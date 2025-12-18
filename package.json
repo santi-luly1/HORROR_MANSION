@@ -1,0 +1,21 @@
+{
+  "name": "horror_mansion",
+  "version": "1.0.0",
+  "description": "",
+  "keywords": [
+    "Roblox",
+    "Nevermore",
+    "Lua"
+  ],
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@quenty/binder": "^14.25.2",
+    "@quenty/clienttranslator": "^14.23.2",
+    "@quenty/cmdrservice": "^13.29.3",
+    "@quenty/loader": "^10.9.0",
+    "@quenty/servicebag": "^11.13.1"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  }
+}
