@@ -8,7 +8,7 @@ local ServiceBag = require("ServiceBag")
 
 local HORROR_MANSIONServiceClient = {}
 HORROR_MANSIONServiceClient.ServiceName = "HORROR_MANSIONServiceClient"
-
+---@diagnostic disable-next-line: undefined-type
 function HORROR_MANSIONServiceClient:Init(serviceBag: ServiceBag.ServiceBag)
 	assert(not self._serviceBag, "Already initialized")
 	self._serviceBag = assert(serviceBag, "No serviceBag")
