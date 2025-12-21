@@ -18,7 +18,6 @@ serviceBag:GetService(require("PurchasingUI"))
 serviceBag:GetService(require("VotingMapUI"))
 serviceBag:GetService(require("SurvivedList"))
 serviceBag:GetService(require("UpdateUI"))
-serviceBag:GetService(require("CreatorPanel"))
 serviceBag:GetService(require("ClientInit"))
 
 serviceBag:Init()

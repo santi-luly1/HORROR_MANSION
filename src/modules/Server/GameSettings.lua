@@ -1,7 +1,6 @@
 local ServerStorage = game:GetService("ServerStorage")
 
 local Settings = {
-    CreatorPanel = { Day = false },
     Main = {
         GameTimer = { Countdown = 120, Base = 120, Default = 120, ["In-game_error"] = 10 },
         Killer = nil,

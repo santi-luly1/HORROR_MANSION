@@ -37,7 +37,7 @@ function ClientInit.Start(serviceBag)
         return nil
     end
 
-    --[[ UpdateUI
+    -- UpdateUI
     do
         local mod = safeRequire("UpdateUI")
         if mod and type(mod.Start) == "function" then
@@ -115,7 +115,7 @@ function ClientInit.Start(serviceBag)
                 end
             end
         end
-    end]]
+    end
 end
 
 return ClientInit

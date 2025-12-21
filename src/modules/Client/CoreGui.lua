@@ -6,17 +6,12 @@ function CoreGui:Init(_serviceBag)
     -- no-op; kept for ServiceBag compatibility
 end
 
-function CoreGui.new(starterGui, _PRINT_UTILITY)
-    local START_TICK = tick()
+function CoreGui.new(starterGui)
     local self = setmetatable({
         _StarterGui = starterGui,
-        _PrintUtility = _PRINT_UTILITY,
     }, CoreGui)
 
     self:SetDefaults()
-    if self._PrintUtility and type(self._PrintUtility.PrintScriptLoaded) == "function" then
-        self._PrintUtility:PrintScriptLoaded(script, START_TICK)
-    end
     return self
 end
 

@@ -2,7 +2,7 @@
 
 *.sublime-workspace
 *.rbxl.lock
-#node_modules
+node_modules
 roblox.toml
 roblox.yml
 dist
