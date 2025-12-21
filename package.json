@@ -13,7 +13,10 @@
     "@quenty/clienttranslator": "^14.23.2",
     "@quenty/cmdrservice": "^13.29.3",
     "@quenty/loader": "^10.9.0",
-    "@quenty/servicebag": "^11.13.1"
+    "@quenty/maid": "^3.5.0",
+    "@quenty/servicebag": "^11.13.1",
+    "@quenty/signal": "^7.11.1",
+    "@quenty/table": "^3.8.0"
   },
   "publishConfig": {
     "access": "restricted"

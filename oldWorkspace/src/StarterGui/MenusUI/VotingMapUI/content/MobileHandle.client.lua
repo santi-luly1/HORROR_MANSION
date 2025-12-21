@@ -1,0 +1,6 @@
+script.Parent.Yes.MouseButton1Click:Connect(function()
+	game.ReplicatedStorage.RemoteEvents.KeyPressed:FireServer(Enum.KeyCode.Q, false)
+end)
+script.Parent.No.MouseButton1Click:Connect(function()
+	game.ReplicatedStorage.RemoteEvents.KeyPressed:FireServer(Enum.KeyCode.E, false)
+end)
