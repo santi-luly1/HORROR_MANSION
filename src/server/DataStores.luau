@@ -6,14 +6,13 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local Types = require(script.Parent._Types)
-local require = (require :: any)(script.Parent.loader).load(script)
 local Players = game:GetService("Players")
+local Packages = game:GetService("ReplicatedStorage").Packages
 
-local Maid = require("Maid") :: Types.Maid
-local ProfileStore = require("ProfileStore")
-local Promise = require("Promise") :: Types.Promise<any>
-local Signal = require("Signal") :: Types.Signal<any>
+local Maid = require(Packages.maid)
+local ProfileStore = require(Packages.profilestore)
+local Promise = require(Packages.promise)
+local Signal = require(Packages.signal)
 
 local DataStores = {}
 DataStores.ServiceName = "DataStores"
@@ -35,12 +34,12 @@ function DataStores:Init(serviceBag)
 		[Player]: typeof(ProfileStore),--Types.Profile, -- TODO: Maybe implement this type.
 	}
 	self._maids = {} :: {
-		[Player]: Types.Maid,
+		[Player]: Maid.Maid,
 	}
 	self._signals = {} :: {
 		[Player]: {
-			SurvivalsChanged: Types.Signal<number>,
-			CoinsChanged: Types.Signal<number>,
+			SurvivalsChanged: Signal.Signal<number>,
+			CoinsChanged: Signal.Signal<number>,
 		}
 	}
 
@@ -67,7 +66,7 @@ end
 --------------------------------------------------------------------
 --- Handlers
 --------------------------------------------------------------------
-function DataStores:_load(player: Player): Types.Promise<boolean>
+function DataStores:_load(player: Player): any --> Promise.Promise<boolean>
 	return Promise.new(function(resolve, reject)
 		if not player or typeof(player) ~= "Instance" or not player:IsA("Player") then -- just making sure, a bit redundant, but me and my clumsiness.
 			reject(`First argument must be a player instance, got {typeof(player)}.`)
@@ -210,7 +209,7 @@ function DataStores:UpdatePlayerStat(userId: number, statName: string, delta: nu
 	return new
 end
 
-function DataStores:PromisePlayerData(player: Player): Types.Promise<boolean>
+function DataStores:PromisePlayerData(player: Player): any --> Promise.Promise<boolean>
 	-- Resolves instantly if already loaded, else waits for the load promise
 	if self._profiles[player] then
 		return Promise.resolve(self._profiles[player])
