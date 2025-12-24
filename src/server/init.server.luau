@@ -1,1 +1,3 @@
-print("Hello world, from server!")
+local a = require(script.DataStores)
+
+a.Init(a, {})

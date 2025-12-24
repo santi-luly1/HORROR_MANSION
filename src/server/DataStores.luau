@@ -31,7 +31,7 @@ function DataStores:Init(serviceBag)
 
 	self._store = ProfileStore.New("Survivals", TEMPLATE)
 	self._profiles = {} :: {
-		[Player]: typeof(ProfileStore),--Types.Profile, -- TODO: Maybe implement this type.
+		[Player]: ProfileStore.Profile<any>, -- TODO: Maybe implement this type.
 	}
 	self._maids = {} :: {
 		[Player]: Maid.Maid,
