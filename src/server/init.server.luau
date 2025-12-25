@@ -1,3 +1,4 @@
 local a = require(script.DataStores)
 
-a.Init(a, {})
+a:Init()
+a:Start()

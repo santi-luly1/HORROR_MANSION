@@ -3,6 +3,11 @@
 registry = "test"
 
 [[package]]
+name = "cosinewaves/loader"
+version = "1.2.4"
+dependencies = []
+
+[[package]]
 name = "devsparkle/maid"
 version = "2.1.0"
 dependencies = []
@@ -18,13 +23,33 @@ version = "4.0.0"
 dependencies = []
 
 [[package]]
+name = "noahrepublic/servicebag"
+version = "0.1.0"
+dependencies = [["Signal", "sleitnick/signal@1.5.0"], ["Trove", "sleitnick/trove@1.8.0"]]
+
+[[package]]
+name = "osyrisrblx/t"
+version = "3.1.1"
+dependencies = []
+
+[[package]]
 name = "santiago/horror-mansion"
 version = "0.1.0"
-dependencies = [["cmdr", "evaera/cmdr@1.12.0"], ["maid", "devsparkle/maid@2.1.0"], ["profilestore", "vyon/profilestore@1.0.3"], ["promise", "evaera/promise@4.0.0"], ["signal", "sleitnick/signal@2.0.3"]]
+dependencies = [["cmdr", "evaera/cmdr@1.12.0"], ["loader", "cosinewaves/loader@1.2.4"], ["maid", "devsparkle/maid@2.1.0"], ["profilestore", "vyon/profilestore@1.0.3"], ["promise", "evaera/promise@4.0.0"], ["servicebag", "noahrepublic/servicebag@0.1.0"], ["signal", "sleitnick/signal@2.0.3"], ["t", "osyrisrblx/t@3.1.1"]]
+
+[[package]]
+name = "sleitnick/signal"
+version = "1.5.0"
+dependencies = []
 
 [[package]]
 name = "sleitnick/signal"
 version = "2.0.3"
+dependencies = []
+
+[[package]]
+name = "sleitnick/trove"
+version = "1.8.0"
 dependencies = []
 
 [[package]]
