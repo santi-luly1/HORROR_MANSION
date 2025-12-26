@@ -5,6 +5,8 @@
 
 	CHANGELOG: [
 		12/25/25 --> Added t module support & methods now returns promises.
+		12/26/25 --> Fixed some t validations, new print formatting, fixed C stack overflow error from signal,
+					signals fire remotes for the client and now using Promises.try on public APIs.
 	]
 ]=]
 
@@ -13,7 +15,9 @@
 --------------------------------------------------------------------
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local Packages = game:GetService("ReplicatedStorage").Packages
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Packages = ReplicatedStorage.Packages
+local Remotes = ReplicatedStorage.Remotes.DataStores
 
 local Maid = require(Packages.maid)
 local ProfileStore = require(Packages.profilestore)
@@ -25,20 +29,27 @@ local DataStores = {
 	_init = false,
 	_start = false,
 }
+local SIGNAL_NAMES = {
+	Survivals = "SurvivalsChanged",
+	Points = "PointsChanged",
+}
 
 --------------------------------------------------------------------
 --- Template
 --------------------------------------------------------------------
-local TEMPLATE = { Survivals = 0, Coins = 0 }
+local TEMPLATE = { Survivals = 0, Points = 0 }
 
 --------------------------------------------------------------------
 --- Types
 --------------------------------------------------------------------
-export type VALID_STATS = "Survivals" | "Coins"
+type Promise<T> = typeof(Promise)
+export type ValidStats = "Survivals" | "Points"
+export type PlayerData = { Survivals: number, Points: number } --typeof(TEMPLATE)
+
 local playerExpected = t.Instance
 local updateStats = t.tuple(t.Instance, t.string, t.number)
 
-local function isPlayer(p: Instance)
+local function isPlayer(p: Instance): (boolean, string?)
 	local _ok, log = playerExpected(p)
 	if not _ok then
 		return false, log
@@ -68,13 +79,12 @@ function DataStores:Init()
 	self._signals = {} :: {
 		[Player]: {
 			SurvivalsChanged: Signal.Signal<number>,
-			CoinsChanged: Signal.Signal<number>,
+			PointsChanged: Signal.Signal<number>,
 		},
 	}
 
 	--- signals
 	self.ProfileLoaded = Signal.new() -- fired when a profile is loaded
-	self.OnUpdate = Signal.new() -- fired when a profile is updated
 	self.ProfileReleased = Signal.new() -- fired when a profile is released
 end
 
@@ -84,56 +94,41 @@ function DataStores:Start()
 
 	Players.PlayerAdded:Connect(function(p: Player)
 		self:_load(p)
-			:andThen(function(ok: boolean, log: string)
-				if ok then
-					print(`[{script.Name}] - Loaded {p.Name}'s profile.`)
-				else
-					print(`[{script.Name}] - Couldn't load {p.Name}'s profile. Log:\n{log}`)
-				end
-
-				self:UpdatePlayerStat(605354831, "Survivals", 500) -- just testing.
+			:andThen(function()
+				print(`[{script.Name}] - Loaded {p.Name}'s profile.`)
+				self:UpdatePlayerStat(p, "Survivals", 500) -- just testing.
 			end)
 			:catch(warn)
 	end)
 
 	Players.PlayerRemoving:Connect(function(p: Player)
 		self:_release(p)
-			:andThen(function(ok: boolean, log: string)
-				if ok then
-					print(`[{script.Name}] - Unloaded {p.Name}'s profile.`)
-				else
-					print(`[{script.Name}] - Couldn't unload {p.Name}'s profile. Log:\n{log}`)
-				end
-
-				self:UpdatePlayerStat(605354831, "Survivals", 500) -- just testing.
+			:andThen(function()
+				print(`[{script.Name}] - Unloaded {p.Name}'s profile.`)
 			end)
 			:catch(warn)
 	end)
 
 	for _, p: Player in Players:GetPlayers() do -- for early players.
 		self:_load(p)
-			:andThen(function(ok: boolean, log: string)
-				if ok then
-					print(`[{script.Name}] - Loaded {p.Name}'s profile.`)
-				else
-					print(`[{script.Name}] - Couldn't load {p.Name}'s profile. Log:\n{log}`)
-				end
-
-				self:UpdatePlayerStat(605354831, "Survivals", 500) -- just testing.
+			:andThen(function()
+				self:UpdatePlayerStat(p, "Survivals", 500) -- just testing.
 			end)
 			:catch(warn)
 	end
+
+	table.freeze(self) -- Prevent accidental modification after module is fully up and running.
 end
 
 --------------------------------------------------------------------
 --- Core
 --------------------------------------------------------------------
-function DataStores:_load(player: Player): any --> Promise.Promise<boolean>
+function DataStores:_load(player: Player): Promise<nil>
 	return Promise.new(function(resolve, reject)
 		do -- needed so the variables only live here.
 			local _ok, log = isPlayer(player)
 			if not _ok then
-				reject(_ok, log)
+				reject(`[{script.Name}] - {log}`)
 				return
 			end
 		end
@@ -144,7 +139,7 @@ function DataStores:_load(player: Player): any --> Promise.Promise<boolean>
 			end,
 		})
 		if not profile then
-			reject(false, "profile = nil")
+			reject(`[{script.Name}] - Indexed profile is nil for {player.Name}`)
 			player:Kick(
 				"Failed to get your data loaded, and decided to prevent data loss by kicking you. Please rejoin!"
 			)
@@ -163,13 +158,13 @@ function DataStores:_load(player: Player): any --> Promise.Promise<boolean>
 
 		-- Signals for this player
 		local survSig = Signal.new()
-		local coinSig = Signal.new()
+		local pointSig = Signal.new()
 		self._signals[player] = {
 			SurvivalsChanged = survSig,
-			CoinsChanged = coinSig,
+			PointsChanged = pointSig,
 		}
 
-		-- Build leaderstats exactly like the old code
+		-- Build leaderstats
 		do
 			local ls = Instance.new("Folder")
 			do
@@ -188,8 +183,8 @@ function DataStores:_load(player: Player): any --> Promise.Promise<boolean>
 
 			local coinVal = Instance.new("IntValue")
 			do
-				coinVal.Name = "Coins"
-				coinVal.Value = profile.Data.Coins
+				coinVal.Name = "Points"
+				coinVal.Value = profile.Data.Points
 				coinVal.Parent = ls
 				maid:GiveTask(coinVal)
 			end
@@ -197,26 +192,26 @@ function DataStores:_load(player: Player): any --> Promise.Promise<boolean>
 			-- Signal update handlers
 			maid:GiveTask(self:ObserveSurvivals(player, function(new)
 				survVal.Value = new
-				survSig:Fire(new)
+				Remotes.SurvivalsChanged:Fire(player, new)
 			end))
-			maid:GiveTask(self:ObserveCoins(player, function(new)
+			maid:GiveTask(self:ObservePoints(player, function(new)
 				coinVal.Value = new
-				coinSig:Fire(new)
+				Remotes.PointsChanged:Fire(player, new)
 			end))
 		end
 
 		-- Public events
 		self.ProfileLoaded:Fire(player, profile)
-		resolve(true)
+		resolve()
 	end)
 end
 
-function DataStores:_release(player: Player): any --> Promise.Promise<boolean>
+function DataStores:_release(player: Player): Promise<nil>
 	return Promise.new(function(resolve, reject)
 		do -- needed so the variables only live here.
 			local _ok, log = isPlayer(player)
 			if not _ok then
-				reject(_ok, log)
+				reject(`[{script.Name}] - {log}`)
 				return
 			end
 		end
@@ -228,7 +223,7 @@ function DataStores:_release(player: Player): any --> Promise.Promise<boolean>
 		end
 		if sig then
 			sig.SurvivalsChanged:Destroy()
-			sig.CoinsChanged:Destroy()
+			sig.PointsChanged:Destroy()
 		end
 		self._maids[player] = nil
 		self._signals[player] = nil
@@ -239,90 +234,89 @@ function DataStores:_release(player: Player): any --> Promise.Promise<boolean>
 			self.ProfileReleased:Fire(player, profile)
 		end
 		self._profiles[player] = nil
-		player:Kick("Session ended.")
-		resolve(true)
+		resolve()
 	end)
+end
+
+function DataStores:_clearData(player: Player) --> Should only be used in studio
+	if not RunService:IsStudio() then
+		warn(`[{script.Name}] - Tried to clear {player.Name}'s profile while in a live server!`)
+		return
+	end
+
+	self:SetPlayerStat(player, "Survivals", 0)
+	self:SetPlayerStat(player, "Points", 0)
 end
 
 --------------------------------------------------------------------
 --- API
 --------------------------------------------------------------------
-function DataStores:GetPlayerData(player: Player): any --> Promise.Promise<boolean>
-	return Promise.new(function(resolve, reject)
-		do -- needed so the variables only live here.
-			local _ok, log = isPlayer(player)
-			if not _ok then
-				reject(_ok, log)
-				return
-			end
-		end
+function DataStores:GetPlayerData(player: Player): Promise<PlayerData>
+	return Promise.try(function()
+		assert(isPlayer(player))
 
 		local profile = self._profiles[player]
 		if not profile then
-			reject(false, `{player.Name}'s profile was not found.`)
-			return
+			error(`[{script.Name}] - Indexed profile is nil for {player.Name}`)
 		end
 
-		resolve {
-			Survivals = profile.Data.Survivals,
-			Coins = profile.Data.Coins,
-		}
+		return { Survivals = profile.Data.Survivals, Points = profile.Data.Points }
 	end)
 end
 
-function DataStores:SetPlayerStat(player: Player, statName: VALID_STATS, value: number)
+function DataStores:SetPlayerStat(player: Player, statName: ValidStats, value: number)
+	assert(isPlayer(player))
 	assert(updateStats(player, statName, value))
 
 	local profile = self._profiles[player]
 	if not profile then
-		warn(`[{script.Name}] - No profile for player {player.Name}, no value set!`)
+		warn(`[{script.Name}] - Indexed profile is nil for {player.Name}`)
 		return
 	end
 
 	profile.Data[statName] = value
-	self._signals[player][`{statName}Changed`]:Fire(value)
-	self.OnUpdate:Fire(player, statName, value)
+	self._signals[player][SIGNAL_NAMES[statName]]:Fire(value)
 end
 
-function DataStores:UpdatePlayerStat(player: Player, statName: VALID_STATS, delta: number): any --> Promise.Promise<boolean>
-	return Promise.new(function(resolve, reject)
-		do -- needed so the variables only live here.
-			local _ok, log = isPlayer(player)
-			if not _ok then
-				reject(_ok, log)
-				return
-			end
-		end
+function DataStores:UpdatePlayerStat(player, statName, delta): Promise<number>
+	return Promise.try(function()
+		assert(isPlayer(player))
+		assert(updateStats(player, statName, delta))
 
 		local profile = self._profiles[player]
 		if not profile then
-			reject(false, `[{script.Name}] - No profile for player {player.Name}, no update!`)
-			return
+			error(`[{script.Name}] - Indexed profile is nil for {player.Name}`)
 		end
 
-		local new: number = profile.Data[statName] + delta
+		local new = profile.Data[statName] + delta
 		profile.Data[statName] = new
-		self._signals[player][`{statName}Changed`]:Fire(new)
-		self.OnUpdate:Fire(player, statName, new)
-
-		resolve(true, new)
+		self._signals[player][SIGNAL_NAMES[statName]]:Fire(new)
+		return new
 	end)
 end
 
-function DataStores:ObserveSurvivals(player: Player, callback: (number) -> ()): Signal.Connection | () -> ()
+function DataStores:ObserveSurvivals(player: Player, callback: (number) -> ()): Signal.Connection?
+	assert(isPlayer(player))
+
 	local sig = self._signals[player]
 	if not sig then
-		return function() end
-	end -- dummy disconnect
+		warn(`[{script.Name}] - Indexed signals is nil for {player.Name}`)
+		return
+	end
+
 	return sig.SurvivalsChanged:Connect(callback)
 end
 
-function DataStores:ObserveCoins(player: Player, callback: (number) -> ()): Signal.Connection | () -> ()
+function DataStores:ObservePoints(player: Player, callback: (number) -> ()): Signal.Connection?
+	assert(isPlayer(player))
+
 	local sig = self._signals[player]
 	if not sig then
-		return function() end
+		warn(`[{script.Name}] - Indexed signals is nil for {player.Name}`)
+		return
 	end
-	return sig.CoinsChanged:Connect(callback)
+
+	return sig.PointsChanged:Connect(callback)
 end
 
 return DataStores

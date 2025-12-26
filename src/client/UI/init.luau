@@ -1,6 +1,6 @@
 --[=[
-    Boilerplate for server stuff
-	@class _BOILERPLATE_Server
+    Boilerplate for client stuff
+	@class UI
     @author: santi-luly1
 
     CHANGELOG: [
@@ -16,7 +16,7 @@ local Packages = game:GetService("ReplicatedStorage").Packages
 local Promise = require(Packages.promise)
 local t = require(Packages.t)
 
-local _BOILERPLATE_Server = {
+local _BOILERPLATE_Client = {
 	_init = false,
 	_start = false,
 }
@@ -31,12 +31,12 @@ local TYPE = t.optional(t.string)
 --------------------------------------------------------------------
 --- ServiceBag (not currently using service bag)
 --------------------------------------------------------------------
-function _BOILERPLATE_Server:Init()
+function _BOILERPLATE_Client:Init()
 	assert(not self._init, `[{script.Name}] - Module already initialized.`)
     self._init = true
 end
 
-function _BOILERPLATE_Server:Start()
+function _BOILERPLATE_Client:Start()
 	assert(not self._start, `[{script.Name}] - Module already started.`)
     self._start = true
 end
@@ -44,7 +44,7 @@ end
 --------------------------------------------------------------------
 --- Handlers
 --------------------------------------------------------------------
-function _BOILERPLATE_Server:doSomething(a: TYPE): Promise<string>
+function _BOILERPLATE_Client:doSomething(a: TYPE): Promise<string>
     return Promise.new(function(resolve, reject, onCancel)
         do -- needed so the variables only live here.
             local _ok, log = TYPE(a)
@@ -66,4 +66,4 @@ end
 --------------------------------------------------------------------
 
 
-return _BOILERPLATE_Server
+return _BOILERPLATE_Client

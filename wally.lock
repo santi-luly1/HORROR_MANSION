@@ -13,6 +13,11 @@ version = "2.1.0"
 dependencies = []
 
 [[package]]
+name = "elttob/fusion"
+version = "0.3.0"
+dependencies = []
+
+[[package]]
 name = "evaera/cmdr"
 version = "1.12.0"
 dependencies = []
@@ -35,7 +40,7 @@ dependencies = []
 [[package]]
 name = "santiago/horror-mansion"
 version = "0.1.0"
-dependencies = [["cmdr", "evaera/cmdr@1.12.0"], ["loader", "cosinewaves/loader@1.2.4"], ["maid", "devsparkle/maid@2.1.0"], ["profilestore", "vyon/profilestore@1.0.3"], ["promise", "evaera/promise@4.0.0"], ["servicebag", "noahrepublic/servicebag@0.1.0"], ["signal", "sleitnick/signal@2.0.3"], ["t", "osyrisrblx/t@3.1.1"]]
+dependencies = [["cmdr", "evaera/cmdr@1.12.0"], ["fusion", "elttob/fusion@0.3.0"], ["loader", "cosinewaves/loader@1.2.4"], ["maid", "devsparkle/maid@2.1.0"], ["profilestore", "vyon/profilestore@1.0.3"], ["promise", "evaera/promise@4.0.0"], ["servicebag", "noahrepublic/servicebag@0.1.0"], ["signal", "sleitnick/signal@2.0.3"], ["t", "osyrisrblx/t@3.1.1"]]
 
 [[package]]
 name = "sleitnick/signal"

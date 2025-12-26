@@ -24,6 +24,7 @@ local _BOILERPLATE_Client = {
 --------------------------------------------------------------------
 --- Types
 --------------------------------------------------------------------
+type Promise<T> = typeof(Promise)
 export type TYPE = "a" | "b"
 local TYPE = t.optional(t.string)
 
@@ -43,7 +44,7 @@ end
 --------------------------------------------------------------------
 --- Handlers
 --------------------------------------------------------------------
-function _BOILERPLATE_Client:doSomething(a: TYPE): any --> Promise.Promise<boolean>
+function _BOILERPLATE_Client:doSomething(a: TYPE): Promise<string>
     return Promise.new(function(resolve, reject, onCancel)
         do -- needed so the variables only live here.
             local _ok, log = TYPE(a)
