@@ -17,7 +17,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Packages = ReplicatedStorage.Packages
-local Remotes = ReplicatedStorage.Remotes.DataStores
+local Remotes = ReplicatedStorage.ServerSignals.DataStores
 
 local Maid = require(Packages.maid)
 local ProfileStore = require(Packages.profilestore)
@@ -192,11 +192,11 @@ function DataStores:_load(player: Player): Promise<nil>
 			-- Signal update handlers
 			maid:GiveTask(self:ObserveSurvivals(player, function(new)
 				survVal.Value = new
-				Remotes.SurvivalsChanged:Fire(player, new)
+				Remotes.SurvivalsChanged:FireClient(player, new)
 			end))
 			maid:GiveTask(self:ObservePoints(player, function(new)
 				coinVal.Value = new
-				Remotes.PointsChanged:Fire(player, new)
+				Remotes.PointsChanged:FireClient(player, new)
 			end))
 		end
 
