@@ -1,30 +1,63 @@
+--!native
 --[=[
 	Main API for player data
-    @class DataStores
+	@class DataStores
 	@author: santi-luly1
 
-	CHANGELOG: [
+	CHANGELOG:
 		12/25/25 --> Added t module support & methods now returns promises.
 		12/26/25 --> Fixed some t validations, new print formatting, fixed C stack overflow error from signal,
 					signals fire remotes for the client and now using Promises.try on public APIs.
-	]
+		12/31/25 --> Added retry/back-off, consistent error handling, fixed isPlayer type-check, added
+					profile-versioning, etc.
 ]=]
 
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Packages = ReplicatedStorage.Packages
-local Remotes = ReplicatedStorage.ServerSignals.DataStores
+local RunService = game:GetService("RunService")
 
-local Maid = require(Packages.maid)
-local ProfileStore = require(Packages.profilestore)
-local Promise = require(Packages.promise)
-local Signal = require(Packages.signal)
-local t = require(Packages.t)
+local Packages = ReplicatedStorage:WaitForChild("Packages")
+local Remotes = ReplicatedStorage:WaitForChild("ServerSignals"):WaitForChild("DataStores")
 
+local Maid = require(Packages:WaitForChild("maid"))
+local ProfileStore = require(Packages:WaitForChild("profilestore"))
+local Promise = require(Packages:WaitForChild("promise"))
+local Signal = require(Packages:WaitForChild("signal"))
+local t = require(Packages:WaitForChild("t"))
+
+--------------------------------------------------------------------
+--- Config
+--------------------------------------------------------------------
+local DATASTORE_KEY = RunService:IsStudio() and "Studio" or "Live"
+local MAX_RETRIES = 5
+local YIELD_PER_RETRY = 2 -- seconds
+local PROFILE_VERSION = 1 -- bump when template changes
+
+--------------------------------------------------------------------
+--- Template
+--------------------------------------------------------------------
+local TEMPLATE = {
+	Survivals = 0,
+	Points = 0,
+	Version = PROFILE_VERSION, -- versioning
+}
+
+--------------------------------------------------------------------
+--- Types
+--------------------------------------------------------------------
+type Promise<T> = typeof(Promise.new())
+export type ValidStats = "Survivals" | "Points"
+export type PlayerData = { Survivals: number, Points: number }
+
+local playerCheck = t.instanceOf("Player")
+local updateCheck = t.tuple(t.instanceOf("Player"), t.literal("Survivals", "Points"), t.number)
+
+--------------------------------------------------------------------
+--- Module
+--------------------------------------------------------------------
 local DataStores = {
 	_init = false,
 	_start = false,
@@ -35,89 +68,48 @@ local SIGNAL_NAMES = {
 }
 
 --------------------------------------------------------------------
---- Template
---------------------------------------------------------------------
-local TEMPLATE = { Survivals = 0, Points = 0 }
-
---------------------------------------------------------------------
---- Types
---------------------------------------------------------------------
-type Promise<T> = typeof(Promise)
-export type ValidStats = "Survivals" | "Points"
-export type PlayerData = { Survivals: number, Points: number } --typeof(TEMPLATE)
-
-local playerExpected = t.Instance
-local updateStats = t.tuple(t.Instance, t.string, t.number)
-
-local function isPlayer(p: Instance): (boolean, string?)
-	local _ok, log = playerExpected(p)
-	if not _ok then
-		return false, log
-	end
-
-	if not p:IsA("Player") then
-		return false, "Parameter is not a Player."
-	end
-
-	return true
-end
-
---------------------------------------------------------------------
---- ServiceBag (not currently using service bag)
+--- Init / Start
 --------------------------------------------------------------------
 function DataStores:Init()
-	assert(not self._init, `[{script.Name}] - Module already initialized.`)
+	assert(not self._init, `[{script.Name}] already initialized`)
 	self._init = true
 
-	self._store = ProfileStore.New(RunService:IsStudio() and "Studio" or "Live", TEMPLATE)
-	self._profiles = {} :: {
-		[Player]: typeof(self._store:StartSessionAsync()), -- ProfileStore.Profile<any>
-	}
+	self._store = ProfileStore.New(DATASTORE_KEY, TEMPLATE)
+	self._profiles = {} -- [Player]: Profile
 	self._maids = {} :: {
 		[Player]: Maid.Maid,
 	}
 	self._signals = {} :: {
-		[Player]: {
-			SurvivalsChanged: Signal.Signal<number>,
-			PointsChanged: Signal.Signal<number>,
-		},
+		[Player]: Signal.Signal<>,
 	}
 
-	--- signals
-	self.ProfileLoaded = Signal.new() -- fired when a profile is loaded
-	self.ProfileReleased = Signal.new() -- fired when a profile is released
+	self.ProfileLoaded = Signal.new()
+	self.ProfileReleased = Signal.new()
 end
 
 function DataStores:Start()
-	assert(not self._start, `[{script.Name}] - Module already started.`)
+	assert(not self._start, `[{script.Name}] already started`)
 	self._start = true
 
-	Players.PlayerAdded:Connect(function(p: Player)
-		self:_load(p)
+	Players.PlayerRemoving:Connect(function(player: Player)
+		self:_release(player):catch(warn)
+	end)
+
+	Players.PlayerAdded:Connect(function(player: Player)
+		self:_load(player)
 			:andThen(function()
-				print(`[{script.Name}] - Loaded {p.Name}'s profile.`)
-				self:UpdatePlayerStat(p, "Survivals", 500) -- just testing.
+				print(`[{script.Name}] loaded {player.Name}'s profile`)
 			end)
 			:catch(warn)
 	end)
 
-	Players.PlayerRemoving:Connect(function(p: Player)
-		self:_release(p)
-			:andThen(function()
-				print(`[{script.Name}] - Unloaded {p.Name}'s profile.`)
-			end)
-			:catch(warn)
-	end)
-
-	for _, p: Player in Players:GetPlayers() do -- for early players.
-		self:_load(p)
-			:andThen(function()
-				self:UpdatePlayerStat(p, "Survivals", 500) -- just testing.
-			end)
-			:catch(warn)
+	for _, player in Players:GetPlayers() do -- handle studio early entries
+		task.spawn(function()
+			self:_load(player):catch(warn)
+		end)
 	end
 
-	table.freeze(self) -- Prevent accidental modification after module is fully up and running.
+	table.freeze(DataStores)
 end
 
 --------------------------------------------------------------------
@@ -125,38 +117,39 @@ end
 --------------------------------------------------------------------
 function DataStores:_load(player: Player): Promise<nil>
 	return Promise.new(function(resolve, reject)
-		do -- needed so the variables only live here.
-			local _ok, log = isPlayer(player)
-			if not _ok then
-				reject(`[{script.Name}] - {log}`)
-				return
-			end
+		if not playerCheck(player) then
+			return reject(`[{script.Name}] bad argument #1 (Player expected)`)
 		end
 
-		local profile = self._store:StartSessionAsync(`P_{player.UserId}`, {
-			Cancel = function()
-				return player.Parent ~= Players
-			end,
-		})
+		-- retry with back-off
+		local profile
+		for attempt = 1, MAX_RETRIES do
+			profile = self._store:StartSessionAsync(`P_{player.UserId}`, {
+				Cancel = function()
+					return player.Parent ~= Players
+				end,
+			})
+			if profile then
+				break
+			end
+			task.wait(YIELD_PER_RETRY * (2 ^ (attempt - 1))) -- exponential
+		end
 		if not profile then
-			reject(`[{script.Name}] - Indexed profile is nil for {player.Name}`)
-			player:Kick(
-				"Failed to get your data loaded, and decided to prevent data loss by kicking you. Please rejoin!"
-			)
-			return
+			return reject(`[{script.Name}] could not load profile for {player.Name} after {MAX_RETRIES} tries`)
 		end
 
 		profile:AddUserId(player.UserId)
-		profile:Reconcile()
+		profile:Reconcile() -- adds missing keys for old profiles
+		if profile.Data.Version ~= PROFILE_VERSION then
+			-- simple migration..............
+			profile.Data.Version = PROFILE_VERSION
+		end
 
-		--- Store profile
 		self._profiles[player] = profile
 
-		--- Maid for this player
 		local maid = Maid.new()
 		self._maids[player] = maid
 
-		-- Signals for this player
 		local survSig = Signal.new()
 		local pointSig = Signal.new()
 		self._signals[player] = {
@@ -164,56 +157,42 @@ function DataStores:_load(player: Player): Promise<nil>
 			PointsChanged = pointSig,
 		}
 
-		-- Build leaderstats
-		do
-			local ls = Instance.new("Folder")
-			do
-				ls.Name = "leaderstats"
-				ls.Parent = player
-				maid:GiveTask(ls)
-			end
+		-- leaderstats
+		local ls = Instance.new("Folder")
+		ls.Name = "leaderstats"
+		ls.Parent = player
+		maid:GiveTask(ls)
 
-			local survVal = Instance.new("IntValue")
-			do
-				survVal.Name = "Survivals"
-				survVal.Value = profile.Data.Survivals
-				survVal.Parent = ls
-				maid:GiveTask(survVal)
-			end
+		local survVal = Instance.new("IntValue")
+		survVal.Name = "Survivals"
+		survVal.Value = profile.Data.Survivals
+		survVal.Parent = ls
+		maid:GiveTask(survVal)
 
-			local coinVal = Instance.new("IntValue")
-			do
-				coinVal.Name = "Points"
-				coinVal.Value = profile.Data.Points
-				coinVal.Parent = ls
-				maid:GiveTask(coinVal)
-			end
+		local pointVal = Instance.new("IntValue")
+		pointVal.Name = "Points"
+		pointVal.Value = profile.Data.Points
+		pointVal.Parent = ls
+		maid:GiveTask(pointVal)
 
-			-- Signal update handlers
-			maid:GiveTask(self:ObserveSurvivals(player, function(new)
-				survVal.Value = new
-				Remotes.SurvivalsChanged:FireClient(player, new)
-			end))
-			maid:GiveTask(self:ObservePoints(player, function(new)
-				coinVal.Value = new
-				Remotes.PointsChanged:FireClient(player, new)
-			end))
-		end
+		maid:GiveTask(self:ObserveSurvivals(player, function(new)
+			survVal.Value = new
+			Remotes.SurvivalsChanged:FireClient(player, new)
+		end))
+		maid:GiveTask(self:ObservePoints(player, function(new)
+			pointVal.Value = new
+			Remotes.PointsChanged:FireClient(player, new)
+		end))
 
-		-- Public events
 		self.ProfileLoaded:Fire(player, profile)
-		resolve()
+		return resolve() --shut up LLS
 	end)
 end
 
 function DataStores:_release(player: Player): Promise<nil>
 	return Promise.new(function(resolve, reject)
-		do -- needed so the variables only live here.
-			local _ok, log = isPlayer(player)
-			if not _ok then
-				reject(`[{script.Name}] - {log}`)
-				return
-			end
+		if not playerCheck(player) then
+			return reject(`[{script.Name}] bad argument #1 (Player expected)`)
 		end
 
 		local maid = self._maids[player]
@@ -234,60 +213,43 @@ function DataStores:_release(player: Player): Promise<nil>
 			self.ProfileReleased:Fire(player, profile)
 		end
 		self._profiles[player] = nil
-		resolve()
+		return resolve() --shut up LLS
 	end)
 end
 
-function DataStores:_clearData(player: Player) --> Should only be used in studio
-	if not RunService:IsStudio() then
-		warn(`[{script.Name}] - Tried to clear {player.Name}'s profile while in a live server!`)
-		return
-	end
-
-	self:SetPlayerStat(player, "Survivals", 0)
-	self:SetPlayerStat(player, "Points", 0)
-end
-
 --------------------------------------------------------------------
---- API
+--- Public API
 --------------------------------------------------------------------
 function DataStores:GetPlayerData(player: Player): Promise<PlayerData>
 	return Promise.try(function()
-		assert(isPlayer(player))
-
+		assert(playerCheck(player))
 		local profile = self._profiles[player]
 		if not profile then
-			error(`[{script.Name}] - Indexed profile is nil for {player.Name}`)
+			error(`[{script.Name}] profile not loaded for {player.Name}`)
 		end
-
 		return { Survivals = profile.Data.Survivals, Points = profile.Data.Points }
 	end)
 end
 
 function DataStores:SetPlayerStat(player: Player, statName: ValidStats, value: number)
-	assert(isPlayer(player))
-	assert(updateStats(player, statName, value))
-
+	assert(playerCheck(player) and updateCheck(player, statName, value), `One or more arguments are not valid.`)
 	local profile = self._profiles[player]
 	if not profile then
-		warn(`[{script.Name}] - Indexed profile is nil for {player.Name}`)
-		return
+		return warn(`[{script.Name}] profile not loaded for {player.Name}`)
 	end
-
 	profile.Data[statName] = value
 	self._signals[player][SIGNAL_NAMES[statName]]:Fire(value)
+
+	return --shut up LLS
 end
 
-function DataStores:UpdatePlayerStat(player, statName, delta): Promise<number>
+function DataStores:UpdatePlayerStat(player: Player, statName: ValidStats, delta: number): Promise<number>
 	return Promise.try(function()
-		assert(isPlayer(player))
-		assert(updateStats(player, statName, delta))
-
+		assert(playerCheck(player) and updateCheck(player, statName, delta), `One or more arguments are not valid.`)
 		local profile = self._profiles[player]
 		if not profile then
-			error(`[{script.Name}] - Indexed profile is nil for {player.Name}`)
+			error(`[{script.Name}] profile not loaded for {player.Name}`)
 		end
-
 		local new = profile.Data[statName] + delta
 		profile.Data[statName] = new
 		self._signals[player][SIGNAL_NAMES[statName]]:Fire(new)
@@ -296,27 +258,37 @@ function DataStores:UpdatePlayerStat(player, statName, delta): Promise<number>
 end
 
 function DataStores:ObserveSurvivals(player: Player, callback: (number) -> ()): Signal.Connection?
-	assert(isPlayer(player))
-
-	local sig = self._signals[player]
-	if not sig then
-		warn(`[{script.Name}] - Indexed signals is nil for {player.Name}`)
+	if not playerCheck(player) then
 		return
 	end
-
+	local sig = self._signals[player]
+	if not sig then
+		return warn(`[{script.Name}] signals not ready for {player.Name}`)
+	end
 	return sig.SurvivalsChanged:Connect(callback)
 end
 
 function DataStores:ObservePoints(player: Player, callback: (number) -> ()): Signal.Connection?
-	assert(isPlayer(player))
-
-	local sig = self._signals[player]
-	if not sig then
-		warn(`[{script.Name}] - Indexed signals is nil for {player.Name}`)
+	if not playerCheck(player) then
 		return
 	end
-
+	local sig = self._signals[player]
+	if not sig then
+		return warn(`[{script.Name}] signals not ready for {player.Name}`)
+	end
 	return sig.PointsChanged:Connect(callback)
+end
+
+--------------------------------------------------------------------
+--- Studio-only
+--------------------------------------------------------------------
+function DataStores:ClearPlayerData(player: Player)
+	if not RunService:IsStudio() then
+		return warn(`[{script.Name}] ClearPlayerData can only be used in Studio`)
+	end
+	self:SetPlayerStat(player, "Survivals", 0)
+	self:SetPlayerStat(player, "Points", 0)
+	return  --shut up LLS
 end
 
 return DataStores
