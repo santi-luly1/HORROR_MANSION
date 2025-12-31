@@ -22,6 +22,11 @@ local _BOILERPLATE_Client = {
 }
 
 --------------------------------------------------------------------
+--- Variables
+--------------------------------------------------------------------
+local _
+
+--------------------------------------------------------------------
 --- Types
 --------------------------------------------------------------------
 type Promise<T> = typeof(Promise)
@@ -44,20 +49,17 @@ end
 --------------------------------------------------------------------
 --- Handlers
 --------------------------------------------------------------------
-function _BOILERPLATE_Client:doSomething(a: TYPE): Promise<string>
+function _BOILERPLATE_Client:doSomething(a: TYPE): Promise<nil>
     return Promise.new(function(resolve, reject, onCancel)
-        do -- needed so the variables only live here.
-            local _ok, log = TYPE(a)
-            if not _ok then
-                reject(log) -- when bad parameter type, reject the promise.
-            end
-        end
+        if not TYPE(a) then
+			return reject(`[{script.Name}] bad argument #1 (string expected)`)
+		end
 
         if onCancel(function()
             -- cancel the promise
         end) then return end
         
-        resolve("ok")
+        return resolve()
 	end)
 end
 

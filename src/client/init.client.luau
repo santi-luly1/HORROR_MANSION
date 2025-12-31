@@ -5,21 +5,18 @@
 
     CHANGELOG: [
 		12/26/25 --> New client bootstrapper
+        12/31/25 --> Added proper loader
 	]
 ]=]
 
-local CONTROLLERS = {
-    UI = require(script.UI),
-}
+local Packages = game:GetService("ReplicatedStorage").Packages
 
-for name, svc in CONTROLLERS do
-    assert(svc.Init, `[{script.Name}] {name} has no Init()`)
-    svc:Init()
-    print(`[{script.Name}] {name} initialised`)
-end
+local Loader = require(Packages:WaitForChild("loader"))
 
-for name, svc in CONTROLLERS do
-    assert(svc.Start, `[{script.Name}] {name} has no Start()`)
-    svc:Start()
-    print(`[{script.Name}] {name} started`)
-end
+Loader.SpawnAll(Loader.LoadChildren(script), "Init")
+Loader.SpawnAll(Loader.LoadChildren(script), "Start")
+
+
+require(game.ReplicatedStorage.Network.PlayerDataNetwork).PointsChanged.OnClientEvent:Connect(function(...) -- just for testing porpuses, should be deleted.
+    print(...)
+end)

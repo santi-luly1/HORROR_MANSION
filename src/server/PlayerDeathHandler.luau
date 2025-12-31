@@ -1,55 +1,68 @@
-local PlayerDeathHandler = {}
-PlayerDeathHandler.ServiceName = "PlayerDeathHandler"
+--[=[
+    Server death manager for players
+	@class PlayerDeathHandler
+    @author: santi-luly1
+
+    CHANGELOG: [
+		12/31/25 --> Adapted from original source.
+	]
+]=]
 
 --------------------------------------------------------------------
---- Internal
+--- Dependencies
 --------------------------------------------------------------------
-local function playRandomSound()
-    local tracks = {}
-    for _, child in ipairs(script:GetChildren()) do
-        if child:IsA("Sound") then
-            table.insert(tracks, child)
-        end
-    end
-    if #tracks == 0 then
-        return
-    end
+local Players = game:GetService("Players")
 
-    local rn = math.random(1, #tracks)
-    local track = tracks[rn]
-    if track then
-        track:Play()
-        task.wait(track.TimeLength)
-        track:Pause()
-    end
-end
-
-function PlayerDeathHandler:_onCharacter(character)
-    local hum = character:WaitForChild("Humanoid", 30) -- will this yield the entire server death sound? Hmmm
-    if hum then
-        hum.Died:Connect(function()
-            warn(`[PlayerDeathHandler] Player {character.Name} has died.`)
-            self._players:GetPlayerFromCharacter(character):SetAttribute("PlayerState", "Dead")
-            playRandomSound()
-        end)
-    end
-end
+local PlayerDeathHandler = {
+	_init = false,
+	_start = false,
+}
 
 --------------------------------------------------------------------
---- ServiceBag
+--- Variables
 --------------------------------------------------------------------
-function PlayerDeathHandler:Init(serviceBag)
-    assert(not self._serviceBag, "Already initialized")
-    self._serviceBag = assert(serviceBag, "No serviceBag provided")
-    self._players = game:GetService("Players")
+local tracks = script:GetChildren()
+
+--------------------------------------------------------------------
+--- Types
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+--- ServiceBag (not currently using service bag)
+--------------------------------------------------------------------
+function PlayerDeathHandler:Init()
+	assert(not self._init, `[{script.Name}] - Module already initialized.`)
+	self._init = true
 end
 
 function PlayerDeathHandler:Start()
-    self._players.PlayerAdded:Connect(function(player)
-        player.CharacterAdded:Connect(function(character)
-            self:_onCharacter(character)
-        end)
-    end)
+	assert(not self._start, `[{script.Name}] - Module already started.`)
+	self._start = true
+
+	math.randomseed(tick()) -- just bc
+
+	Players.PlayerAdded:Connect(function(player: Player)
+		player.CharacterAdded:Connect(function(character) -- memory leak?
+			local hum = character:WaitForChild("Humanoid", 30) -- will this yield for the entire server? Hmmm
+			if hum then
+				hum.Died:Once(function()
+					warn(`[{script.Name}] Player {character.Name} has died.`)
+					player:SetAttribute("PlayerState", "Dead")
+					local track = tracks[math.random(1, #tracks)]:Clone()
+					track.Parent = character.PrimaryPart
+                    track:Play()
+				end)
+			end
+		end)
+	end)
 end
+
+--------------------------------------------------------------------
+--- Handlers
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+--- API
+--------------------------------------------------------------------
 
 return PlayerDeathHandler

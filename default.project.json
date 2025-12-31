@@ -6,6 +6,9 @@
     "ReplicatedStorage": {
       "Packages": {
         "$path": "Packages"
+      },
+      "Network": {
+        "$path": "src/network"
       }
     },
 

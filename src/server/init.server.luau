@@ -5,21 +5,13 @@
 
     CHANGELOG: [
 		12/26/25 --> New server bootstrapper
+        12/31/25 --> Added proper loader
 	]
 ]=]
 
-local SERVICES = {
-    DataStores = require(script.DataStores),
-}
+local Packages = game:GetService("ReplicatedStorage").Packages
 
-for name, svc in SERVICES do
-    assert(svc.Init, `[{script.Name}] {name} has no Init()`)
-    svc:Init()
-    print(`[{script.Name}] {name} initialised`)
-end
+local Loader = require(Packages:WaitForChild("loader"))
 
-for name, svc in SERVICES do
-    assert(svc.Start, `[{script.Name}] {name} has no Start()`)
-    svc:Start()
-    print(`[{script.Name}] {name} started`)
-end
+Loader.SpawnAll(Loader.LoadChildren(script), "Init")
+Loader.SpawnAll(Loader.LoadChildren(script), "Start")

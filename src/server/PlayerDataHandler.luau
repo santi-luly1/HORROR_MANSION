@@ -1,7 +1,7 @@
 --!native
 --[=[
 	Main API for player data
-	@class DataStores
+	@class PlayerDataHandler
 	@author: santi-luly1
 
 	CHANGELOG:
@@ -20,7 +20,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Packages = ReplicatedStorage:WaitForChild("Packages")
-local Remotes = ReplicatedStorage:WaitForChild("ServerSignals"):WaitForChild("DataStores")
+local Networking = ReplicatedStorage:WaitForChild("Network")
 
 local Maid = require(Packages:WaitForChild("maid"))
 local ProfileStore = require(Packages:WaitForChild("profilestore"))
@@ -28,8 +28,10 @@ local Promise = require(Packages:WaitForChild("promise"))
 local Signal = require(Packages:WaitForChild("signal"))
 local t = require(Packages:WaitForChild("t"))
 
+local PlayerDataNet = require(Networking:WaitForChild("PlayerDataNetwork"))
+
 --------------------------------------------------------------------
---- Config
+--- Variables
 --------------------------------------------------------------------
 local DATASTORE_KEY = RunService:IsStudio() and "Studio" or "Live"
 local MAX_RETRIES = 5
@@ -58,7 +60,7 @@ local updateCheck = t.tuple(t.instanceOf("Player"), t.literal("Survivals", "Poin
 --------------------------------------------------------------------
 --- Module
 --------------------------------------------------------------------
-local DataStores = {
+local PlayerDataHandler = {
 	_init = false,
 	_start = false,
 }
@@ -70,7 +72,7 @@ local SIGNAL_NAMES = {
 --------------------------------------------------------------------
 --- Init / Start
 --------------------------------------------------------------------
-function DataStores:Init()
+function PlayerDataHandler:Init()
 	assert(not self._init, `[{script.Name}] already initialized`)
 	self._init = true
 
@@ -87,7 +89,7 @@ function DataStores:Init()
 	self.ProfileReleased = Signal.new()
 end
 
-function DataStores:Start()
+function PlayerDataHandler:Start()
 	assert(not self._start, `[{script.Name}] already started`)
 	self._start = true
 
@@ -99,6 +101,8 @@ function DataStores:Start()
 		self:_load(player)
 			:andThen(function()
 				print(`[{script.Name}] loaded {player.Name}'s profile`)
+				self:ClearPlayerData(player)
+				self:UpdatePlayerStat(player, "Points", 5)
 			end)
 			:catch(warn)
 	end)
@@ -109,13 +113,13 @@ function DataStores:Start()
 		end)
 	end
 
-	table.freeze(DataStores)
+	table.freeze(PlayerDataHandler)
 end
 
 --------------------------------------------------------------------
 --- Core
 --------------------------------------------------------------------
-function DataStores:_load(player: Player): Promise<nil>
+function PlayerDataHandler:_load(player: Player): Promise<nil>
 	return Promise.new(function(resolve, reject)
 		if not playerCheck(player) then
 			return reject(`[{script.Name}] bad argument #1 (Player expected)`)
@@ -177,11 +181,11 @@ function DataStores:_load(player: Player): Promise<nil>
 
 		maid:GiveTask(self:ObserveSurvivals(player, function(new)
 			survVal.Value = new
-			Remotes.SurvivalsChanged:FireClient(player, new)
+			PlayerDataNet.SurvivalsChanged:FireClient(player, new)
 		end))
 		maid:GiveTask(self:ObservePoints(player, function(new)
 			pointVal.Value = new
-			Remotes.PointsChanged:FireClient(player, new)
+			PlayerDataNet.PointsChanged:FireClient(player, new)
 		end))
 
 		self.ProfileLoaded:Fire(player, profile)
@@ -189,7 +193,7 @@ function DataStores:_load(player: Player): Promise<nil>
 	end)
 end
 
-function DataStores:_release(player: Player): Promise<nil>
+function PlayerDataHandler:_release(player: Player): Promise<nil>
 	return Promise.new(function(resolve, reject)
 		if not playerCheck(player) then
 			return reject(`[{script.Name}] bad argument #1 (Player expected)`)
@@ -220,7 +224,7 @@ end
 --------------------------------------------------------------------
 --- Public API
 --------------------------------------------------------------------
-function DataStores:GetPlayerData(player: Player): Promise<PlayerData>
+function PlayerDataHandler:GetPlayerData(player: Player): Promise<PlayerData>
 	return Promise.try(function()
 		assert(playerCheck(player))
 		local profile = self._profiles[player]
@@ -231,33 +235,47 @@ function DataStores:GetPlayerData(player: Player): Promise<PlayerData>
 	end)
 end
 
-function DataStores:SetPlayerStat(player: Player, statName: ValidStats, value: number)
+function PlayerDataHandler:SetPlayerStat(player: Player, statName: ValidStats, value: number)
 	assert(playerCheck(player) and updateCheck(player, statName, value), `One or more arguments are not valid.`)
 	local profile = self._profiles[player]
 	if not profile then
 		return warn(`[{script.Name}] profile not loaded for {player.Name}`)
 	end
+
+	local current = profile.Data[statName]
+
+	if current == value then
+		return -- we don't need to update something that is not updated.
+	end
+
 	profile.Data[statName] = value
 	self._signals[player][SIGNAL_NAMES[statName]]:Fire(value)
 
 	return --shut up LLS
 end
 
-function DataStores:UpdatePlayerStat(player: Player, statName: ValidStats, delta: number): Promise<number>
+function PlayerDataHandler:UpdatePlayerStat(player: Player, statName: ValidStats, delta: number): Promise<number>
 	return Promise.try(function()
 		assert(playerCheck(player) and updateCheck(player, statName, delta), `One or more arguments are not valid.`)
 		local profile = self._profiles[player]
 		if not profile then
 			error(`[{script.Name}] profile not loaded for {player.Name}`)
 		end
-		local new = profile.Data[statName] + delta
+
+		local current = profile.Data[statName]
+		local new = current + delta
+
+		if current == new then
+			return new -- we don't need to update something that is not updated.
+		end
+
 		profile.Data[statName] = new
 		self._signals[player][SIGNAL_NAMES[statName]]:Fire(new)
 		return new
 	end)
 end
 
-function DataStores:ObserveSurvivals(player: Player, callback: (number) -> ()): Signal.Connection?
+function PlayerDataHandler:ObserveSurvivals(player: Player, callback: (number) -> ()): Signal.Connection?
 	if not playerCheck(player) then
 		return
 	end
@@ -268,7 +286,7 @@ function DataStores:ObserveSurvivals(player: Player, callback: (number) -> ()): 
 	return sig.SurvivalsChanged:Connect(callback)
 end
 
-function DataStores:ObservePoints(player: Player, callback: (number) -> ()): Signal.Connection?
+function PlayerDataHandler:ObservePoints(player: Player, callback: (number) -> ()): Signal.Connection?
 	if not playerCheck(player) then
 		return
 	end
@@ -282,13 +300,13 @@ end
 --------------------------------------------------------------------
 --- Studio-only
 --------------------------------------------------------------------
-function DataStores:ClearPlayerData(player: Player)
+function PlayerDataHandler:ClearPlayerData(player: Player)
 	if not RunService:IsStudio() then
 		return warn(`[{script.Name}] ClearPlayerData can only be used in Studio`)
 	end
 	self:SetPlayerStat(player, "Survivals", 0)
 	self:SetPlayerStat(player, "Points", 0)
-	return  --shut up LLS
+	return --shut up LLS
 end
 
-return DataStores
+return PlayerDataHandler
