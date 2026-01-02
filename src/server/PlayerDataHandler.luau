@@ -1,4 +1,4 @@
---!native
+--!strict
 --[=[
 	Main API for player data
 	@class PlayerDataHandler
@@ -63,6 +63,8 @@ local updateCheck = t.tuple(t.instanceOf("Player"), t.literal("Survivals", "Poin
 local PlayerDataHandler = {
 	_init = false,
 	_start = false,
+	_profiles = {} :: {[Player]: any}, -- [Player]: Profile
+    _signals  = {} :: {[Player]: any},
 }
 local SIGNAL_NAMES = {
 	Survivals = "SurvivalsChanged",
@@ -78,12 +80,8 @@ function PlayerDataHandler:Init()
 
 	self._store = ProfileStore.New(DATASTORE_KEY, TEMPLATE)
 	self._profiles = {} -- [Player]: Profile
-	self._maids = {} :: {
-		[Player]: Maid.Maid,
-	}
-	self._signals = {} :: {
-		[Player]: Signal.Signal<>,
-	}
+	self._maids = {} :: {[Player]: Maid.Maid}
+	self._signals = {} :: {[Player]: Signal.Signal<>}
 
 	self.ProfileLoaded = Signal.new()
 	self.ProfileReleased = Signal.new()
@@ -102,7 +100,14 @@ function PlayerDataHandler:Start()
 			:andThen(function()
 				print(`[{script.Name}] loaded {player.Name}'s profile`)
 				self:ClearPlayerData(player)
-				self:UpdatePlayerStat(player, "Points", 5)
+
+				task.spawn(function()
+					while RunService:IsStudio() do
+						task.wait(5)
+						
+						self:UpdatePlayerStat(player, "Points", 5)
+					end
+				end)
 			end)
 			:catch(warn)
 	end)
@@ -235,23 +240,24 @@ function PlayerDataHandler:GetPlayerData(player: Player): Promise<PlayerData>
 	end)
 end
 
-function PlayerDataHandler:SetPlayerStat(player: Player, statName: ValidStats, value: number)
+function PlayerDataHandler:SetPlayerStat(player: Player, statName: ValidStats, value: number): (boolean, string?)
 	assert(playerCheck(player) and updateCheck(player, statName, value), `One or more arguments are not valid.`)
 	local profile = self._profiles[player]
 	if not profile then
-		return warn(`[{script.Name}] profile not loaded for {player.Name}`)
+		warn(`[{script.Name}] profile not loaded for {player.Name}`)
+		return false, "Profile not loaded."
 	end
 
 	local current = profile.Data[statName]
 
 	if current == value then
-		return -- we don't need to update something that is not updated.
+		return true -- we don't need to update something that is not updated.
 	end
 
 	profile.Data[statName] = value
 	self._signals[player][SIGNAL_NAMES[statName]]:Fire(value)
 
-	return --shut up LLS
+	return true
 end
 
 function PlayerDataHandler:UpdatePlayerStat(player: Player, statName: ValidStats, delta: number): Promise<number>
@@ -262,7 +268,7 @@ function PlayerDataHandler:UpdatePlayerStat(player: Player, statName: ValidStats
 			error(`[{script.Name}] profile not loaded for {player.Name}`)
 		end
 
-		local current = profile.Data[statName]
+		local current: number = profile.Data[statName]
 		local new = current + delta
 
 		if current == new then
@@ -306,7 +312,6 @@ function PlayerDataHandler:ClearPlayerData(player: Player)
 	end
 	self:SetPlayerStat(player, "Survivals", 0)
 	self:SetPlayerStat(player, "Points", 0)
-	return --shut up LLS
 end
 
 return PlayerDataHandler

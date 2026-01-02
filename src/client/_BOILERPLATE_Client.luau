@@ -13,8 +13,8 @@
 --------------------------------------------------------------------
 local Packages = game:GetService("ReplicatedStorage").Packages
 
-local Promise = require(Packages.promise)
-local t = require(Packages.t)
+local Promise = require(Packages:WaitForChild("promise"))
+local t = require(Packages:WaitForChild("t"))
 
 local _BOILERPLATE_Client = {
 	_init = false,

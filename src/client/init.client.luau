@@ -15,8 +15,3 @@ local Loader = require(Packages:WaitForChild("loader"))
 
 Loader.SpawnAll(Loader.LoadChildren(script), "Init")
 Loader.SpawnAll(Loader.LoadChildren(script), "Start")
-
-
-require(game.ReplicatedStorage.Network.PlayerDataNetwork).PointsChanged.OnClientEvent:Connect(function(...) -- just for testing porpuses, should be deleted.
-    print(...)
-end)

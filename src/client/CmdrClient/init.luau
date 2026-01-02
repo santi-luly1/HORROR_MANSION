@@ -1,20 +1,22 @@
 --!strict
 --[=[
-    Server death manager for players
-	@class PlayerDeathHandler
+    cmdr client initializer
+	@class CmdrClient
     @author: santi-luly1
 
     CHANGELOG: [
-		12/31/25 --> Adapted from original source.
+		01/01/26 --> Added cmdr for initialization only.
 	]
 ]=]
 
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local Players = game:GetService("Players")
+local Packages = game:GetService("ReplicatedStorage").Packages
 
-local PlayerDeathHandler = {
+local Cmdr = require(Packages:WaitForChild("cmdr"))
+
+local CmdrClient = {
 	_init = false,
 	_start = false,
 }
@@ -22,7 +24,6 @@ local PlayerDeathHandler = {
 --------------------------------------------------------------------
 --- Variables
 --------------------------------------------------------------------
-local tracks = script:GetChildren()
 
 --------------------------------------------------------------------
 --- Types
@@ -31,31 +32,16 @@ local tracks = script:GetChildren()
 --------------------------------------------------------------------
 --- ServiceBag (not currently using service bag)
 --------------------------------------------------------------------
-function PlayerDeathHandler:Init()
+function CmdrClient:Init()
 	assert(not self._init, `[{script.Name}] - Module already initialized.`)
-	self._init = true
+    self._init = true
 end
 
-function PlayerDeathHandler:Start()
+function CmdrClient:Start()
 	assert(not self._start, `[{script.Name}] - Module already started.`)
-	self._start = true
+    self._start = true
 
-	math.randomseed(tick()) -- just bc
-
-	Players.PlayerAdded:Connect(function(player: Player)
-		player.CharacterAdded:Connect(function(character: Model) -- memory leak?
-			local hum = character:WaitForChild("Humanoid", 30) :: Humanoid -- will this yield for the entire server? Hmmm
-			if hum then
-				hum.Died:Once(function()
-					warn(`[{script.Name}] Player {player.Name} has died.`)
-					player:SetAttribute("PlayerState", "Dead")
-					local track = tracks[math.random(1, #tracks)]:Clone() :: Sound
-					track.Parent = character.PrimaryPart
-                    track:Play()
-				end)
-			end
-		end)
-	end)
+    Cmdr:SetActivationKeys({ Enum.KeyCode.Q })
 end
 
 --------------------------------------------------------------------
@@ -66,4 +52,5 @@ end
 --- API
 --------------------------------------------------------------------
 
-return PlayerDeathHandler
+
+return CmdrClient
