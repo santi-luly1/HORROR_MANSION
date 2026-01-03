@@ -9,6 +9,9 @@
       },
       "Network": {
         "$path": "src/network"
+      },
+      "Shared": {
+        "$path": "src/shared"
       }
     },
 

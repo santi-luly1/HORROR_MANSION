@@ -8,6 +8,11 @@ version = "3.4.0"
 dependencies = []
 
 [[package]]
+name = "csqrl/colour-utils"
+version = "1.4.1"
+dependencies = []
+
+[[package]]
 name = "devsparkle/maid"
 version = "2.1.0"
 dependencies = []
@@ -28,6 +33,11 @@ version = "4.0.0"
 dependencies = []
 
 [[package]]
+name = "imavafe/onyx-ui"
+version = "1.0.2"
+dependencies = [["ColorUtils", "csqrl/colour-utils@1.4.1"], ["Fusion", "elttob/fusion@0.3.0"]]
+
+[[package]]
 name = "osyrisrblx/t"
 version = "3.1.1"
 dependencies = []
@@ -35,7 +45,7 @@ dependencies = []
 [[package]]
 name = "santiago/horror-mansion"
 version = "0.1.0"
-dependencies = [["cmdr", "evaera/cmdr@1.12.0"], ["fusion", "elttob/fusion@0.3.0"], ["loader", "sleitnick/loader@2.0.0"], ["maid", "devsparkle/maid@2.1.0"], ["net", "sleitnick/net@0.2.0"], ["profilestore", "vyon/profilestore@1.0.3"], ["promise", "evaera/promise@4.0.0"], ["signal", "sleitnick/signal@2.0.3"], ["t", "osyrisrblx/t@3.1.1"], ["topbarplus", "1foreverhd/topbarplus@3.4.0"]]
+dependencies = [["cmdr", "evaera/cmdr@1.12.0"], ["fusion", "elttob/fusion@0.3.0"], ["loader", "sleitnick/loader@2.0.0"], ["maid", "devsparkle/maid@2.1.0"], ["net", "sleitnick/net@0.2.0"], ["onyx-ui", "imavafe/onyx-ui@1.0.2"], ["profilestore", "vyon/profilestore@1.0.3"], ["promise", "evaera/promise@4.0.0"], ["signal", "sleitnick/signal@2.0.3"], ["t", "osyrisrblx/t@3.1.1"], ["topbarplus", "1foreverhd/topbarplus@3.4.0"]]
 
 [[package]]
 name = "sleitnick/loader"

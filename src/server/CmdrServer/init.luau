@@ -1,11 +1,11 @@
 --!strict
 --[=[
-    cmdr server initializer
+    Cmdr server initializer
 	@class cmdrServer
     @author: santi-luly1
 
     CHANGELOG: [
-		01/01/26 --> Added cmdr for initialization only.
+		01/01/26 --> Added Cmdr for initialization only.
 	]
 ]=]
 

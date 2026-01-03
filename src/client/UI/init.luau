@@ -5,7 +5,7 @@
     @author: santi-luly1
 
     CHANGELOG: [
-		01/01/26 --> change
+		01/01/26 --> Created module with a simple UI for survivals and points.
 	]
 ]=]
 
