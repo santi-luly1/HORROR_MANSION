@@ -12,9 +12,7 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local Packages = game:GetService("ReplicatedStorage").Packages
-
-local Cmdr = require(Packages:WaitForChild("cmdr"))
+local Cmdr = require(script:WaitForChild("Cmdr"))
 
 local CmdrServer = {
 	_init = false,

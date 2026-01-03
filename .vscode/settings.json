@@ -1,3 +1,4 @@
 {
-  "editor.fontFamily": "Fira Code, JetBrains Mono, monospace"
+  "editor.fontFamily": "Fira Code, JetBrains Mono, monospace",
+  "luau-lsp.plugin.enabled": true,
 }

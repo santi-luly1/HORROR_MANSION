@@ -13,8 +13,11 @@
 --- Dependencies
 --------------------------------------------------------------------
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
 
 local Cmdr = require(ReplicatedStorage:WaitForChild("CmdrClient") :: ModuleScript)
+local CmdrConfig = require(ReplicatedStorage.Shared.CmdrConfig)
 
 local CmdrClient = {
 	_init = false,
@@ -41,7 +44,9 @@ function CmdrClient:Start()
 	assert(not self._start, `[{script.Name}] - Module already started.`)
     self._start = true
 
-    Cmdr:SetActivationKeys({ Enum.KeyCode.F2 })
+    if table.find(CmdrConfig.Permissions.Admin, player.UserId) then
+		Cmdr:SetActivationKeys({ Enum.KeyCode.F2 })
+    end
 end
 
 --------------------------------------------------------------------
