@@ -1,40 +1,49 @@
--- UI.story.luau finalmente, mira lo que logr'e luego de modificar 213 archivos, y como 5 horas de estar aqu'i
-return function(Target)
-	local Packages = game:GetService("ReplicatedStorage"):WaitForChild("Packages")
+--!strict
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Packages = ReplicatedStorage:WaitForChild("Packages")
 
-	local Fusion = require(Packages:WaitForChild("fusion"))
-	local OnyxUI = require(Packages:WaitForChild("onyx-ui"))
-	local Themer = OnyxUI.Themer
+local Fusion = require(Packages:WaitForChild("fusion"))
+local OnyxUI = require(Packages:WaitForChild("onyx-ui"))
 
-	local scope = Fusion.scoped(Fusion)
+local Themer = OnyxUI.Themer
+local scoped = Fusion.scoped
+local Components = OnyxUI.Components
 
-	-- optional theme toggle
+local uiModule = require(script.Parent.Parent.UI)
+
+return function(Target: Instance)
+	local scope = scoped(Fusion, Components)
+	local Theme = Themer.Theme:now()
+
 	local useLight = scope:Value(false)
 	local activeTheme = scope:Computed(function(use)
 		return use(useLight) and Themer.NewTheme(scope, {}) -- empty = default light
 			or Themer.Theme:now() -- default dark
 	end)
 
-	-- mount the real module under the chosen theme
-	Themer.Theme:is(activeTheme):during(function()
-		local UI = require(script.Parent.Parent.UI)
-		UI:Init()
-		local ui = UI:Start()
-		for _, child in ipairs(ui:GetChildren()) do
-			child.Parent = Target
-		end
-		ui:Destroy() -- we do not need the ScreenGui any more
-		return function()
-			ui:Destroy()
+	-- Mount UI under the chosen theme
+	Themer.Theme:is(Fusion.peek(activeTheme)):during(function()
+		-- Create the actual UI
+		local uiInstance = uiModule:Start()
+		uiInstance.Parent = Target
+
+		return function() -- will this even work? We're in a contextual block...
+			if uiInstance and uiInstance.Parent then
+				uiInstance:Destroy()
+			end
 		end
 	end)
 
-	-- quick toggle button (optional)
-	scope:New "TextButton" {
+	-- Quick toggle button using OnyxUI components
+	scope:IconButton {
+		Image = "rbxassetid://6035140766", -- icon
 		Parent = Target,
-		Size = UDim2.fromOffset(80, 24),
-		Text = "Toggle theme",
-		[Fusion.OnEvent "Activated"] = function()
+		Position = UDim2.fromScale(.5, .5),
+		Size = UDim2.fromOffset(32, 32),
+		BackgroundTransparency = 1,
+		ImageColor3 = Theme.Colors.Neutral.Main,
+		OnActivate = function()
+			print("AAAAAAAAAAAAAAAA")
 			useLight:set(not Fusion.peek(useLight))
 		end,
 	}

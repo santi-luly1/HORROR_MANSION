@@ -6,8 +6,23 @@
 
     CHANGELOG: [
 		01/01/26 --> Created module with a simple UI for survivals and points.
+		01/04/26 --> Support for individual components and easier story management.
 	]
 ]=]
+
+--------------------------------------------------------------------
+--- Components
+--------------------------------------------------------------------
+local PointsDisplay = require(script.PointsDisplay)
+local SurvivalsDisplay = require(script.SurvivalsDisplay)
+
+--------------------------------------------------------------------
+--- Types
+--------------------------------------------------------------------
+export type ComponentHandles = {
+	PointsDisplay: PointsDisplay.PointsDisplayHandle?,
+	SurvivalsDisplay: SurvivalsDisplay.SurvivalsDisplayHandle?,
+}
 
 --------------------------------------------------------------------
 --- Dependencies
@@ -19,21 +34,20 @@ local Networking = ReplicatedStorage:WaitForChild("Network")
 
 local Fusion = require(Packages:WaitForChild("fusion"))
 local OnyxUI = require(Packages:WaitForChild("onyx-ui"))
+
 local Themer = OnyxUI.Themer
+local Components = OnyxUI.Components
+local scoped = Fusion.scoped
+local Children = Fusion.Children
 
 local PlayerDataNet = require(Networking:WaitForChild("PlayerDataNetwork"))
-local doCleanup, scoped, peek, Children = Fusion.doCleanup, Fusion.scoped, Fusion.peek, Fusion.Children
 
 local UI = {
 	_init = false,
 	_start = false,
+	_dataConnections = {} :: { RBXScriptConnection },
+	_componentHandles = {} :: ComponentHandles,
 }
-
-local scope = scoped(Fusion, OnyxUI.Components)
-local Theme = Themer.Theme:now()
-
-local points = scope:Value(0)
-local survivals = scope:Value(0)
 
 --------------------------------------------------------------------
 --- Variables
@@ -43,10 +57,6 @@ local player = Players.LocalPlayer :: Player
 local playerGui = player and player:FindFirstChild("PlayerGui")
 
 --------------------------------------------------------------------
---- Types
---------------------------------------------------------------------
-
---------------------------------------------------------------------
 --- ServiceBag (not currently using service bag)
 --------------------------------------------------------------------
 function UI:Init()
@@ -54,55 +64,81 @@ function UI:Init()
 	self._init = true
 
 	-- updaters
-	PlayerDataNet.PointsChanged.OnClientEvent:Connect(function(new: number)
-		points:set(new)
+	local pointsConn = PlayerDataNet.PointsChanged.OnClientEvent:Connect(function(new: number)
+		local handle = self._componentHandles.PointsDisplay
+		if handle then
+			handle:SetPoints(new)
+		end
 	end)
-	PlayerDataNet.SurvivalsChanged.OnClientEvent:Connect(function(new: number)
-		survivals:set(new)
+
+	local survivalsConn = PlayerDataNet.SurvivalsChanged.OnClientEvent:Connect(function(new: number)
+		local handle = self._componentHandles.SurvivalsDisplay
+		if handle then
+			handle:SetSurvivals(new)
+		end
 	end)
+
+	table.insert(self._dataConnections, pointsConn)
+	table.insert(self._dataConnections, survivalsConn)
 end
 
-function UI:Start()
+function UI:Start(): (Instance, ComponentHandles?)
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
 
-	-- root gui
-	return scope:New "ScreenGui" {
-		Name = "UI",
-		Parent = playerGui or script,
+	local scope = scoped(Fusion, Components)
+	local Theme = Fusion.peek(Themer.Theme:now())
 
-		[Children] = {
-			scope:New "TextLabel" { -- plain instance, zero theme deps
-				Name = "totalPoints",
-				BackgroundTransparency = 1,
-				Font = Enum.Font.Arial,
-				TextScaled = true,
-				AnchorPoint = Vector2.new(0, 1),
-				Position = UDim2.fromScale(0, 1),
-				Size = UDim2.fromScale(0.1, 0.045),
-				TextStrokeTransparency = 0,
-				TextColor3 = Theme.Colors.Primary.Main,
-				Text = scope:Computed(function(use)
-					return `Points: {use(points)}`
-				end),
+	local pointsDisplay = PointsDisplay {
+		scope = scope,
+		initialPoints = 0,
+	}
+
+	local survivalsDisplay = SurvivalsDisplay {
+		scope = scope,
+		initialSurvivals = 0,
+	}
+
+	-- store component handles for data updates
+	self._componentHandles.PointsDisplay = pointsDisplay
+	self._componentHandles.SurvivalsDisplay = survivalsDisplay
+
+	if playerGui then -- we're on a server.
+		return scope:New "ScreenGui" {
+			Name = "UI",
+			Parent = playerGui or script,
+			[Children] = {
+				scope:Frame { -- MainContainer
+					Name = "MainContainer",
+					BackgroundTransparency = 1,
+					Size = UDim2.fromScale(1, 1),
+					Position = UDim2.fromScale(0, 0),
+					BackgroundColor3 = scope:Computed(function(use)
+						return use(Theme.Colors.Base.Main)
+					end), -- Using theme properly
+					[Children] = {
+						pointsDisplay.Component,
+						survivalsDisplay.Component,
+					},
+				},
 			},
-			scope:New "TextLabel" { -- Survivals label.
-				Name = "totalSurvivals",
-				BackgroundTransparency = 1,
-				Font = Enum.Font.Arial,
-				TextScaled = true,
-				Size = UDim2.fromScale(0.1, 0.045),
-				AnchorPoint = Vector2.new(0, 1),
-				Position = UDim2.fromScale(0, 0.95),
-				TextStrokeTransparency = 0,
-				TextColor3 = Theme.Colors.Primary.Main,
-				--TextColor3 = Color3.fromRGB(255, 0, 0),
-				Text = scope:Computed(function(use)
-					return `Survivals: {use(survivals)}`
-				end),
+		}
+	else --we're on a storybook (maybe).
+		return scope:Frame { -- MainContainer
+			Name = "MainContainer",
+			BackgroundTransparency = 1,
+			Size = UDim2.fromScale(1, 1),
+			Position = UDim2.fromScale(0, 0),
+			BackgroundColor3 = scope:Computed(function(use)
+				return use(Theme.Colors.Base.Main)
+			end), -- Using theme properly
+			[Children] = {
+				pointsDisplay.Component,
+				survivalsDisplay.Component,
 			},
 		},
-	}
+			self._componentHandles
+	end
 end
 
 --------------------------------------------------------------------

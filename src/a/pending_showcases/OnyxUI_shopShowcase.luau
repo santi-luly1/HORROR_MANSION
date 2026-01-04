@@ -175,15 +175,14 @@ for i, item in ipairs(shopItems) do
 	}
 end
 
-
-	-- Add coins every 10 seconds
-	task.spawn(function()
-		while true do
-			task.wait(10)
-			local current = Fusion.peek(coinBalance)
-			coinBalance:set(current + 50)
-			print("Added 50 coins! New balance:", Fusion.peek(coinBalance))
-		end
-	end)
+-- Add coins every 10 seconds
+task.spawn(function()
+	while true do
+		task.wait(10)
+		local current = Fusion.peek(coinBalance)
+		coinBalance:set(current + 50)
+		print("Added 50 coins! New balance:", Fusion.peek(coinBalance))
+	end
+end)
 
 print("Simple OnyxUI Shop loaded!")
