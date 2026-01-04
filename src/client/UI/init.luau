@@ -82,12 +82,12 @@ function UI:Init()
 	table.insert(self._dataConnections, survivalsConn)
 end
 
-function UI:Start(): (Instance, ComponentHandles?)
+function UI:Start(startingTheme: OnyxUI.ThemeSpec?): (Instance, ComponentHandles?)
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
 
 	local scope = scoped(Fusion, Components)
-	local Theme = Fusion.peek(Themer.Theme:now())
+	local Theme = startingTheme or Fusion.peek(Themer.Theme:now())
 
 	local pointsDisplay = PointsDisplay {
 		scope = scope,

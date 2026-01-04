@@ -24,7 +24,7 @@ return function(Target: Instance)
 	-- Mount UI under the chosen theme
 	Themer.Theme:is(Fusion.peek(activeTheme)):during(function()
 		-- Create the actual UI
-		local uiInstance = uiModule:Start()
+		local uiInstance = uiModule:Start(Fusion.peek(activeTheme))
 		uiInstance.Parent = Target
 
 		return function() -- will this even work? We're in a contextual block...
