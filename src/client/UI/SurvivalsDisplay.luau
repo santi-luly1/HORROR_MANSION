@@ -7,6 +7,7 @@ local OnyxUI = require(Packages:WaitForChild("onyx-ui"))
 
 local Components = OnyxUI.Components
 local Themer = OnyxUI.Themer
+local Children = Fusion.Children
 
 export type SurvivalsDisplayProps = {
 	scope: Fusion.Scope,
@@ -40,6 +41,9 @@ return function(props: SurvivalsDisplayProps): SurvivalsDisplayHandle
 		AnchorPoint = Vector2.new(0, 1),
 		Position = props.Position or UDim2.fromScale(0, 0.95),
 		Size = props.Size or UDim2.fromScale(0.1, 0.045),
+        [Children] = {
+            scope:New "UIStroke" {}
+        }
 	}
 
 	return {
