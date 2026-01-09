@@ -30,7 +30,7 @@ local _
 --------------------------------------------------------------------
 --- Types
 --------------------------------------------------------------------
-type Promise<T> = typeof(Promise)
+type TypedPromise<T> = Promise.TypedPromise<T>
 export type TYPE = "a" | "b"
 local TYPE = t.optional(t.string)
 
@@ -50,7 +50,7 @@ end
 --------------------------------------------------------------------
 --- Handlers
 --------------------------------------------------------------------
-function _BOILERPLATE_Server:doSomething(a: TYPE): Promise<nil>
+function _BOILERPLATE_Server:doSomething(a: TYPE): TypedPromise<nil>
     return Promise.new(function(resolve, reject, onCancel)
         if not TYPE(a) then
 			return reject(`[{script.Name}] bad argument #1 (string expected)`)

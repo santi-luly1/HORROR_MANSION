@@ -10,6 +10,7 @@
 					signals fire remotes for the client and now using Promises.try on public APIs.
 		12/31/25 --> Added retry/back-off, consistent error handling, fixed isPlayer type-check, added
 					profile-versioning, etc.
+		01/09/26 --> Added Promise typechecking.
 ]=]
 
 --------------------------------------------------------------------
@@ -31,12 +32,27 @@ local t = require(Packages:WaitForChild("t"))
 local PlayerDataNet = require(Networking:WaitForChild("PlayerDataNetwork"))
 
 --------------------------------------------------------------------
+--- Module
+--------------------------------------------------------------------
+local PlayerDataHandler = {
+	_init = false,
+	_start = false,
+	_profiles = {} :: { [Player]: PlayerProfile },
+	_maids = {} :: { [Player]: Maid.Maid },
+	_signals = {} :: { [Player]: { [string]: Signal.Signal<number> } },
+}
+
+--------------------------------------------------------------------
 --- Variables
 --------------------------------------------------------------------
 local DATASTORE_KEY = RunService:IsStudio() and "Studio" or "Live"
 local MAX_RETRIES = 5
 local YIELD_PER_RETRY = 2 -- seconds
 local PROFILE_VERSION = 1 -- bump when template changes
+local SIGNAL_NAMES = {
+	Survivals = "SurvivalsChanged",
+	Points = "PointsChanged",
+} :: { [ValidStats]: string }
 
 --------------------------------------------------------------------
 --- Template
@@ -50,26 +66,18 @@ local TEMPLATE = {
 --------------------------------------------------------------------
 --- Types
 --------------------------------------------------------------------
-type Promise<T> = typeof(Promise.new())
+type TypedPromise<T...> = Promise.TypedPromise<T...>
+type PlayerProfile = ProfileStore.Profile<PlayerData>
+type ProfileStateChangedSignal = Signal.Signal<Player, ProfileStore.Profile<PlayerData>>
 export type ValidStats = "Survivals" | "Points"
-export type PlayerData = { Survivals: number, Points: number }
+export type PlayerData = {
+	Survivals: number,
+	Points: number,
+	Version: number,
+}
 
 local playerCheck = t.instanceOf("Player")
 local updateCheck = t.tuple(t.instanceOf("Player"), t.literal("Survivals", "Points"), t.number)
-
---------------------------------------------------------------------
---- Module
---------------------------------------------------------------------
-local PlayerDataHandler = {
-	_init = false,
-	_start = false,
-	_profiles = {} :: {[Player]: any}, -- [Player]: Profile
-    _signals  = {} :: {[Player]: any},
-}
-local SIGNAL_NAMES = {
-	Survivals = "SurvivalsChanged",
-	Points = "PointsChanged",
-}
 
 --------------------------------------------------------------------
 --- Init / Start
@@ -79,12 +87,9 @@ function PlayerDataHandler:Init()
 	self._init = true
 
 	self._store = ProfileStore.New(DATASTORE_KEY, TEMPLATE)
-	self._profiles = {} -- [Player]: Profile
-	self._maids = {} :: {[Player]: Maid.Maid}
-	self._signals = {} :: {[Player]: Signal.Signal<>}
 
-	self.ProfileLoaded = Signal.new()
-	self.ProfileReleased = Signal.new()
+	self.ProfileLoaded = Signal.new() :: ProfileStateChangedSignal
+	self.ProfileReleased = Signal.new() :: ProfileStateChangedSignal
 end
 
 function PlayerDataHandler:Start()
@@ -104,7 +109,6 @@ function PlayerDataHandler:Start()
 				task.spawn(function()
 					while RunService:IsStudio() do
 						task.wait(5)
-						
 						self:UpdatePlayerStat(player, "Points", 5)
 					end
 				end)
@@ -117,21 +121,19 @@ function PlayerDataHandler:Start()
 			self:_load(player):catch(warn)
 		end)
 	end
-
-	table.freeze(PlayerDataHandler)
 end
 
 --------------------------------------------------------------------
 --- Core
 --------------------------------------------------------------------
-function PlayerDataHandler:_load(player: Player): Promise<nil>
+function PlayerDataHandler:_load(player: Player): TypedPromise<nil>
 	return Promise.new(function(resolve, reject)
 		if not playerCheck(player) then
 			return reject(`[{script.Name}] bad argument #1 (Player expected)`)
 		end
 
 		-- retry with back-off
-		local profile
+		local profile: ProfileStore.Profile<PlayerData>
 		for attempt = 1, MAX_RETRIES do
 			profile = self._store:StartSessionAsync(`P_{player.UserId}`, {
 				Cancel = function()
@@ -159,11 +161,9 @@ function PlayerDataHandler:_load(player: Player): Promise<nil>
 		local maid = Maid.new()
 		self._maids[player] = maid
 
-		local survSig = Signal.new()
-		local pointSig = Signal.new()
 		self._signals[player] = {
-			SurvivalsChanged = survSig,
-			PointsChanged = pointSig,
+			SurvivalsChanged = Signal.new(),
+			PointsChanged = Signal.new(),
 		}
 
 		-- leaderstats
@@ -194,11 +194,11 @@ function PlayerDataHandler:_load(player: Player): Promise<nil>
 		end))
 
 		self.ProfileLoaded:Fire(player, profile)
-		return resolve() --shut up LLS
+		resolve()
 	end)
 end
 
-function PlayerDataHandler:_release(player: Player): Promise<nil>
+function PlayerDataHandler:_release(player: Player): TypedPromise<nil>
 	return Promise.new(function(resolve, reject)
 		if not playerCheck(player) then
 			return reject(`[{script.Name}] bad argument #1 (Player expected)`)
@@ -222,48 +222,49 @@ function PlayerDataHandler:_release(player: Player): Promise<nil>
 			self.ProfileReleased:Fire(player, profile)
 		end
 		self._profiles[player] = nil
-		return resolve() --shut up LLS
+		resolve()
 	end)
 end
 
 --------------------------------------------------------------------
 --- Public API
 --------------------------------------------------------------------
-function PlayerDataHandler:GetPlayerData(player: Player): Promise<PlayerData>
+function PlayerDataHandler:GetPlayerData(player: Player): TypedPromise<PlayerData>
 	return Promise.try(function()
 		assert(playerCheck(player))
-		local profile = self._profiles[player]
+		local profile: PlayerProfile = self._profiles[player]
 		if not profile then
 			error(`[{script.Name}] profile not loaded for {player.Name}`)
 		end
-		return { Survivals = profile.Data.Survivals, Points = profile.Data.Points }
+		return { Survivals = profile.Data.Survivals, Points = profile.Data.Points, Version = profile.Data.Version }
 	end)
 end
 
-function PlayerDataHandler:SetPlayerStat(player: Player, statName: ValidStats, value: number): (boolean, string?)
-	assert(playerCheck(player) and updateCheck(player, statName, value), `One or more arguments are not valid.`)
-	local profile = self._profiles[player]
-	if not profile then
-		warn(`[{script.Name}] profile not loaded for {player.Name}`)
-		return false, "Profile not loaded."
-	end
+function PlayerDataHandler:SetPlayerStat(player: Player, statName: ValidStats, value: number): TypedPromise<boolean>
+	return Promise.try(function()
+		assert(playerCheck(player) and updateCheck(player, statName, value), `One or more arguments are not valid.`)
+		local profile = self._profiles[player] --do not add PlayerProfile type to this var or else LLS will get mad.
+		if not profile then
+			error(`[{script.Name}] profile not loaded for {player.Name}`)
+		end
 
-	local current = profile.Data[statName]
+		local current = profile.Data[statName]
 
-	if current == value then
-		return true -- we don't need to update something that is not updated.
-	end
+		if current == value then
+			return true
+		end
 
-	profile.Data[statName] = value
-	self._signals[player][SIGNAL_NAMES[statName]]:Fire(value)
+		profile.Data[statName] = value
+		self._signals[player][SIGNAL_NAMES[statName]]:Fire(value)
 
-	return true
+		return true
+	end)
 end
 
-function PlayerDataHandler:UpdatePlayerStat(player: Player, statName: ValidStats, delta: number): Promise<number>
+function PlayerDataHandler:UpdatePlayerStat(player: Player, statName: ValidStats, delta: number): TypedPromise<number>
 	return Promise.try(function()
 		assert(playerCheck(player) and updateCheck(player, statName, delta), `One or more arguments are not valid.`)
-		local profile = self._profiles[player]
+		local profile = self._profiles[player] --do not add PlayerProfile type to this var or else LLS will get mad.
 		if not profile then
 			error(`[{script.Name}] profile not loaded for {player.Name}`)
 		end
@@ -314,4 +315,7 @@ function PlayerDataHandler:ClearPlayerData(player: Player)
 	self:SetPlayerStat(player, "Points", 0)
 end
 
-return PlayerDataHandler
+return PlayerDataHandler :: typeof(PlayerDataHandler) & {
+	_profiles: { [Player]: PlayerProfile },
+	_signals: { [Player]: { [string]: Signal.Signal<number> } },
+}

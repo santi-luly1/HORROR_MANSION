@@ -27,6 +27,7 @@ export type PointsDisplayHandle = {
 return function(props: PointsDisplayProps): PointsDisplayHandle
 	local scope = props.scope:innerScope(Fusion, Components)
 	local theme = Themer.Theme:now() -- state object
+
 	local points = scope:Value(props.initialPoints or 0)
 
 	local component = scope:Text {
