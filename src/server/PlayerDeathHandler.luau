@@ -22,7 +22,7 @@ local PlayerDeathHandler = {
 --------------------------------------------------------------------
 --- Variables
 --------------------------------------------------------------------
-local tracks = script:GetChildren()
+local tracks = script:GetChildren() :: {Sound}
 
 --------------------------------------------------------------------
 --- Types
@@ -49,7 +49,7 @@ function PlayerDeathHandler:Start()
 				hum.Died:Once(function()
 					warn(`[{script.Name}] Player {player.Name} has died.`)
 					player:SetAttribute("PlayerState", "Dead")
-					local track = tracks[math.random(1, #tracks)]:Clone() :: Sound
+					local track = tracks[math.random(1, #tracks)]:Clone()
 					track.Parent = character.PrimaryPart
                     track:Play()
 				end)

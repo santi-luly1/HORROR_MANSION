@@ -23,7 +23,7 @@ local Packages = ReplicatedStorage:WaitForChild("Packages")
 local Networking = ReplicatedStorage:WaitForChild("Network")
 
 local Maid = require(Packages:WaitForChild("maid"))
-local ProfileStore = require(Packages:WaitForChild("profilestore"))
+local ProfileStore = require(script:WaitForChild("ProfileStore"))
 local Promise = require(Packages:WaitForChild("promise"))
 local Signal = require(Packages:WaitForChild("signal"))
 local t = require(Packages:WaitForChild("t"))
