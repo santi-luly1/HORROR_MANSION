@@ -68,7 +68,7 @@ local TEMPLATE = {
 --------------------------------------------------------------------
 type TypedPromise<T...> = Promise.TypedPromise<T...>
 type PlayerProfile = ProfileStore.Profile<PlayerData>
-type ProfileStateChangedSignal = Signal.Signal<Player, ProfileStore.Profile<PlayerData>>
+type ProfileStateChangedSignal = Signal.Signal<Player, PlayerProfile>
 export type ValidStats = "Survivals" | "Points"
 export type PlayerData = {
 	Survivals: number,
@@ -100,7 +100,7 @@ function PlayerDataHandler:Start()
 		self:_release(player):catch(warn)
 	end)
 
-	Players.PlayerAdded:Connect(function(player: Player)
+	local function createProfileForPlayer(player: Player)
 		self:_load(player)
 			:andThen(function()
 				print(`[{script.Name}] loaded {player.Name}'s profile`)
@@ -114,11 +114,13 @@ function PlayerDataHandler:Start()
 				end)
 			end)
 			:catch(warn)
-	end)
+	end
+
+	Players.PlayerAdded:Connect(createProfileForPlayer)
 
 	for _, player in Players:GetPlayers() do -- handle studio early entries
 		task.spawn(function()
-			self:_load(player):catch(warn)
+			createProfileForPlayer(player)
 		end)
 	end
 end
@@ -126,14 +128,14 @@ end
 --------------------------------------------------------------------
 --- Core
 --------------------------------------------------------------------
-function PlayerDataHandler:_load(player: Player): TypedPromise<nil>
+function PlayerDataHandler:_load(player: Player): TypedPromise<>
 	return Promise.new(function(resolve, reject)
 		if not playerCheck(player) then
 			return reject(`[{script.Name}] bad argument #1 (Player expected)`)
 		end
 
 		-- retry with back-off
-		local profile: ProfileStore.Profile<PlayerData>
+		local profile: PlayerProfile
 		for attempt = 1, MAX_RETRIES do
 			profile = self._store:StartSessionAsync(`P_{player.UserId}`, {
 				Cancel = function()
@@ -194,11 +196,11 @@ function PlayerDataHandler:_load(player: Player): TypedPromise<nil>
 		end))
 
 		self.ProfileLoaded:Fire(player, profile)
-		resolve()
+		return resolve()
 	end)
 end
 
-function PlayerDataHandler:_release(player: Player): TypedPromise<nil>
+function PlayerDataHandler:_release(player: Player): TypedPromise<>
 	return Promise.new(function(resolve, reject)
 		if not playerCheck(player) then
 			return reject(`[{script.Name}] bad argument #1 (Player expected)`)
