@@ -9,7 +9,7 @@ local function findNearestTorso(pos: Vector3): Part?
 		local char = p.Character
 		local hrp = char and char:FindFirstChild("HumanoidRootPart") :: Part
 		local hum = char and char:FindFirstChildOfClass("Humanoid")
-		if hrp and hum and hum.Health > 0 then
+		if hrp and hum and hum.Health > 0 and not char:FindFirstChildOfClass("ForceField") then
 			local d = (hrp.Position - pos).Magnitude
 			if d < dist then
 				closest, dist = hrp, d
@@ -39,27 +39,32 @@ return function(model: Model, maid: any, customPosition: Vector3?): boolean
 		AgentRadius = 2,
 		AgentCanJump = true,
 	})
-
 	path:ComputeAsync(torso.Position, target.Position)
 	if path.Status ~= Enum.PathStatus.Success then
 		return false
 	end
 
-	for _, waypoint in ipairs(path:GetWaypoints()) do
+	local lastTargetPos = target.Position -- snapshot
+	local waypoints = path:GetWaypoints()
+
+	for i, waypoint in ipairs(waypoints) do
 		if not model.Parent or humanoid.Health <= 0 then
+			break
+		end
+
+		if (target.Position - lastTargetPos).Magnitude >= 10 and i / #waypoints <= 0.75 then -- if the target got 10 studs away from the destination, and the progress made is below 75%, then recalculate
+			warn(`{target.Parent} moved 10 studs away from original destination, break.`)
 			break
 		end
 
 		if waypoint.Action == Enum.PathWaypointAction.Jump then
 			humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
 		end
-
 		humanoid:MoveTo(waypoint.Position)
 		local moved = humanoid.MoveToFinished:Wait()
 		if not moved then
 			break
 		end
 	end
-
 	return true
 end

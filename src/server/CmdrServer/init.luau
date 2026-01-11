@@ -14,6 +14,9 @@
 --------------------------------------------------------------------
 local Cmdr = require(script:WaitForChild("Cmdr"))
 
+--------------------------------------------------------------------
+--- Module
+--------------------------------------------------------------------
 local CmdrServer = {
 	_init = false,
 	_start = false,
@@ -32,12 +35,12 @@ local CmdrServer = {
 --------------------------------------------------------------------
 function CmdrServer:Init()
 	assert(not self._init, `[{script.Name}] - Module already initialized.`)
-    self._init = true
+	self._init = true
 end
 
 function CmdrServer:Start()
 	assert(not self._start, `[{script.Name}] - Module already started.`)
-    self._start = true
+	self._start = true
 
 	Cmdr:RegisterCommandsIn(script.Commands)
 	Cmdr:RegisterHooksIn(script.Hooks)
@@ -51,6 +54,5 @@ end
 --------------------------------------------------------------------
 --- API
 --------------------------------------------------------------------
-
 
 return CmdrServer

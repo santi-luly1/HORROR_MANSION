@@ -11,6 +11,7 @@
 		12/31/25 --> Added retry/back-off, consistent error handling, fixed isPlayer type-check, added
 					profile-versioning, etc.
 		01/09/26 --> Added Promise typechecking.
+		01/11/26 --> Entire module is now typechecked.
 ]=]
 
 --------------------------------------------------------------------
@@ -38,9 +39,10 @@ local PlayerDataHandler = {
 	_init = false,
 	_start = false,
 	_profiles = {} :: { [Player]: PlayerProfile },
+	_store = (nil :: any) :: ProfileStore.ProfileStore<PlayerData>,
 	_maids = {} :: { [Player]: Maid.Maid },
 	_signals = {} :: { [Player]: { [string]: Signal.Signal<number> } },
-}
+} :: PlayerDataHandler
 
 --------------------------------------------------------------------
 --- Variables
@@ -61,7 +63,7 @@ local TEMPLATE = {
 	Survivals = 0,
 	Points = 0,
 	Version = PROFILE_VERSION, -- versioning
-}
+} :: PlayerData
 
 --------------------------------------------------------------------
 --- Types
@@ -74,6 +76,35 @@ export type PlayerData = {
 	Survivals: number,
 	Points: number,
 	Version: number,
+}
+type PlayerDataHandler = {
+    -- lifecycle
+    Init: (self: PlayerDataHandler) -> (),
+    Start: (self: PlayerDataHandler) -> (),
+
+    -- public API
+    GetPlayerData: (self: PlayerDataHandler, Player) -> TypedPromise<PlayerData>,
+    SetPlayerStat: (self: PlayerDataHandler, Player, ValidStats, number) -> TypedPromise<boolean>,
+    UpdatePlayerStat: (self: PlayerDataHandler, Player, ValidStats, number) -> TypedPromise<number>,
+    ObserveSurvivals: (self: PlayerDataHandler, Player, (number)->()) -> Signal.Connection?,
+    ObservePoints: (self: PlayerDataHandler, Player, (number)->()) -> Signal.Connection?,
+    ClearPlayerData: (self: PlayerDataHandler, Player) -> (),
+
+    -- events
+    ProfileLoaded: ProfileStateChangedSignal,
+    ProfileReleased: ProfileStateChangedSignal,
+
+    -- private
+    _init: boolean,
+    _start: boolean,
+    _store: ProfileStore.ProfileStore<PlayerData>,
+    _profiles: { [Player]: PlayerProfile },
+    _maids: { [Player]: Maid.Maid },
+    _signals: { [Player]: { [string]: Signal.Signal<number> } },
+
+    -- private methods
+    _load: (self: PlayerDataHandler, Player) -> TypedPromise<>,
+    _release: (self: PlayerDataHandler, Player) -> TypedPromise<>,
 }
 
 local playerCheck = t.instanceOf("Player")
@@ -135,7 +166,7 @@ function PlayerDataHandler:_load(player: Player): TypedPromise<>
 		end
 
 		-- retry with back-off
-		local profile: PlayerProfile
+		local profile: PlayerProfile?
 		for attempt = 1, MAX_RETRIES do
 			profile = self._store:StartSessionAsync(`P_{player.UserId}`, {
 				Cancel = function()
@@ -250,13 +281,13 @@ function PlayerDataHandler:SetPlayerStat(player: Player, statName: ValidStats, v
 			error(`[{script.Name}] profile not loaded for {player.Name}`)
 		end
 
-		local current = profile.Data[statName]
+		local current: number = (profile.Data :: PlayerData)[statName] -- LLS wouldn't shut up.. what do I doooooo?!?!?!?
 
 		if current == value then
 			return true
 		end
 
-		profile.Data[statName] = value
+		(profile.Data :: PlayerData)[statName] = value -- LLS wouldn't shut up.. what do I doooooo?!?!?!?
 		self._signals[player][SIGNAL_NAMES[statName]]:Fire(value)
 
 		return true
@@ -271,14 +302,14 @@ function PlayerDataHandler:UpdatePlayerStat(player: Player, statName: ValidStats
 			error(`[{script.Name}] profile not loaded for {player.Name}`)
 		end
 
-		local current: number = profile.Data[statName]
+		local current: number = (profile.Data :: PlayerData)[statName] -- LLS wouldn't shut up.. what do I doooooo?!?!?!?
 		local new = current + delta
 
 		if current == new then
 			return new -- we don't need to update something that is not updated.
 		end
 
-		profile.Data[statName] = new
+		(profile.Data :: PlayerData)[statName] = new -- LLS wouldn't shut up.. what do I doooooo?!?!?!?
 		self._signals[player][SIGNAL_NAMES[statName]]:Fire(new)
 		return new
 	end)
@@ -317,7 +348,4 @@ function PlayerDataHandler:ClearPlayerData(player: Player)
 	self:SetPlayerStat(player, "Points", 0)
 end
 
-return PlayerDataHandler :: typeof(PlayerDataHandler) & {
-	_profiles: { [Player]: PlayerProfile },
-	_signals: { [Player]: { [string]: Signal.Signal<number> } },
-}
+return PlayerDataHandler

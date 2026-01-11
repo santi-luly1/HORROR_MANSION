@@ -29,7 +29,7 @@ local _
 --------------------------------------------------------------------
 --- Types
 --------------------------------------------------------------------
-type TypedPromise<T> = Promise.TypedPromise<T>
+type TypedPromise<T...> = Promise.TypedPromise<T...>
 export type TYPE = "a" | "b"
 local TYPE = t.optional(t.string)
 
