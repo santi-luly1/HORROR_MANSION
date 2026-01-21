@@ -78,33 +78,33 @@ export type PlayerData = {
 	Version: number,
 }
 type PlayerDataHandler = {
-    -- lifecycle
-    Init: (self: PlayerDataHandler) -> (),
-    Start: (self: PlayerDataHandler) -> (),
+	-- lifecycle
+	Init: (self: PlayerDataHandler) -> (),
+	Start: (self: PlayerDataHandler) -> (),
 
-    -- public API
-    GetPlayerData: (self: PlayerDataHandler, Player) -> TypedPromise<PlayerData>,
-    SetPlayerStat: (self: PlayerDataHandler, Player, ValidStats, number) -> TypedPromise<boolean>,
-    UpdatePlayerStat: (self: PlayerDataHandler, Player, ValidStats, number) -> TypedPromise<number>,
-    ObserveSurvivals: (self: PlayerDataHandler, Player, (number)->()) -> Signal.Connection?,
-    ObservePoints: (self: PlayerDataHandler, Player, (number)->()) -> Signal.Connection?,
-    ClearPlayerData: (self: PlayerDataHandler, Player) -> (),
+	-- public API
+	GetPlayerData: (self: PlayerDataHandler, Player) -> TypedPromise<PlayerData>,
+	SetPlayerStat: (self: PlayerDataHandler, Player, ValidStats, number) -> TypedPromise<boolean>,
+	UpdatePlayerStat: (self: PlayerDataHandler, Player, ValidStats, number) -> TypedPromise<number>,
+	ObserveSurvivals: (self: PlayerDataHandler, Player, (number) -> ()) -> Signal.Connection?,
+	ObservePoints: (self: PlayerDataHandler, Player, (number) -> ()) -> Signal.Connection?,
+	ClearPlayerData: (self: PlayerDataHandler, Player) -> (),
 
-    -- events
-    ProfileLoaded: ProfileStateChangedSignal,
-    ProfileReleased: ProfileStateChangedSignal,
+	-- events
+	ProfileLoaded: ProfileStateChangedSignal,
+	ProfileReleased: ProfileStateChangedSignal,
 
-    -- private
-    _init: boolean,
-    _start: boolean,
-    _store: ProfileStore.ProfileStore<PlayerData>,
-    _profiles: { [Player]: PlayerProfile },
-    _maids: { [Player]: Maid.Maid },
-    _signals: { [Player]: { [string]: Signal.Signal<number> } },
+	-- private
+	_init: boolean,
+	_start: boolean,
+	_store: ProfileStore.ProfileStore<PlayerData>,
+	_profiles: { [Player]: PlayerProfile },
+	_maids: { [Player]: Maid.Maid },
+	_signals: { [Player]: { [string]: Signal.Signal<number> } },
 
-    -- private methods
-    _load: (self: PlayerDataHandler, Player) -> TypedPromise<>,
-    _release: (self: PlayerDataHandler, Player) -> TypedPromise<>,
+	-- private methods
+	_load: (self: PlayerDataHandler, Player) -> TypedPromise<>,
+	_release: (self: PlayerDataHandler, Player) -> TypedPromise<>,
 }
 
 local playerCheck = t.instanceOf("Player")
@@ -157,7 +157,7 @@ function PlayerDataHandler:Start()
 end
 
 --------------------------------------------------------------------
---- Core
+--- Handlers
 --------------------------------------------------------------------
 function PlayerDataHandler:_load(player: Player): TypedPromise<>
 	return Promise.new(function(resolve, reject)
@@ -255,7 +255,7 @@ function PlayerDataHandler:_release(player: Player): TypedPromise<>
 			self.ProfileReleased:Fire(player, profile)
 		end
 		self._profiles[player] = nil
-		resolve()
+		return resolve()
 	end)
 end
 
@@ -276,7 +276,7 @@ end
 function PlayerDataHandler:SetPlayerStat(player: Player, statName: ValidStats, value: number): TypedPromise<boolean>
 	return Promise.try(function()
 		assert(playerCheck(player) and updateCheck(player, statName, value), `One or more arguments are not valid.`)
-		local profile = self._profiles[player] --do not add PlayerProfile type to this var or else LLS will get mad.
+		local profile: PlayerProfile = self._profiles[player] --do not add PlayerProfile type to this var or else LLS will get mad.
 		if not profile then
 			error(`[{script.Name}] profile not loaded for {player.Name}`)
 		end

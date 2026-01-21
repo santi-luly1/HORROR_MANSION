@@ -29,9 +29,24 @@ local CmdrServer = {
 --------------------------------------------------------------------
 --- Types
 --------------------------------------------------------------------
+type CmdrServer = {
+	-- lifecycle
+	Init: (self: CmdrServer) -> (),
+	Start: (self: CmdrServer) -> (),
+
+	-- public API
+
+	-- events
+
+	-- private
+	_init: boolean,
+	_start: boolean,
+
+	-- private methods
+}
 
 --------------------------------------------------------------------
---- ServiceBag (not currently using service bag)
+--- Init / Start
 --------------------------------------------------------------------
 function CmdrServer:Init()
 	assert(not self._init, `[{script.Name}] - Module already initialized.`)
@@ -52,7 +67,7 @@ end
 --------------------------------------------------------------------
 
 --------------------------------------------------------------------
---- API
+--- Public API
 --------------------------------------------------------------------
 
 return CmdrServer

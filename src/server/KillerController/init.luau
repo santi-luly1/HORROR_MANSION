@@ -70,7 +70,7 @@ type KillerController = {
 local nameCheck = t.string
 
 --------------------------------------------------------------------
---- ServiceBag (not currently using service bag)
+--- Init / Start
 --------------------------------------------------------------------
 function KillerController:Init()
 	assert(not self._init, `[{script.Name}] - Module already initialized.`)
@@ -170,7 +170,7 @@ function KillerController:_spawnKillerByName(name: string, spawnIndex: number?):
 end
 
 --------------------------------------------------------------------
---- API
+--- Public API
 --------------------------------------------------------------------
 function KillerController:SpawnRandomKiller(spawnIndex: number?): TypedPromise<number, Model>
 	local selected = killersList[math.random(1, #killersList)]

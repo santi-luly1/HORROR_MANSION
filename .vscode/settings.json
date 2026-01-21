@@ -1,5 +1,8 @@
 {
   "editor.fontFamily": "Fira Code, JetBrains Mono, monospace",
   "luau-lsp.plugin.enabled": true,
-  "luau-lsp.sourcemap.rojoPath": "/home/santiago/.aftman/bin/rojo"
+  "luau-lsp.sourcemap.rojoPath": "/home/santiago/.aftman/bin/rojo",
+  "luau-lsp.types.definitionFiles": [
+    "/home/santiago/.config/Code - OSS/User/globalStorage/johnnymorganz.luau-lsp/globalTypes.d.lua",
+  ]
 }

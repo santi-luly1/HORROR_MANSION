@@ -14,6 +14,9 @@
 --------------------------------------------------------------------
 local Players = game:GetService("Players")
 
+--------------------------------------------------------------------
+--- Module
+--------------------------------------------------------------------
 local PlayerDeathHandler = {
 	_init = false,
 	_start = false,
@@ -22,14 +25,14 @@ local PlayerDeathHandler = {
 --------------------------------------------------------------------
 --- Variables
 --------------------------------------------------------------------
-local tracks = script:GetChildren() :: {Sound}
+local tracks = script:GetChildren() :: { Sound }
 
 --------------------------------------------------------------------
 --- Types
 --------------------------------------------------------------------
 
 --------------------------------------------------------------------
---- ServiceBag (not currently using service bag)
+--- Init / Start
 --------------------------------------------------------------------
 function PlayerDeathHandler:Init()
 	assert(not self._init, `[{script.Name}] - Module already initialized.`)
@@ -51,7 +54,7 @@ function PlayerDeathHandler:Start()
 					player:SetAttribute("PlayerState", "Dead")
 					local track = tracks[math.random(1, #tracks)]:Clone()
 					track.Parent = character.PrimaryPart
-                    track:Play()
+					track:Play()
 				end)
 			end
 		end)
@@ -63,7 +66,7 @@ end
 --------------------------------------------------------------------
 
 --------------------------------------------------------------------
---- API
+--- Public API
 --------------------------------------------------------------------
 
 return PlayerDeathHandler
