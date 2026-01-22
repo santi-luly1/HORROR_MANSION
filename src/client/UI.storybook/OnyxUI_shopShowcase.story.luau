@@ -1,4 +1,4 @@
--- UI.story.luau finalmente, mira lo que logr'e luego de modificar 213 archivos, y como 5 horas de estar aqu'i
+-- UI.story.luau
 return function(Target)
 	local Packages = game:GetService("ReplicatedStorage"):WaitForChild("Packages")
 

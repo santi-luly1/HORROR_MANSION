@@ -200,21 +200,18 @@ function PlayerDataHandler:_load(player: Player): TypedPromise<>
 		}
 
 		-- leaderstats
-		local ls = Instance.new("Folder")
+		local ls = Instance.new("Folder", player)
 		ls.Name = "leaderstats"
-		ls.Parent = player
 		maid:GiveTask(ls)
 
-		local survVal = Instance.new("IntValue")
+		local survVal = Instance.new("IntValue", ls)
 		survVal.Name = "Survivals"
 		survVal.Value = profile.Data.Survivals
-		survVal.Parent = ls
 		maid:GiveTask(survVal)
 
-		local pointVal = Instance.new("IntValue")
+		local pointVal = Instance.new("IntValue", ls)
 		pointVal.Name = "Points"
 		pointVal.Value = profile.Data.Points
-		pointVal.Parent = ls
 		maid:GiveTask(pointVal)
 
 		maid:GiveTask(self:ObserveSurvivals(player, function(new)

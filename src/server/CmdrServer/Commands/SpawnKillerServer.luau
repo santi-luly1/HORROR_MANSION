@@ -6,13 +6,13 @@ local KillerController = require(Services.KillerController)
 local Killers = ServerStorage:WaitForChild("Killers")
 
 return function(context, name: string, spawnIndex: number?)
-    if typeof(spawnIndex) == "function" then
-        spawnIndex = spawnIndex() -- get the actual default value (nil anyways...)
-    end
+	if typeof(spawnIndex) == "function" then
+		spawnIndex = nil -- function returns nil anyways.
+	end
 
 	if name == "any" then
-		KillerController:SpawnRandomKiller(spawnIndex)
-			:andThen(function(index, killer)
+		KillerController:SpawnKiller(nil, spawnIndex)
+			:andThen(function(killer, index)
 				local msg = `Spawned random killer {killer.Name} at index {index}.`
 				context:Reply(msg, Color3.fromRGB(0, 255))
 			end)
@@ -25,7 +25,7 @@ return function(context, name: string, spawnIndex: number?)
 
 	if Killers:FindFirstChild(name) then
 		KillerController:SpawnKiller(name, spawnIndex)
-			:andThen(function(index, killer)
+			:andThen(function(killer, index)
 				local msg = `Spawned {name} at index {index}.`
 				context:Reply(msg, Color3.fromRGB(0, 255))
 			end)

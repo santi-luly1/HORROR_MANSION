@@ -53,8 +53,7 @@ type KillerController = {
 	Start: (self: KillerController) -> (),
 
 	-- public API
-	SpawnRandomKiller: (self: KillerController, spawnIndex: number?) -> TypedPromise<number, Model>,
-	SpawnKiller: (self: KillerController, name: string, spawnIndex: number?) -> TypedPromise<number, Model>,
+	SpawnKiller: (self: KillerController, name: string?, spawnIndex: number?) -> TypedPromise<Model, number>,
 	GetCurrentKiller: (self: KillerController) -> Model?,
 	ClearCurrentKiller: (self: KillerController) -> (),
 	GetKillersName: (self: KillerController) -> { string },
@@ -64,7 +63,8 @@ type KillerController = {
 	_maid: Maid.Maid,
 	_init: boolean,
 	_start: boolean,
-	_spawnKillerByName: (self: KillerController, name: string, spawnIndex: number?) -> TypedPromise<number, Model>,
+	_spawnKillerByName: (self: KillerController, name: string, spawnIndex: number?) -> TypedPromise<Model, number>,
+	_spawnRandomKiller: (self: KillerController, spawnIndex: number?) -> TypedPromise<Model, number>,
 }
 
 local nameCheck = t.string
@@ -86,7 +86,7 @@ function KillerController:Start()
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
 
-	-- self:SpawnRandomKiller(nil)
+	-- self:_spawnRandomKiller(nil)
 	-- 	:andThen(function(_, killer: Model)
 	-- 		print(killer, killer:GetFullName())
 	-- 	end)
@@ -110,7 +110,7 @@ end
 --------------------------------------------------------------------
 --- Handlers
 --------------------------------------------------------------------
-function KillerController:_spawnKillerByName(name: string, spawnIndex: number?): TypedPromise<number, Model>
+function KillerController:_spawnKillerByName(name: string, spawnIndex: number?): TypedPromise<Model, number>
 	return Promise.new(function(resolve, reject, onCancel)
 		if not nameCheck(name) then
 			return reject(`[{script.Name}] bad argument #1 (string expected)`)
@@ -137,10 +137,6 @@ function KillerController:_spawnKillerByName(name: string, spawnIndex: number?):
 		hrp.CFrame = killerCFrame
 
 		local hitbox = clone:FindFirstChild("hitbox") :: Part
-		local running = true
-		maid:GiveTask(function()
-			running = false
-		end)
 		maid:GiveTask(hitbox.Touched:Connect(function(hit)
 			local character = hit.Parent
 			if character and character ~= clone then
@@ -154,7 +150,7 @@ function KillerController:_spawnKillerByName(name: string, spawnIndex: number?):
 		self._currentKiller = clone
 
 		maid:GiveTask(task.spawn(function()
-			while running and clone.Parent do
+			while true do
 				local ok = Compute(clone, maid) -- single path
 				if not ok then
 					task.wait(1)
@@ -165,20 +161,19 @@ function KillerController:_spawnKillerByName(name: string, spawnIndex: number?):
 		end))
 
 		-- TODO: Make the module "SpecialKillerBehaviour" work in here.
-		return resolve(index, clone)
+		return resolve(clone, index)
 	end)
+end
+function KillerController:_spawnRandomKiller(spawnIndex: number?): TypedPromise<Model, number>
+	local selected = killersList[math.random(1, #killersList)]
+	return self:_spawnKillerByName(selected.Name, spawnIndex)
 end
 
 --------------------------------------------------------------------
 --- Public API
 --------------------------------------------------------------------
-function KillerController:SpawnRandomKiller(spawnIndex: number?): TypedPromise<number, Model>
-	local selected = killersList[math.random(1, #killersList)]
-	return self:_spawnKillerByName(selected.Name, spawnIndex)
-end
-
-function KillerController:SpawnKiller(name: string, spawnIndex: number?): TypedPromise<number, Model>
-	return self:_spawnKillerByName(name, spawnIndex)
+function KillerController:SpawnKiller(name: string?, spawnIndex: number?): TypedPromise<Model, number>
+	return name and self:_spawnKillerByName(name, spawnIndex) or self:_spawnRandomKiller(spawnIndex)
 end
 
 function KillerController:GetCurrentKiller(): Model?

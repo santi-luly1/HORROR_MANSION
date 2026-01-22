@@ -5,7 +5,6 @@ local Services = ServerScriptService.Server
 local PlayerDataHandler = require(Services.PlayerDataHandler)
 
 return function(context, player: Player, stat: PlayerDataHandler.ValidStats, ammount: number)
-	warn(game:GetService("RunService"):IsServer())
 	local ok = PlayerDataHandler:SetPlayerStat(player, stat, ammount)
 
 	if ok then
