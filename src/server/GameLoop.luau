@@ -77,7 +77,7 @@ end
 --------------------------------------------------------------------
 --- Handlers
 --------------------------------------------------------------------
-function GameLoop:_startRound(prefixedKiller: string?): TypedPromise<Model>
+function GameLoop:_startRound(preferredKiller: string?): TypedPromise<Model>
 	return Promise.new(function(resolve, reject, onCancel)
 		if onCancel(function() -- I think this is wrong, since we would need to save this promise inside a variable somewhere to be able to properly cancel it.
 			self:_endRound()
@@ -85,7 +85,7 @@ function GameLoop:_startRound(prefixedKiller: string?): TypedPromise<Model>
 			return
 		end
 
-		KillerController:SpawnKiller(prefixedKiller)
+		KillerController:SpawnKiller(preferredKiller)
 			:andThen(function(killer)
 				maid:LinkToInstance(killer)
 
@@ -115,7 +115,9 @@ function GameLoop:_endRound(): TypedPromise<>
 		KillerController:ClearCurrentKiller()
 		print("PENDING TO DISPLAY SURVIVORS, PROPER INTERMISSION ETC.")
 		countdownHint.Text = `---------------`
+
 		task.wait(5)
+
 		self:_startRound()
 			:andThen(function(killer)
 				return resolve()

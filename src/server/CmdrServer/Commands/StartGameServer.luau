@@ -2,18 +2,14 @@
 local ServerStorage = game:GetService("ServerStorage")
 local Services = game:GetService("ServerScriptService").Server
 
-local KillerController = require(Services.KillerController)
 local Killers = ServerStorage:WaitForChild("Killers")
+local GameLoop = require(Services.GameLoop)
 
-return function(context, name: string, spawnIndex: number?)
-	if typeof(spawnIndex) == "function" then
-		spawnIndex = spawnIndex() -- function returns nil anyways.
-	end
-
+return function(context, name: string)
 	if name == "any" then
-		KillerController:SpawnKiller(nil, spawnIndex)
-			:andThen(function(killer, index)
-				local msg = `Spawned random killer '{killer.Name}' at index {index}.`
+		GameLoop:Begin()
+			:andThen(function(killer)
+				local msg = `Round started with random killer '{killer.Name}'.`
 				context:Reply(msg, Color3.fromRGB(0, 255))
 			end)
 			:catch(function(e)
@@ -24,9 +20,9 @@ return function(context, name: string, spawnIndex: number?)
 	end
 
 	if Killers:FindFirstChild(name) then
-		KillerController:SpawnKiller(name, spawnIndex)
-			:andThen(function(killer, index)
-				local msg = `Spawned '{name}' at index {index}.`
+		GameLoop:Begin(name)
+			:andThen(function(killer)
+				local msg = `Round started with killer '{name}'.`
 				context:Reply(msg, Color3.fromRGB(0, 255))
 			end)
 			:catch(function(e)
