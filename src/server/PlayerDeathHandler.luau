@@ -13,6 +13,7 @@
 --- Dependencies
 --------------------------------------------------------------------
 local Players = game:GetService("Players")
+local ServerStorage = game:GetService("ServerStorage")
 
 --------------------------------------------------------------------
 --- Module
@@ -25,7 +26,7 @@ local PlayerDeathHandler = {
 --------------------------------------------------------------------
 --- Variables
 --------------------------------------------------------------------
-local tracks = script:GetChildren() :: { Sound }
+local tracks = ServerStorage.Sounds.Deaths:GetChildren() :: { Sound }
 
 --------------------------------------------------------------------
 --- Types

@@ -3,5 +3,5 @@
 std = "roblox"
 
 [rules]
-if_same_then_else = "allow" # This actually makes code less clear sometimes
+#if_same_then_else = "allow" # This actually makes code less clear sometimes
 mixed_table = "allow" # Blend uses mixed tables

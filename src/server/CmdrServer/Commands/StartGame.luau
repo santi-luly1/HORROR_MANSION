@@ -7,8 +7,8 @@ return {
 		{
 			Type = "killers",
 			Name = "killer",
-			Description = "Start with a preferred killer (optional).",
-			Default = "any",
+			Description = "Start with a preferred killer.",
+			Default = "**",
 		}
 	},
 }

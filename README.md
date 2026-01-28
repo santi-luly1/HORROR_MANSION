@@ -15,3 +15,8 @@ rojo serve
 ```
 
 For more help, check out [the Rojo documentation](https://rojo.space/docs).
+
+## Self notes
+```bash
+wally-package-types -s sourcemap.json Packages ServerPackages #reexports types (should be run once per "wally install")
+```

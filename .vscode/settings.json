@@ -3,6 +3,42 @@
   "luau-lsp.plugin.enabled": true,
   "luau-lsp.sourcemap.rojoPath": "/home/santiago/.aftman/bin/rojo",
   "luau-lsp.types.definitionFiles": [
-    "/home/santiago/.config/Code - OSS/User/globalStorage/johnnymorganz.luau-lsp/globalTypes.d.lua",
-  ]
+    "/home/santiago/.config/Code - OSS/User/globalStorage/johnnymorganz.luau-lsp/globalTypes.d.lua"
+  ],
+  "[lua]": {
+    "editor.defaultFormatter": "JohnnyMorganz.stylua",
+    "editor.formatOnSave": true
+  },
+  "[luau]": {
+    "editor.defaultFormatter": "JohnnyMorganz.stylua",
+    "editor.formatOnSave": true
+  },
+  "workbench.editor.customLabels.patterns": {
+    "**/init.lua": "${dirname} (${filename}.${extname})",
+    "**/init.luau": "${dirname} (${filename}.${extname})"
+  },
+  "files.autoSave": "afterDelay",
+  "editor.semanticHighlighting.enabled": true,
+  "stylua.searchParentDirectories": true,
+  "terminal.integrated.defaultProfile.linux": "zsh",
+  "explorer.confirmDragAndDrop": false,
+  "explorer.confirmDelete": false,
+  "workbench.tree.indent": 24,
+  "workbench.iconTheme": "charmed-soft",
+  "workbench.colorTheme": "Monokai Dimmed",
+  "git.autofetch": true,
+  "yaml.schemas": {
+    "file:///home/santiago/.vscode/extensions/continue.continue-1.2.11-linux-x64/config-yaml-schema.json": [
+      ".continue/**/*.yaml"
+    ]
+  },
+  "git.enableSmartCommit": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "editor.fontLigatures": true,
+  "luau-lsp.completion.autocompleteEnd": true,
+  "redhat.telemetry.enabled": false,
+  "chat.disableAIFeatures": true,
+  "luau-lsp.completion.imports.enabled": true,
+  "luau-lsp.inlayHints.variableTypes": true
 }

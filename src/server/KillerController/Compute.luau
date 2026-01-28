@@ -2,32 +2,44 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local simplepath = require(ReplicatedStorage.Packages.simplepath)
 
-return function(model: Model, maid: any): boolean
-	local torso = model:FindFirstChild("HumanoidRootPart") :: Part
-	if not torso then
-		warn(`{model:GetFullName()} has no HRP`)
+local lastTarget: Model? = nil
+local lastPath = nil
+
+return function(model: Model, maid: any): boolean -- typecheck for maid? not rn..
+	local hrp = model:FindFirstChild("HumanoidRootPart") :: Part?
+	if not hrp then
+		warn(`{model:GetFullName()} lacks HumanoidRootPart`)
 		return false
 	end
 
-	local target = simplepath.GetNearestCharacter(torso.Position)
-	if not target or target.Humanoid.Health <= 0 or target:FindFirstChildOfClass("ForceField") then -- probably this will be a semi-bug, since if the same person stays close to it with a FF, it'll always reject.
-		warn(`{model:GetFullName()} has not found any character`)
+	local target = simplepath.GetNearestCharacter(hrp.Position)
+	if not target then
 		return false
 	end
 
-	local path =
-		simplepath.new(model, { -- maybe this is a bad idea? maid cleans it every round, but is it still good tho?
+	local human = target:FindFirstChildOfClass("Humanoid")
+	if not human or human.Health <= 0 then
+		return false
+	end
+
+	if target:FindFirstChildOfClass("ForceField") then
+		return false
+	end -- FIXME: for some reason, just 1 killer works at the same time. (kind of)
+
+	if target ~= lastTarget or not lastPath then
+		lastPath = simplepath.new(model, {
 			AgentHeight = 5,
 			AgentRadius = 2,
 			AgentCanJump = true,
-			Costs = {
-				Roof = math.huge,
-			},
+			Costs = { Roof = math.huge }, --really?
 		})
+		lastTarget = target
 
-	maid:GiveTask(function()
-		path:Destroy()
-	end)
+		maid:GiveTask(function()
+			lastTarget = nil
+		end)
+		maid:GiveTask(lastPath)
+	end
 
-	return path:Run(target:GetPivot().Position) :: boolean
+	return lastPath:Run(target:GetPivot().Position) :: boolean
 end

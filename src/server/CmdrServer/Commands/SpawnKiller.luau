@@ -8,14 +8,13 @@ return {
 			Type = "killers",
 			Name = "name",
 			Description = "The killer to spawn.",
+			Default = "**"
 		},
 		{
 			Type = "number",
 			Name = "spawnIndex",
-			Description = "The spawn index (optional).",
-			Default = function()
-				return nil
-			end,
+			Description = "The spawn index.",
+			Default = -1
 		}
-	},
+	}
 }

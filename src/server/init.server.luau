@@ -8,8 +8,8 @@
         12/31/25 --> Added proper loader
 	]
 
-    FIXME: currently, every module loads one by one, and if some yield (ej WaitForChild), the runtime won';t continue, same goes to the client.
-    future me, consider adding a task.spawn, modify the laoder module or get another module.
+    NOTE > maybe I should consider requireing all of the modules inside an "Services" module or smth, feel like cacheing the
+    modules would improve performance and reduce bugs (vars would initialize just once)
 ]=]
 
 local Packages = game:GetService("ReplicatedStorage").Packages

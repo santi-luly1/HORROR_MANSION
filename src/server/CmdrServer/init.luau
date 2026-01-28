@@ -12,7 +12,8 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local Cmdr = require(script:WaitForChild("Cmdr"))
+local ServerPackages = script.Parent.Packages
+local Cmdr = require(ServerPackages:WaitForChild("cmdr"))
 
 --------------------------------------------------------------------
 --- Module
