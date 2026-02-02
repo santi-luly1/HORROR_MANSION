@@ -8,6 +8,7 @@
 		01/10/26 --> Adapted from original source.
 		01/11/26 --> Added module-wide typechecking and random spawn selector with its APIs.
 		01/28/26 --> Added multiple killers support and signals.
+		01/30/26 --> Added GetRandomIndex API, and added killer sounds.
 	]
 ]=]
 
@@ -15,6 +16,7 @@
 --- Dependencies
 --------------------------------------------------------------------
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local ServerStorage = game:GetService("ServerStorage")
 
 local Packages = ReplicatedStorage:WaitForChild("Packages")
@@ -51,6 +53,7 @@ do
 		NAMES[i + 2] = m.Name
 	end
 end
+local SoundsIndex = require(script.Sounds)
 
 --------------------------------------------------------------------
 --- Types
@@ -69,6 +72,7 @@ type KillerController = {
 	Clear: (self: KillerController) -> (),
 	IsValidName: (self: KillerController, name: string) -> boolean,
 	GetKillersName: (self: KillerController) -> { string },
+	GetRandomIndex: (self: KillerController) -> number,
 	KillerSpawned: Signal.Signal<Model, number>,
 	KillerCleared: Signal.Signal<string>,
 
@@ -108,7 +112,6 @@ end
 --------------------------------------------------------------------
 local function getSpawnCFrame(index: number): (number, CFrame)
 	local spawns = workspace.Map.spawns:GetChildren() :: { SpawnLocation }
-	index = math.clamp(index, 1, #spawns)
 	return index, spawns[index].CFrame * CFrame.new(0, 10, 0)
 end
 
@@ -129,6 +132,10 @@ function KillerController:_spawn(name: string, spawnIndex: number): TypedPromise
 			if existing.Name == name and existing.Parent then
 				return reject(`Killer '{name}' already spawned.`) --maybe shoudl I allow this?
 			end
+		end
+
+		if spawnIndex < 1 then
+			spawnIndex = self:GetRandomIndex()
 		end
 
 		local maid = Maid.new()
@@ -166,6 +173,17 @@ function KillerController:_spawn(name: string, spawnIndex: number): TypedPromise
 				and not char:FindFirstChildOfClass("ForceField")
 				and not char:GetAttribute("killer")
 			then
+				local sounds = SoundsIndex[clone.Name].Kill
+				if #sounds > 0 then
+					local track = Instance.new("Sound")
+					track.SoundId = `rbxassetid://{sounds[math.random(1, #sounds)]}`
+					track.Parent = clone.PrimaryPart
+					track.Volume = 2 -- maybe a bit too loud.
+					track.Ended:Once(function()
+						track:Destroy() -- would this even be needed?
+					end)
+					track:Play()
+				end
 				hum.Health = 0 -- TODO: Maybe smth else instead of just insta kill?
 			end
 		end))
@@ -180,7 +198,11 @@ function KillerController:_spawn(name: string, spawnIndex: number): TypedPromise
 
 			while clone.Parent do
 				local ok = Compute(clone, maid)
-				task.wait(ok and 0 or 1)
+				if ok then
+					RunService.Heartbeat:Wait() -- sooo smooth
+				else
+					task.wait(0.5)
+				end
 			end
 		end))
 
@@ -253,6 +275,11 @@ end
 
 function KillerController:GetCurrentKillers(): { Model }
 	return self._killers
+end
+
+function KillerController:GetRandomIndex(): number
+	local spawns = workspace.Map.spawns:GetChildren()
+	return math.random(1, #spawns)
 end
 
 function KillerController:GetKillersName(): { string }

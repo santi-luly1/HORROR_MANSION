@@ -16,5 +16,5 @@ local Packages = game:GetService("ReplicatedStorage").Packages
 local Net = require(Packages.net)
 
 return {
-    GetKillersName = Net:RemoteFunction("GetKillersName"),
+	GetKillersName = Net:RemoteFunction("GetKillersName"),
 }

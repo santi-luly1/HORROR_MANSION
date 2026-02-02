@@ -1,6 +1,6 @@
 return {
 	Name = "spawnKiller",
-	Aliases = {"sk"},
+	Aliases = { "sk" },
 	Description = "Spawns a killer at the specified index.",
 	Group = "Admin",
 	Args = {
@@ -8,13 +8,13 @@ return {
 			Type = "killers",
 			Name = "name",
 			Description = "The killer to spawn.",
-			Default = "**"
+			Default = "**",
 		},
 		{
 			Type = "number",
 			Name = "spawnIndex",
 			Description = "The spawn index.",
-			Default = -1
-		}
-	}
+			Default = -1,
+		},
+	},
 }

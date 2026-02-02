@@ -16,5 +16,5 @@ local Packages = game:GetService("ReplicatedStorage").Packages
 local Net = require(Packages.net)
 
 return {
-    RE = Net:RemoteEvent("RE"),
+	RE = Net:RemoteEvent("RE"),
 }

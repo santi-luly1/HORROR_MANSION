@@ -6,6 +6,7 @@
 
     CHANGELOG: [
 		12/31/25 --> Adapted from original source.
+		01/30/26 --> Indexed all the deaths sounds into a module.
 	]
 ]=]
 
@@ -13,7 +14,6 @@
 --- Dependencies
 --------------------------------------------------------------------
 local Players = game:GetService("Players")
-local ServerStorage = game:GetService("ServerStorage")
 
 --------------------------------------------------------------------
 --- Module
@@ -26,7 +26,7 @@ local PlayerDeathHandler = {
 --------------------------------------------------------------------
 --- Variables
 --------------------------------------------------------------------
-local tracks = ServerStorage.Sounds.Deaths:GetChildren() :: { Sound }
+local SoundsIndex = require(script.Sounds)
 
 --------------------------------------------------------------------
 --- Types
@@ -48,13 +48,18 @@ function PlayerDeathHandler:Start()
 
 	Players.PlayerAdded:Connect(function(player: Player)
 		player.CharacterAdded:Connect(function(character: Model) -- memory leak?
+			--player:SetAttribute("Dead", false) -- little bug (race conditions)
 			local hum = character:WaitForChild("Humanoid", 30) :: Humanoid -- will this yield for the entire server? Hmmm
 			if hum then
 				hum.Died:Once(function()
 					warn(`[{script.Name}] Player {player.Name} has died.`)
-					player:SetAttribute("PlayerState", "Dead")
-					local track = tracks[math.random(1, #tracks)]:Clone()
+					player:SetAttribute("Dead", true)
+					local track = Instance.new("Sound")
+					track.SoundId = `rbxassetid://{SoundsIndex[math.random(1, #SoundsIndex)]}`
 					track.Parent = character.PrimaryPart
+					track.Ended:Once(function()
+						track:Destroy() -- would this even be needed? Character is gonna respawn, deleting this in the process anyways
+					end)
 					track:Play()
 				end)
 			end

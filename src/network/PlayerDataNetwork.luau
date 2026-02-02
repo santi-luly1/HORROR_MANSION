@@ -16,6 +16,6 @@ local Packages = game:GetService("ReplicatedStorage").Packages
 local Net = require(Packages.net)
 
 return {
-    SurvivalsChanged = Net:RemoteEvent("SurvivalsChanged"),
-    PointsChanged = Net:RemoteEvent("PointsChanged")
+	SurvivalsChanged = Net:RemoteEvent("SurvivalsChanged"),
+	PointsChanged = Net:RemoteEvent("PointsChanged"),
 }

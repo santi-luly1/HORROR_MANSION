@@ -11,6 +11,7 @@
 		12/31/25 --> Added retry/back-off, consistent error handling, fixed isPlayer type-check, added profile-versioning, etc.
 		01/09/26 --> Added Promise typechecking.
 		01/11/26 --> Entire module is now typechecked.
+		01/30/26 --> Removed Promise.try for a better Promise chain.
 ]=]
 
 --------------------------------------------------------------------
@@ -86,9 +87,9 @@ type PlayerDataHandler = {
 	GetPlayerData: (self: PlayerDataHandler, Player) -> TypedPromise<PlayerData>,
 	SetPlayerStat: (self: PlayerDataHandler, Player, ValidStats, number) -> TypedPromise<boolean>,
 	UpdatePlayerStat: (self: PlayerDataHandler, Player, ValidStats, number) -> TypedPromise<number>,
-	ObserveSurvivals: (self: PlayerDataHandler, Player, (number) -> ()) -> Signal.Connection?,
-	ObservePoints: (self: PlayerDataHandler, Player, (number) -> ()) -> Signal.Connection?,
-	ClearPlayerData: (self: PlayerDataHandler, Player) -> (),
+	ObserveSurvivals: (self: PlayerDataHandler, Player, (number) -> ()) -> TypedPromise<Signal.Connection>,
+	ObservePoints: (self: PlayerDataHandler, Player, (number) -> ()) -> TypedPromise<Signal.Connection>,
+	ClearPlayerData: (self: PlayerDataHandler, Player) -> TypedPromise<boolean>,
 
 	-- events
 	ProfileLoaded: ProfileStateChangedSignal,
@@ -135,12 +136,12 @@ function PlayerDataHandler:Start()
 		self:_load(player)
 			:andThen(function()
 				print(`[{script.Name}] loaded {player.Name}'s profile`)
-				self:ClearPlayerData(player)
+				self:ClearPlayerData(player):catch(warn)
 
 				task.spawn(function()
 					while RunService:IsStudio() do
-						task.wait(5)
-						self:UpdatePlayerStat(player, "Points", 5)
+						task.wait(1)
+						self:UpdatePlayerStat(player, "Points", 5):catch(warn)
 					end
 				end)
 			end)
@@ -159,10 +160,11 @@ end
 --------------------------------------------------------------------
 --- Handlers
 --------------------------------------------------------------------
-function PlayerDataHandler:_load(player: Player): TypedPromise<>
+function PlayerDataHandler:_load(player: Player): TypedPromise<PlayerProfile>
 	return Promise.new(function(resolve, reject)
-		if not playerCheck(player) then
-			return reject(`[{script.Name}] bad argument #1 (Player expected)`)
+		local ok, err = playerCheck(player)
+		if not ok then
+			return reject(`[{script.Name}] {err}`)
 		end
 
 		-- retry with back-off
@@ -217,24 +219,38 @@ function PlayerDataHandler:_load(player: Player): TypedPromise<>
 		pointVal.Value = profile.Data.Points
 		maid:GiveTask(pointVal)
 
-		maid:GiveTask(self:ObserveSurvivals(player, function(new)
+		self:ObserveSurvivals(player, function(new)
 			survVal.Value = new
 			PlayerDataNet.SurvivalsChanged:FireClient(player, new)
-		end))
-		maid:GiveTask(self:ObservePoints(player, function(new)
+		end)
+			:andThen(function(connection)
+				maid:GiveTask(connection)
+			end)
+			:catch(function(e)
+				warn(`[{script.Name}] Failed to observe {player.Name}'s survivals, expect visual bugs:`, e)
+			end)
+
+		self:ObservePoints(player, function(new)
 			pointVal.Value = new
 			PlayerDataNet.PointsChanged:FireClient(player, new)
-		end))
+		end)
+			:andThen(function(connection)
+				maid:GiveTask(connection)
+			end)
+			:catch(function(e)
+				warn(`[{script.Name}] Failed to observe {player.Name}'s points, expect visual bugs:`, e)
+			end)
 
 		self.ProfileLoaded:Fire(player, profile)
-		return resolve()
+		return resolve(profile)
 	end)
 end
 
 function PlayerDataHandler:_release(player: Player): TypedPromise<>
 	return Promise.new(function(resolve, reject)
-		if not playerCheck(player) then
-			return reject(`[{script.Name}] bad argument #1 (Player expected)`)
+		local ok, err = playerCheck(player)
+		if not ok then
+			return reject(`[{script.Name}] {err}`)
 		end
 
 		local maid = self._maids[player]
@@ -263,89 +279,137 @@ end
 --- Public API
 --------------------------------------------------------------------
 function PlayerDataHandler:GetPlayerData(player: Player): TypedPromise<PlayerData>
-	return Promise.try(function()
-		assert(playerCheck(player))
-		local profile: PlayerProfile = self._profiles[player]
-		if not profile then
-			error(`[{script.Name}] profile not loaded for {player.Name}`)
+	return Promise.new(function(resolve, reject)
+		local ok, err = playerCheck(player)
+		if not ok then
+			return reject(`[{script.Name}] {err}`)
 		end
-		return { Survivals = profile.Data.Survivals, Points = profile.Data.Points, Version = profile.Data.Version }
+
+		local profile = self._profiles[player]
+		if not profile then
+			return reject(`[{script.Name}] profile not loaded for {player.Name}`)
+		end
+
+		resolve({
+			Survivals = profile.Data.Survivals,
+			Points = profile.Data.Points,
+			Version = profile.Data.Version,
+		})
 	end)
 end
 
 function PlayerDataHandler:SetPlayerStat(player: Player, statName: ValidStats, value: number): TypedPromise<boolean>
-	return Promise.try(function()
-		assert(playerCheck(player) and updateCheck(player, statName, value), `One or more arguments are not valid.`)
-		local profile: PlayerProfile = self._profiles[player] --do not add PlayerProfile type to this var or else LLS will get mad.
+	return Promise.new(function(resolve, reject)
+		local ok, err = playerCheck(player)
+		if not ok then
+			return reject(`[{script.Name}] {err}`)
+		end
+
+		if typeof(value) ~= "number" then
+			return reject(`[{script.Name}] bad argument #3 (number expected, got {typeof(value)})`)
+		end
+
+		local profile = self._profiles[player]
 		if not profile then
-			error(`[{script.Name}] profile not loaded for {player.Name}`)
+			return reject(`[{script.Name}] profile not loaded for {player.Name}`)
 		end
 
-		local current: number = (profile.Data :: PlayerData)[statName] -- LLS wouldn't shut up.. what do I doooooo?!?!?!?
-
-		if current == value then
-			return true
+		local data = profile.Data :: PlayerData
+		if data[statName] == value then
+			return resolve(true)
 		end
 
-		(profile.Data :: PlayerData)[statName] = value -- LLS wouldn't shut up.. what do I doooooo?!?!?!?
+		data[statName] = value
 		self._signals[player][SIGNAL_NAMES[statName]]:Fire(value)
-
-		return true
+		return resolve(true)
 	end)
 end
 
 function PlayerDataHandler:UpdatePlayerStat(player: Player, statName: ValidStats, delta: number): TypedPromise<number>
-	return Promise.try(function()
-		assert(playerCheck(player) and updateCheck(player, statName, delta), `One or more arguments are not valid.`)
-		local profile = self._profiles[player] --do not add PlayerProfile type to this var or else LLS will get mad.
+	return Promise.new(function(resolve, reject)
+		local ok, err = playerCheck(player)
+		if not ok then
+			return reject(`[{script.Name}] {err}`)
+		end
+
+		ok, err = updateCheck(player, statName, delta)
+		if not ok then
+			return reject(`[{script.Name}] {err}`)
+		end
+
+		if typeof(delta) ~= "number" then
+			return reject(`[{script.Name}] bad argument #3 (number expected, got {typeof(delta)})`)
+		end
+
+		local profile = self._profiles[player]
 		if not profile then
-			error(`[{script.Name}] profile not loaded for {player.Name}`)
+			return reject(`[{script.Name}] profile not loaded for {player.Name}`)
 		end
 
-		local current: number = (profile.Data :: PlayerData)[statName] -- LLS wouldn't shut up.. what do I doooooo?!?!?!?
-		local new = current + delta
+		local data = profile.Data :: PlayerData
+		local newValue = data[statName] + delta
 
-		if current == new then
-			return new -- we don't need to update something that is not updated.
+		if data[statName] == newValue then
+			return resolve(newValue) -- we don't need to update something that is not updated.
 		end
 
-		(profile.Data :: PlayerData)[statName] = new -- LLS wouldn't shut up.. what do I doooooo?!?!?!?
-		self._signals[player][SIGNAL_NAMES[statName]]:Fire(new)
-		return new
+		data[statName] = newValue
+		self._signals[player][SIGNAL_NAMES[statName]]:Fire(newValue)
+		return resolve(newValue)
 	end)
 end
 
-function PlayerDataHandler:ObserveSurvivals(player: Player, callback: (number) -> ()): Signal.Connection?
-	if not playerCheck(player) then
-		return
-	end
-	local sig = self._signals[player]
-	if not sig then
-		return warn(`[{script.Name}] signals not ready for {player.Name}`)
-	end
-	return sig.SurvivalsChanged:Connect(callback)
+function PlayerDataHandler:ObserveSurvivals(player: Player, callback: (number) -> ()): TypedPromise<Signal.Connection>
+	return Promise.new(function(resolve, reject)
+		local ok, err = playerCheck(player)
+		if not ok then
+			return reject(`[{script.Name}] {err}`)
+		end
+
+		local sig = self._signals[player]
+		if not sig then
+			return reject(`[{script.Name}] signals not initialized for {player.Name}`)
+		end
+
+		return resolve(sig.SurvivalsChanged:Connect(callback))
+	end)
 end
 
-function PlayerDataHandler:ObservePoints(player: Player, callback: (number) -> ()): Signal.Connection?
-	if not playerCheck(player) then
-		return
-	end
-	local sig = self._signals[player]
-	if not sig then
-		return warn(`[{script.Name}] signals not ready for {player.Name}`)
-	end
-	return sig.PointsChanged:Connect(callback)
+function PlayerDataHandler:ObservePoints(player: Player, callback: (number) -> ()): TypedPromise<Signal.Connection>
+	return Promise.new(function(resolve, reject)
+		local ok, err = playerCheck(player)
+		if not ok then
+			return reject(`[{script.Name}] {err}`)
+		end
+
+		local sig = self._signals[player]
+		if not sig then
+			return reject(`[{script.Name}] signals not initialized for {player.Name}`)
+		end
+
+		return resolve(sig.PointsChanged:Connect(callback))
+	end)
 end
 
 --------------------------------------------------------------------
 --- Studio-only
 --------------------------------------------------------------------
-function PlayerDataHandler:ClearPlayerData(player: Player)
+function PlayerDataHandler:ClearPlayerData(player: Player): TypedPromise<boolean>
 	if not RunService:IsStudio() then
-		return warn(`[{script.Name}] ClearPlayerData can only be used in Studio`)
+		return Promise.reject(`[{script.Name}] ClearPlayerData can only be used in Studio`)
 	end
-	self:SetPlayerStat(player, "Survivals", 0)
-	self:SetPlayerStat(player, "Points", 0)
+
+	local ok, err = playerCheck(player)
+	if not ok then
+		return Promise.reject(`[{script.Name}] {err}`)
+	end
+
+	return Promise.all({
+		self:SetPlayerStat(player, "Survivals", 0),
+		self:SetPlayerStat(player, "Points", 0),
+	}):andThen(function()
+		return true
+	end)
 end
 
 return PlayerDataHandler

@@ -7,12 +7,15 @@
     CHANGELOG: [
 		01/21/26 --> Initial version of the module.
 		01/28/26 --> Adjusted to the new KillerController and added checks for in-progress rounds.
+		02/02/26 --> Display survivors on a Message instance.
 	]
 ]=]
 
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
+local Debris = game:GetService("Debris")
+local Players = game:GetService("Players")
 local Packages = game:GetService("ReplicatedStorage").Packages
 
 local Maid = require(Packages.maid)
@@ -58,6 +61,7 @@ type GameLoop = {
 	_init: boolean,
 	_start: boolean,
 	_inProgress: boolean,
+	_isEnded: boolean,
 	_maid: Maid.Maid,
 
 	-- private methods
@@ -125,8 +129,8 @@ function GameLoop:_startRound(preferredKiller: string): TypedPromise<{ Model }>
 		end
 
 		local spawnPromise: TypedPromise<{ Model }> = killersToSpawn
-				and KillerController:SpawnKillers(killersToSpawn, 1)
-			or KillerController:SpawnAll(1)
+				and KillerController:SpawnKillers(killersToSpawn, -1)
+			or KillerController:SpawnAll(-1)
 
 		spawnPromise
 			:andThen(function(killers)
@@ -158,7 +162,7 @@ function GameLoop:_startRound(preferredKiller: string): TypedPromise<{ Model }>
 					end
 
 					task.defer(function()
-						self:_endRound()
+						self:_endRound():catch(warn)
 					end)
 				end))
 
@@ -173,11 +177,42 @@ end
 
 function GameLoop:_endRound(): TypedPromise<{ Model }>
 	return Promise.new(function(resolve, reject)
+		if self._isEnded then
+			return reject("Round already ended.")
+		end
+
+		self._isEnded = true
 		self._maid:DoCleaning()
-		print("PENDING TO DISPLAY SURVIVORS, PROPER INTERMISSION ETC.")
+
+		local survivors = {} :: { string }
+
+		for _, player in ipairs(Players:GetPlayers()) do
+			if player:GetAttribute("Dead") == false then
+				table.insert(survivors, player.Name)
+			else
+				player:SetAttribute("Dead", false) -- reset back the attribute
+			end
+		end
+
+		local announcement = Instance.new("Message") -- TODO: maybe make it a little notification?
+		announcement.Parent = workspace
+
+		if #survivors == 0 then
+			announcement.Text = "No survivors."
+		elseif #survivors == 1 then
+			announcement.Text = `Survivor: {survivors[1]}.`
+		else
+			table.sort(survivors)
+			announcement.Text =
+				`Survivors: {table.concat(survivors, ", ", nil, #survivors - 1)} and {survivors[#survivors]}.`
+		end
+		Debris:AddItem(announcement, 3)
+
 		countdownHint.Text = "Round ended - Starting next round in 5s..."
 
 		task.wait(5)
+
+		self._isEnded = false
 
 		self
 			:_startRound("**") -- TODO: probably add duos or just multiple killers to survive?

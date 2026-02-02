@@ -10,8 +10,8 @@ return function(context, player: Player, stat: PlayerDataHandler.ValidStats, amm
 			context:Reply(`Updated {player.Name}'s stat '{stat}' to {ammount}.`, Color3.fromRGB(0, 255, 0))
 		end)
 		:catch(function(e)
-			warn(e)
-			context:Reply("Failed to update.", Color3.fromRGB(255, 0, 0))
+			warn(`[Command]:`, e)
+			context:Reply(`Failed to update: {e}`, Color3.fromRGB(255, 0, 0))
 		end)
 
 	return ""

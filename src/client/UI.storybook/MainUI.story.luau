@@ -9,46 +9,41 @@ local Themer = OnyxUI.Themer
 local scoped = Fusion.scoped
 local Components = OnyxUI.Components
 
-local uiModule = require(script.Parent.Parent.UI)
+local UI = require(script.Parent.Parent.UI)
 
 return function(Target: Instance)
 	local scope = scoped(Fusion, Components)
-	local Theme = Themer.Theme:now()
 
-	local useLight = scope:Value(false)
-	local activeTheme = scope:Computed(function(use)
-		return use(useLight) and Themer.NewTheme(scope, {}) -- empty = default light
-			or Themer.Theme:now() -- default dark
-	end)
+	local darkTheme = Themer.Theme:now()
+	local lightTheme = Themer.NewTheme(scope, {})
 
-	-- Mount UI under the chosen theme
-	Themer.Theme:is(Fusion.peek(activeTheme)):during(function()
-		-- Create the actual UI
-		local uiInstance = uiModule:Start(Fusion.peek(activeTheme))
-		uiInstance.Parent = Target
+	local isLight = scope:Value(false)
 
-		return function() -- will this even work? We're in a contextual block...
-			if uiInstance and uiInstance.Parent then
-				uiInstance:Destroy()
-			end
-		end
-	end)
+	UI:Init()
 
-	-- Quick toggle button using OnyxUI components
+	local uiInstance = UI:Start((scope:Computed(function(use)
+		return use(isLight) and lightTheme or darkTheme
+	end) :: any) :: Fusion.Value<OnyxUI.Theme>)
+	uiInstance.Parent = Target
+
 	scope:IconButton {
-		Image = "rbxassetid://6035140766", -- icon
 		Parent = Target,
-		Position = UDim2.fromScale(.5, .5),
-		Size = UDim2.fromOffset(32, 32),
-		BackgroundTransparency = 1,
-		ImageColor3 = Theme.Colors.Neutral.Main,
+		Position = UDim2.fromScale(0.5, 0.1),
+		Size = UDim2.fromOffset(40, 40),
+		Image = scope:Computed(function(use)
+			return use(isLight) and "rbxassetid://6035140766" -- sun
+				or "rbxassetid://6035067836" -- moon
+		end),
+		Color = scope:Computed(function(use)
+			return use(isLight) and Color3.fromRGB(255, 200, 0) or Color3.fromRGB(200, 200, 255)
+		end),
 		OnActivate = function()
-			print("AAAAAAAAAAAAAAAA")
-			useLight:set(not Fusion.peek(useLight))
+			isLight:set(not Fusion.peek(isLight))
 		end,
 	}
 
 	return function()
-		Target:Destroy()
+		UI:Stop()
+		scope:doCleanup()
 	end
 end

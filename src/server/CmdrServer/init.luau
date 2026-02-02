@@ -1,7 +1,7 @@
 --!strict
 --[=[
     Cmdr server initializer
-	@class cmdrServer
+	@class CmdrServer
     @author: santi-luly1
 
     CHANGELOG: [

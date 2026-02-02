@@ -1,4 +1,4 @@
-local REQUIRED_MODULE = require(script.Parent._Index["imavafe_onyx-ui@1.0.2"]["onyx-ui"])
+local REQUIRED_MODULE = require(script.Parent._Index["imavafe_onyx-ui@1.0.4"]["onyx-ui"])
 export type Theme = REQUIRED_MODULE.Theme 
 export type ThemeSpec = REQUIRED_MODULE.ThemeSpec 
 export type BaseProps = REQUIRED_MODULE.BaseProps 

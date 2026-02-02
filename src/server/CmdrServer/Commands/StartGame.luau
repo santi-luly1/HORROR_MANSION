@@ -1,6 +1,6 @@
 return {
 	Name = "startGame",
-	Aliases = {"start"},
+	Aliases = { "start" },
 	Description = "Starts a new fresh round.",
 	Group = "Admin",
 	Args = {
@@ -9,6 +9,6 @@ return {
 			Name = "killer",
 			Description = "Start with a preferred killer.",
 			Default = "**",
-		}
+		},
 	},
 }

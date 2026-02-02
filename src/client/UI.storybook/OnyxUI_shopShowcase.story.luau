@@ -166,9 +166,9 @@ return function(Target)
 
 	local CountThread = task.spawn(function()
 		--while true do
-			task.wait(5)
-			coinBalance:set(Fusion.peek(coinBalance) + 50)
-			print("Added 50 coins! New balance:", Fusion.peek(coinBalance))
+		task.wait(5)
+		coinBalance:set(Fusion.peek(coinBalance) + 50)
+		print("Added 50 coins! New balance:", Fusion.peek(coinBalance))
 		--end
 	end)
 

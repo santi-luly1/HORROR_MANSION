@@ -19,7 +19,7 @@ return function(context, name: string, spawnIndex: number)
 				context:Reply(`Spawned '{killer.Name}' at index {index}.`, Color3.fromRGB(0, 255, 0))
 			end)
 			:catch(function(e)
-				warn(`[Command] Spawn failed:`, e)
+				warn(`[Command]:`, e)
 				context:Reply(`Failed to spawn '{name}': {e}`, Color3.fromRGB(255, 0, 0))
 			end)
 	end

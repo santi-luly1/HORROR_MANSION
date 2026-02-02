@@ -2,10 +2,13 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local simplepath = require(ReplicatedStorage.Packages.simplepath)
 
-local lastTarget: Model? = nil
-local lastPath = nil
+-- each killer gets its own entry via the model as key
+local pathRegistry = setmetatable({} :: { [Model]: { target: Model?, path: any } }, { __mode = "k" })
 
-return function(model: Model, maid: any): boolean -- typecheck for maid? not rn..
+return function(
+	model: Model,
+	maid: any
+): boolean -- typecheck for maid? not rn.. -> FIXME: Sometimes you need to get close to the killer to notice you.
 	local hrp = model:FindFirstChild("HumanoidRootPart") :: Part?
 	if not hrp then
 		warn(`{model:GetFullName()} lacks HumanoidRootPart`)
@@ -24,22 +27,28 @@ return function(model: Model, maid: any): boolean -- typecheck for maid? not rn.
 
 	if target:FindFirstChildOfClass("ForceField") then
 		return false
-	end -- FIXME: for some reason, just 1 killer works at the same time. (kind of)
+	end
 
-	if target ~= lastTarget or not lastPath then
-		lastPath = simplepath.new(model, {
+	local data = pathRegistry[model]
+	if not data then
+		data = { target = nil, path = nil }
+		pathRegistry[model] = data
+
+		maid:GiveTask(function()
+			pathRegistry[model].path:Destroy()
+			pathRegistry[model] = nil
+		end)
+	end
+
+	if target ~= data.target or not data.path then
+		data.target = target
+		data.path = simplepath.new(model, {
 			AgentHeight = 5,
 			AgentRadius = 2,
 			AgentCanJump = true,
 			Costs = { Roof = math.huge }, --really?
 		})
-		lastTarget = target
-
-		maid:GiveTask(function()
-			lastTarget = nil
-		end)
-		maid:GiveTask(lastPath)
 	end
 
-	return lastPath:Run(target:GetPivot().Position) :: boolean
+	return data.path:Run(target:GetPivot().Position) :: boolean
 end
