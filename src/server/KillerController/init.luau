@@ -9,6 +9,7 @@
 		01/11/26 --> Added module-wide typechecking and random spawn selector with its APIs.
 		01/28/26 --> Added multiple killers support and signals.
 		01/30/26 --> Added GetRandomIndex API, and added killer sounds.
+		02/15/26 --> Added SpecialKillerBehavior support and removed sounds index.
 	]
 ]=]
 
@@ -16,7 +17,6 @@
 --- Dependencies
 --------------------------------------------------------------------
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local ServerStorage = game:GetService("ServerStorage")
 
 local Packages = ReplicatedStorage:WaitForChild("Packages")
@@ -24,8 +24,8 @@ local Networking = ReplicatedStorage:WaitForChild("Network")
 
 local Maid = require(Packages:WaitForChild("maid"))
 local Promise = require(Packages:WaitForChild("promise"))
---local SpecialKillerBehaviour = require(script:WaitForChild("SpecialKillerBehaviour"))
 local Signal = require(Packages:WaitForChild("signal"))
+local SpecialKillerBehavior = require(script:WaitForChild("SpecialKillerBehavior"))
 local t = require(Packages:WaitForChild("t"))
 
 local KillerControllerNet = require(Networking:WaitForChild("KillerController"))
@@ -53,7 +53,6 @@ do
 		NAMES[i + 2] = m.Name
 	end
 end
-local SoundsIndex = require(script.Sounds)
 
 --------------------------------------------------------------------
 --- Types
@@ -96,6 +95,8 @@ function KillerController:Init()
 	self._maid = Maid.new()
 	self.KillerSpawned = Signal.new()
 	self.KillerCleared = Signal.new()
+	SpecialKillerBehavior:Init()
+
 	-- handle client requests
 	KillerControllerNet.GetKillersName.OnServerInvoke = function()
 		return self:GetKillersName()
@@ -151,9 +152,13 @@ function KillerController:_spawn(name: string, spawnIndex: number): TypedPromise
 			return reject("Killer not found")
 		end
 
+		local behaviour = SpecialKillerBehavior:Get(name)
+		local Compute = require(script:WaitForChild("Compute"))
 		local clone = template:Clone()
-		local hrp = clone:FindFirstChild("HumanoidRootPart") :: Part
 
+		local hrp = clone:FindFirstChild("HumanoidRootPart") :: Part
+		local hitbox = clone:FindFirstChild("hitbox") :: Part
+		local humanoid = clone:FindFirstChild("Humanoid") :: Humanoid
 		local index, cf = getSpawnCFrame(spawnIndex)
 		clone.Parent = workspace
 		hrp.CFrame = cf
@@ -163,48 +168,46 @@ function KillerController:_spawn(name: string, spawnIndex: number): TypedPromise
 		maid:GiveTask(clone)
 		maid:LinkToInstance(clone) -- would this be an issue with the line above?
 
-		local hitbox = clone:FindFirstChild("hitbox") :: Part
+		behaviour:Init(clone, maid)
+
+		hitbox.Transparency = 0.8
+		local canHit = true -- typical debounce
 		maid:GiveTask(hitbox.Touched:Connect(function(hit)
 			local char = hit.Parent :: Model
 			local hum = char and char:FindFirstChildOfClass("Humanoid")
 			if
-				hum
+				canHit
+				and hum
 				and hum.Health > 0
 				and not char:FindFirstChildOfClass("ForceField")
 				and not char:GetAttribute("killer")
 			then
-				local sounds = SoundsIndex[clone.Name].Kill
-				if #sounds > 0 then
-					local track = Instance.new("Sound")
-					track.SoundId = `rbxassetid://{sounds[math.random(1, #sounds)]}`
-					track.Parent = clone.PrimaryPart
-					track.Volume = 2 -- maybe a bit too loud.
-					track.Ended:Once(function()
-						track:Destroy() -- would this even be needed?
-					end)
-					track:Play()
-				end
-				hum.Health = 0 -- TODO: Maybe smth else instead of just insta kill?
+				canHit = false
+
+				local track = Instance.new("Sound")
+				track.Parent = clone.PrimaryPart
+				track.Volume = 2 -- a bit loud?
+				track.Ended:Once(function()
+					track:Destroy()
+				end)
+				track.SoundId = behaviour:GetBonkSound()
+				track:Play()
+
+				behaviour:Damage(clone, hum)
+				task.delay(behaviour:GetBonkDelay(), function()
+					canHit = true
+				end)
 			end
 		end))
 
-		local humanoid = clone:FindFirstChild("Humanoid") :: Humanoid
 		humanoid.Died:Once(function()
 			maid:Destroy()
 		end)
-
-		maid:GiveTask(task.spawn(function()
-			local Compute = require(script:WaitForChild("Compute"))
-
-			while clone.Parent do
-				local ok = Compute(clone, maid)
-				if ok then
-					RunService.Heartbeat:Wait() -- sooo smooth
-				else
-					task.wait(0.5)
-				end
-			end
+		maid:GiveTask(humanoid.HealthChanged:Connect(function(health)
+			behaviour:OnDamaged(health)
 		end))
+
+		maid:GiveTask(behaviour:InitAI(clone, maid, Compute))
 
 		maid:GiveTask(function()
 			for i, k in ipairs(self._killers) do
@@ -213,10 +216,9 @@ function KillerController:_spawn(name: string, spawnIndex: number): TypedPromise
 					break
 				end
 			end
-			self.KillerCleared:Fire(clone.Name)
+			self.KillerCleared:Fire(clone.Name) -- what are we using these signals even for???
 		end)
 
-		-- TODO: Make the module "SpecialKillerBehaviour" work in here.
 		self._maid:GiveTask(maid)
 		self.KillerSpawned:Fire(clone, index)
 		return resolve(clone, index)

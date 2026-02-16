@@ -40,5 +40,6 @@
   "redhat.telemetry.enabled": false,
   "chat.disableAIFeatures": true,
   "luau-lsp.completion.imports.enabled": true,
-  "luau-lsp.inlayHints.variableTypes": true
+  "luau-lsp.inlayHints.variableTypes": true,
+  "files.autoSaveDelay": 2500,
 }

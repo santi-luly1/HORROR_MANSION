@@ -10,7 +10,7 @@ return function(context, name: string)
 			end
 		end)
 		:catch(function(e)
-			warn(`[Command]:`, e)
+			warn(`[Command]: {e}`)
 			context:Reply(`Failed to start round: {e}`, Color3.fromRGB(255, 0, 0))
 		end)
 

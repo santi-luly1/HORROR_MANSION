@@ -1,5 +1,6 @@
 --!strict
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Maid = require(ReplicatedStorage.Packages.maid)
 local simplepath = require(ReplicatedStorage.Packages.simplepath)
 
 -- each killer gets its own entry via the model as key
@@ -7,8 +8,8 @@ local pathRegistry = setmetatable({} :: { [Model]: { target: Model?, path: any }
 
 return function(
 	model: Model,
-	maid: any
-): boolean -- typecheck for maid? not rn.. -> FIXME: Sometimes you need to get close to the killer to notice you.
+	maid: Maid.Maid
+): boolean -- FIXME: Sometimes you need to get close to the killer to notice you.
 	local hrp = model:FindFirstChild("HumanoidRootPart") :: Part?
 	if not hrp then
 		warn(`{model:GetFullName()} lacks HumanoidRootPart`)

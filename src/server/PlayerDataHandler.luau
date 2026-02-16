@@ -39,10 +39,10 @@ local PlayerDataNet = require(Networking:WaitForChild("PlayerDataNetwork"))
 local PlayerDataHandler = {
 	_init = false,
 	_start = false,
-	_profiles = {} :: { [Player]: PlayerProfile },
-	_store = (nil :: any) :: ProfileStore.ProfileStore<PlayerData>,
-	_maids = {} :: { [Player]: Maid.Maid },
-	_signals = {} :: { [Player]: { [string]: Signal.Signal<number> } },
+	_profiles = {},
+	_store = nil,
+	_maids = {},
+	_signals = {},
 } :: PlayerDataHandler
 
 --------------------------------------------------------------------
@@ -227,7 +227,7 @@ function PlayerDataHandler:_load(player: Player): TypedPromise<PlayerProfile>
 				maid:GiveTask(connection)
 			end)
 			:catch(function(e)
-				warn(`[{script.Name}] Failed to observe {player.Name}'s survivals, expect visual bugs:`, e)
+				warn(`[{script.Name}] Failed to observe {player.Name}'s survivals, expect visual bugs: {e}`)
 			end)
 
 		self:ObservePoints(player, function(new)
@@ -238,7 +238,7 @@ function PlayerDataHandler:_load(player: Player): TypedPromise<PlayerProfile>
 				maid:GiveTask(connection)
 			end)
 			:catch(function(e)
-				warn(`[{script.Name}] Failed to observe {player.Name}'s points, expect visual bugs:`, e)
+				warn(`[{script.Name}] Failed to observe {player.Name}'s points, expect visual bugs: {e}`)
 			end)
 
 		self.ProfileLoaded:Fire(player, profile)
@@ -300,13 +300,9 @@ end
 
 function PlayerDataHandler:SetPlayerStat(player: Player, statName: ValidStats, value: number): TypedPromise<boolean>
 	return Promise.new(function(resolve, reject)
-		local ok, err = playerCheck(player)
+		local ok, err = updateCheck(player, statName, value)
 		if not ok then
 			return reject(`[{script.Name}] {err}`)
-		end
-
-		if typeof(value) ~= "number" then
-			return reject(`[{script.Name}] bad argument #3 (number expected, got {typeof(value)})`)
 		end
 
 		local profile = self._profiles[player]
@@ -327,18 +323,9 @@ end
 
 function PlayerDataHandler:UpdatePlayerStat(player: Player, statName: ValidStats, delta: number): TypedPromise<number>
 	return Promise.new(function(resolve, reject)
-		local ok, err = playerCheck(player)
+		local ok, err = updateCheck(player, statName, delta)
 		if not ok then
 			return reject(`[{script.Name}] {err}`)
-		end
-
-		ok, err = updateCheck(player, statName, delta)
-		if not ok then
-			return reject(`[{script.Name}] {err}`)
-		end
-
-		if typeof(delta) ~= "number" then
-			return reject(`[{script.Name}] bad argument #3 (number expected, got {typeof(delta)})`)
 		end
 
 		local profile = self._profiles[player]
