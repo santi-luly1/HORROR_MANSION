@@ -129,12 +129,6 @@ function KillerController:_spawn(name: string, spawnIndex: number): TypedPromise
 			return reject(`Name '{name}' is invalid.`)
 		end
 
-		for _, existing in ipairs(self._killers) do
-			if existing.Name == name and existing.Parent then
-				return reject(`Killer '{name}' already spawned.`) --maybe shoudl I allow this?
-			end
-		end
-
 		if spawnIndex < 1 then
 			spawnIndex = self:GetRandomIndex()
 		end
@@ -164,9 +158,16 @@ function KillerController:_spawn(name: string, spawnIndex: number): TypedPromise
 		hrp.CFrame = cf
 		clone:SetAttribute("killer", true)
 
-		table.insert(self._killers, clone)
 		maid:GiveTask(clone)
 		maid:LinkToInstance(clone) -- would this be an issue with the line above?
+
+		for _, existing in ipairs(self._killers) do
+			if existing ~= clone and existing.Name == name and existing.Parent then
+				clone:Destroy()
+				return reject(`Killer '{name}' already spawned.`) --maybe shoudl I allow this?
+			end
+		end
+		table.insert(self._killers, clone)
 
 		behaviour:Init(clone, maid)
 
@@ -185,7 +186,7 @@ function KillerController:_spawn(name: string, spawnIndex: number): TypedPromise
 				canHit = false
 
 				local track = Instance.new("Sound")
-				track.Parent = clone.PrimaryPart
+				track.Parent = hrp
 				track.Volume = 2 -- a bit loud?
 				track.Ended:Once(function()
 					track:Destroy()
@@ -210,13 +211,11 @@ function KillerController:_spawn(name: string, spawnIndex: number): TypedPromise
 		maid:GiveTask(behaviour:InitAI(clone, maid, Compute))
 
 		maid:GiveTask(function()
-			for i, k in ipairs(self._killers) do
-				if k == clone then
-					table.remove(self._killers, i)
-					break
-				end
+			local idx = table.find(self._killers, clone)
+			if idx then
+				table.remove(self._killers, idx)
+				self.KillerCleared:Fire(clone.Name)
 			end
-			self.KillerCleared:Fire(clone.Name) -- what are we using these signals even for???
 		end)
 
 		self._maid:GiveTask(maid)
@@ -231,10 +230,20 @@ end
 function KillerController:SpawnKillers(names: { string }, spawnIndex: number): TypedPromise<{ Model }>
 	return Promise.new(function(resolve, reject)
 		local promises = {}
+		local usedIndices = {} -- Track used spawns if random
 
-		for _, name in ipairs(names) do
+		for i, name in ipairs(names) do
+			local idx = spawnIndex
+			if idx < 1 then
+				idx = self:GetRandomIndex()
+				while usedIndices[idx] and i <= #workspace.Map.spawns:GetChildren() do -- gambling time
+					idx = self:GetRandomIndex()
+				end
+				usedIndices[idx] = true
+			end
+
 			if self:IsValidName(name) then
-				table.insert(promises, self:SpawnKiller(name, spawnIndex))
+				table.insert(promises, self:SpawnKiller(name, idx))
 			end
 		end
 
@@ -248,7 +257,7 @@ function KillerController:SpawnKillers(names: { string }, spawnIndex: number): T
 				for _, result in ipairs(results) do
 					table.insert(killers, result)
 				end
-				resolve(killers)
+				return resolve(killers)
 			end)
 			:catch(reject)
 	end)
@@ -289,6 +298,7 @@ function KillerController:GetKillersName(): { string }
 end
 
 function KillerController:IsValidName(name: string): boolean
+	-- "*" = all "**" = random
 	return table.find(NAMES, name) and name ~= "*" and name ~= "**" or false
 end
 

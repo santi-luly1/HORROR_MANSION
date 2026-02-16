@@ -2,8 +2,14 @@
 local Services = game:GetService("ServerScriptService").Server
 
 local KillerController = require(Services.KillerController)
+local RoundController = require(Services.RoundController)
 
 return function(context, name: string, spawnIndex: number)
+	if RoundController:OnIntermission() then
+		context:Reply(`Can't spawn killers during intermission!`, Color3.fromRGB(255, 200, 0))
+		return ""
+	end
+
 	if name == "*" then
 		KillerController:SpawnAll(spawnIndex)
 			:andThen(function(killers)

@@ -71,7 +71,7 @@ function Default:OnDamaged(_health)
 end
 
 function Default:GetBonkSound(): string
-	return `rbxassetid://`
+	return `rbxassetid://140110603417819`
 end
 
 function Default:GetKillSound(): string

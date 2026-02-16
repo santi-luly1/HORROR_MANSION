@@ -1,7 +1,7 @@
 --!strict
 --[=[
     Main server game loop handler
-	@class GameLoop
+	@class RoundController
     @author: santi-luly1
 
     CHANGELOG: [
@@ -9,6 +9,7 @@
 		01/28/26 --> Adjusted to the new KillerController and added checks for in-progress rounds.
 		02/02/26 --> Display survivors on a Message instance.
 		02/14/26 --> If the killer dies, now the round ends with a message, and better hint message.
+		02/16/26 --> Better script performance.
 	]
 ]=]
 
@@ -28,19 +29,17 @@ local PlayerDataHandler = require(script.Parent.PlayerDataHandler)
 --------------------------------------------------------------------
 --- Module
 --------------------------------------------------------------------
-local GameLoop = {
+local RoundController = {
 	_init = false,
 	_start = false,
 	_inProgress = false,
-} :: GameLoop
+} :: RoundController
 
 --------------------------------------------------------------------
 --- Variables
 --------------------------------------------------------------------
 local countdownHint = Instance.new("Hint")
-do
-	countdownHint.Parent = workspace
-end
+countdownHint.Parent = workspace
 local TOTAL_ROUND_DURATION = 20
 
 --------------------------------------------------------------------
@@ -48,59 +47,49 @@ local TOTAL_ROUND_DURATION = 20
 --------------------------------------------------------------------
 type TypedPromise<T...> = Promise.TypedPromise<T...>
 
-type GameLoop = {
+type RoundController = {
 	-- lifecycle
-	Init: (self: GameLoop) -> (),
-	Start: (self: GameLoop) -> (),
+	Init: (self: RoundController) -> (),
+	Start: (self: RoundController) -> (),
 
 	-- public API
-	Begin: (self: GameLoop, preferredKiller: string) -> TypedPromise<{ Model }>,
-	Stop: (self: GameLoop) -> TypedPromise<{ Model }>,
-
-	-- events
+	Begin: (self: RoundController, preferredKiller: string) -> TypedPromise<{ Model }>,
+	Stop: (self: RoundController) -> TypedPromise<{ Model }>,
+	OnIntermission: (self: RoundController) -> boolean,
 
 	-- private
 	_init: boolean,
 	_start: boolean,
 	_inProgress: boolean,
-	_isEnded: boolean,
-	_maid: Maid.Maid,
+	_isEnding: boolean,
+	_maid: Maid.Maid?,
 
 	-- private methods
-	_startRound: (self: GameLoop, preferredKiller: string) -> TypedPromise<{ Model }>,
-	_endRound: (self: GameLoop) -> TypedPromise<{ Model }>,
+	_startRound: (self: RoundController, preferredKiller: string) -> TypedPromise<{ Model }>,
+	_endRound: (self: RoundController) -> TypedPromise<{ Model }>,
+	_cleanupRound: (self: RoundController, maid: Maid.Maid) -> (),
 }
 
 --------------------------------------------------------------------
 --- Init / Start
 --------------------------------------------------------------------
-function GameLoop:Init()
+function RoundController:Init()
 	assert(not self._init, `[{script.Name}] - Module already initialized.`)
 	self._init = true
 end
 
-function GameLoop:Start()
+function RoundController:Start()
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
 
-	self._maid = Maid.new()
-
-	self:_endRound() -- start the main loop.
+	self:_startRound("**") -- start the main loop.
 end
 
 --------------------------------------------------------------------
 --- Handlers
 --------------------------------------------------------------------
-function GameLoop:_startRound(preferredKiller: string): TypedPromise<{ Model }>
+function RoundController:_startRound(preferredKiller: string): TypedPromise<{ Model }>
 	return Promise.new(function(resolve, reject, onCancel)
-		local cancelled = false
-		if onCancel(function()
-			cancelled = true
-			self:_endRound()
-		end) then
-			return
-		end
-
 		if self._inProgress then
 			return reject("Round already in progress")
 		end
@@ -108,7 +97,15 @@ function GameLoop:_startRound(preferredKiller: string): TypedPromise<{ Model }>
 		self._inProgress = true
 
 		local maid = Maid.new()
-		self._maid:GiveTask(maid)
+		self._maid = maid
+
+		local cancelled = false
+		if onCancel(function()
+			cancelled = true
+			self:_cleanupRound(maid)
+		end) then
+			return
+		end
 
 		local killersToSpawn: { string }?
 
@@ -130,70 +127,97 @@ function GameLoop:_startRound(preferredKiller: string): TypedPromise<{ Model }>
 				and KillerController:SpawnKillers(killersToSpawn, -1)
 			or KillerController:SpawnAll(-1)
 
-		spawnPromise
-			:andThen(function(killers)
+		return spawnPromise
+			:andThen(function(initialKillers)
 				if cancelled then
 					return
 				end
 
-				if #killers == 0 then
-					maid:Destroy()
+				if #initialKillers == 0 then
+					self:_cleanupRound(maid)
 					return reject("No killers spawned")
 				end
 
-				maid:GiveTask(function() -- cleanup and stuff
-					self._inProgress = false
-					KillerController:Clear()
+				local processedKillers = {} :: { [Model]: boolean } -- killers that already have been setup
 
-					-- in case the killer dies, the round would have to end.
-					if not self._isEnded then
-						self:_endRound():catch(warn)
+				local function setupKillerDeathDetection(killer: Model) -- cleanup and stuff
+					if processedKillers[killer] then
+						return
 					end
-				end)
+					processedKillers[killer] = true
 
-				for i, killer in ipairs(killers) do -- FIXME: little bug that creates "Ghost" killers, happens when you start with multiple killers, and kill one of them while the round is freshly starting (or while the Messages are up)
-					killer.Destroying:Once(function() -- make a new announcement for every killer killed
-						if self._isEnded or not self._inProgress then
+					killer.Destroying:Once(function()
+						if self._isEnding or not self._inProgress then
 							return
 						end
 
-						local announcement = Instance.new("Message")
-						announcement.Parent = workspace
-
-						if #killers <= 1 then
-							announcement.Text = `All killers have been defeated.`
-							table.remove(killers, i)
-							Debris:AddItem(announcement, 3)
-							task.wait(3)
-							return maid:Destroy() -- it was the last killer, so time for cleanup.
-						end
-
-						announcement.Text = `{killer.Name} has been killed.`
-						table.remove(killers, i)
-						Debris:AddItem(announcement, 3)
+						task.defer(function()
+							local remaining = KillerController:GetCurrentKillers()
+							if #remaining == 0 and not self._isEnding then -- it was the last killer, so time for cleanup.
+								self:_cleanupRound(maid)
+								self:_endRound():catch(warn)
+							else
+								local announcement = Instance.new("Message") -- just announce
+								announcement.Parent = workspace
+								announcement.Text = `{killer.Name} has been killed.`
+								Debris:AddItem(announcement, 3)
+							end
+						end)
 					end)
 				end
 
+				for _, killer in ipairs(initialKillers) do -- setup initial killers
+					setupKillerDeathDetection(killer)
+				end
+
+				maid:GiveTask(KillerController.KillerSpawned:Connect(function(newKiller) -- get new killers mid-round
+					if not self._inProgress or self._isEnding then
+						return
+					end
+					setupKillerDeathDetection(newKiller)
+				end))
+
 				maid:GiveTask(task.spawn(function()
 					local countdown = TOTAL_ROUND_DURATION
+					local cachedNames = {} :: { string }
+					local cachedCount = -1
+					local killerCount = 0
 
-					while countdown >= 0 do
-						if #killers == 0 then
+					local function updateCache()
+						local currentKillers = KillerController:GetCurrentKillers()
+						killerCount = #currentKillers
+
+						if killerCount ~= cachedCount then
+							cachedCount = killerCount
+							table.clear(cachedNames)
+							for _, k in ipairs(currentKillers) do
+								table.insert(cachedNames, k.Name)
+							end
+						end
+					end
+
+					maid:GiveTask(
+						KillerController.KillerSpawned:Connect(function() -- invalidate cache when new killers spawn
+							cachedCount = -1
+						end)
+					)
+
+					while countdown >= 0 and self._inProgress and not self._isEnding do
+						updateCache()
+
+						if killerCount == 0 then
 							countdownHint.Text = `No killers.`
 							task.wait(3)
 							break
-						elseif #killers == 1 then
-							countdownHint.Text = `{killers[1].Name} leaves in {countdown}s`
+						elseif killerCount == 1 then
+							countdownHint.Text = `{cachedNames[1]} leaves in {countdown}s`
 						else
-							if #killers > 5 then -- nested ifs = ugly?????
-								countdownHint.Text = `{#killers} killers will leave in {countdown}s`
+							if killerCount > 5 then
+								countdownHint.Text = `{killerCount} killers will leave in {countdown}s`
 							else
-								local namesTable = {}
-								for _, killer in ipairs(killers) do -- TODO: we're on a while loop, this just kills performance, UPDATE IT AAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-									table.insert(namesTable, killer.Name)
-								end
+								local lastIdx = #cachedNames
 								countdownHint.Text =
-									`{table.concat(namesTable, ", ", nil, #namesTable - 1)} and {namesTable[#namesTable]} will leave in {countdown}s.`
+									`{table.concat(cachedNames, ", ", 1, lastIdx - 1)} and {cachedNames[lastIdx]} will leave in {countdown}s.`
 							end
 						end
 
@@ -201,31 +225,42 @@ function GameLoop:_startRound(preferredKiller: string): TypedPromise<{ Model }>
 						countdown -= 1
 					end
 
-					task.defer(function()
-						self:_endRound():catch(warn)
-					end)
+					if self._inProgress and not self._isEnding then
+						task.defer(function()
+							self:_cleanupRound(maid)
+							self:_endRound():catch(warn)
+						end)
+					end
 				end))
 
-				return resolve(killers)
+				return resolve(initialKillers)
 			end)
 			:catch(function(e)
-				maid:Destroy()
+				self:_cleanupRound(maid)
 				reject(e)
 			end)
 	end)
 end
 
-function GameLoop:_endRound(): TypedPromise<{ Model }>
-	return Promise.new(function(resolve, reject)
-		if self._isEnded then
-			return reject("Round already ended.")
-		end
+function RoundController:_cleanupRound(maid: Maid.Maid)
+	if not self._inProgress then
+		return
+	end
 
-		self._isEnded = true
-		self._maid:DoCleaning()
+	self._inProgress = false
+	maid:Destroy()
+	KillerController:Clear()
+	self._maid = nil
+end
+
+function RoundController:_endRound(): TypedPromise<{ Model }>
+	return Promise.new(function(resolve, reject)
+		if self._isEnding then
+			return reject("Round already ending.")
+		end
+		self._isEnding = true
 
 		local survivors = {} :: { string }
-
 		for _, player in ipairs(Players:GetPlayers()) do
 			if player:GetAttribute("Dead") == false then
 				table.insert(survivors, player.Name)
@@ -244,8 +279,8 @@ function GameLoop:_endRound(): TypedPromise<{ Model }>
 			announcement.Text = `Survivor: {survivors[1]}.`
 		else
 			table.sort(survivors)
-			announcement.Text =
-				`Survivors: {table.concat(survivors, ", ", nil, #survivors - 1)} and {survivors[#survivors]}.`
+			local lastIdx = #survivors
+			announcement.Text = `Survivors: {table.concat(survivors, ", ", 1, lastIdx - 1)} and {survivors[lastIdx]}.`
 		end
 		Debris:AddItem(announcement, 3)
 
@@ -253,7 +288,7 @@ function GameLoop:_endRound(): TypedPromise<{ Model }>
 
 		task.wait(5)
 
-		self._isEnded = false
+		self._isEnding = false
 
 		self
 			:_startRound("**") -- TODO: probably add duos or just multiple killers to survive?
@@ -265,12 +300,19 @@ end
 --------------------------------------------------------------------
 --- Public API
 --------------------------------------------------------------------
-function GameLoop:Begin(preferredKiller: string): TypedPromise<{ Model }>
+function RoundController:Begin(preferredKiller: string): TypedPromise<{ Model }>
 	return self:_startRound(preferredKiller)
 end
 
-function GameLoop:Stop(): TypedPromise<{ Model }>
+function RoundController:OnIntermission(): boolean
+	return self._isEnding and not self._inProgress
+end
+
+function RoundController:Stop(): TypedPromise<{ Model }>
+	if self._maid then
+		self:_cleanupRound(self._maid)
+	end
 	return self:_endRound()
 end
 
-return GameLoop
+return RoundController

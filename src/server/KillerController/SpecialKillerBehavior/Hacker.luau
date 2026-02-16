@@ -66,7 +66,7 @@ function Hacker:OnDamaged(health)
 end
 
 function Hacker:GetBonkSound(): string
-	return `rbxassetid://`
+	return Registry._default:GetBonkSound()
 end
 
 function Hacker:GetKillSound(): string

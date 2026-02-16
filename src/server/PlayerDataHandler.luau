@@ -12,6 +12,8 @@
 		01/09/26 --> Added Promise typechecking.
 		01/11/26 --> Entire module is now typechecked.
 		01/30/26 --> Removed Promise.try for a better Promise chain.
+		02/16/26 --> Fixed race conditions.
+	]
 ]=]
 
 --------------------------------------------------------------------
@@ -43,6 +45,7 @@ local PlayerDataHandler = {
 	_store = nil,
 	_maids = {},
 	_signals = {},
+	_loadingPromises = {}, -- track in-progress loads to prevent race conditions
 } :: PlayerDataHandler
 
 --------------------------------------------------------------------
@@ -102,10 +105,11 @@ type PlayerDataHandler = {
 	_profiles: { [Player]: PlayerProfile },
 	_maids: { [Player]: Maid.Maid },
 	_signals: { [Player]: { [string]: Signal.Signal<number> } },
+	_loadingPromises: { [Player]: TypedPromise<PlayerProfile> },
 
 	-- private methods
-	_load: (self: PlayerDataHandler, Player) -> TypedPromise<>,
-	_release: (self: PlayerDataHandler, Player) -> TypedPromise<>,
+	_load: (self: PlayerDataHandler, Player) -> TypedPromise<PlayerProfile>,
+	_release: (self: PlayerDataHandler, Player) -> TypedPromise<()>,
 }
 
 local playerCheck = t.instanceOf("Player")
@@ -136,10 +140,8 @@ function PlayerDataHandler:Start()
 		self:_load(player)
 			:andThen(function()
 				print(`[{script.Name}] loaded {player.Name}'s profile`)
-				self:ClearPlayerData(player):catch(warn)
-
 				task.spawn(function()
-					while RunService:IsStudio() do
+					while RunService:IsStudio() and self._profiles[player] do
 						task.wait(1)
 						self:UpdatePlayerStat(player, "Points", 5):catch(warn)
 					end
@@ -161,7 +163,11 @@ end
 --- Handlers
 --------------------------------------------------------------------
 function PlayerDataHandler:_load(player: Player): TypedPromise<PlayerProfile>
-	return Promise.new(function(resolve, reject)
+	if self._loadingPromises[player] then
+		return self._loadingPromises[player]
+	end
+
+	local promise = Promise.new(function(resolve, reject)
 		local ok, err = playerCheck(player)
 		if not ok then
 			return reject(`[{script.Name}] {err}`)
@@ -184,10 +190,18 @@ function PlayerDataHandler:_load(player: Player): TypedPromise<PlayerProfile>
 			return reject(`[{script.Name}] could not load profile for {player.Name} after {MAX_RETRIES} tries`)
 		end
 
+		-- just in case it's "corrupted" or whatever
+		if not profile.Data or type(profile.Data) ~= "table" then
+			profile:EndSession()
+			return reject(`[{script.Name}] invalid profile data for {player.Name}`)
+		end
+
 		profile:AddUserId(player.UserId)
 		profile:Reconcile() -- adds missing keys for old profiles
+
 		if profile.Data.Version ~= PROFILE_VERSION then
 			-- simple migration..............
+			-- TODO: actual migration
 			profile.Data.Version = PROFILE_VERSION
 		end
 
@@ -244,13 +258,24 @@ function PlayerDataHandler:_load(player: Player): TypedPromise<PlayerProfile>
 		self.ProfileLoaded:Fire(player, profile)
 		return resolve(profile)
 	end)
+
+	self._loadingPromises[player] = promise
+	promise:finally(function()
+		self._loadingPromises[player] = nil
+	end)
+
+	return promise
 end
 
-function PlayerDataHandler:_release(player: Player): TypedPromise<>
+function PlayerDataHandler:_release(player: Player): TypedPromise<()>
 	return Promise.new(function(resolve, reject)
 		local ok, err = playerCheck(player)
 		if not ok then
 			return reject(`[{script.Name}] {err}`)
+		end
+
+		if self._loadingPromises[player] then
+			self._loadingPromises[player]:await()
 		end
 
 		local maid = self._maids[player]
