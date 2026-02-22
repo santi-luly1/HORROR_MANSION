@@ -22,6 +22,7 @@ export type ItemCardProps = {
 
 return function(props: ItemCardProps): Frame
 	local scope = props.scope:innerScope(Fusion, Components)
+	local theme = props.theme
 
 	local component = scope:Card {
 		Name = `Card_{props.itemData.Name}`,
@@ -29,29 +30,17 @@ return function(props: ItemCardProps): Frame
 		Position = UDim2.fromScale(0.5, 0.5),
 		Size = props.onPreview and UDim2.fromScale(1, 1) or UDim2.new(0.55, 0, 0, 250),
 		BackgroundTransparency = 0.5,
-		BackgroundColor3 = scope:Computed(function(use)
-			local theme = props.theme
-			return use(theme.Colors.Base.Light)
-		end),
+		BackgroundColor3 = theme.Colors.Base.Light,
 		Stroke = {
-			Thickness = scope:Computed(function(use)
-				local theme = props.theme
-				return use(theme.StrokeThickness["1"])
-			end),
-			Color = scope:Computed(function(use)
-				local theme = props.theme
-				return use(theme.Colors.Base.Light)
-			end),
+			Thickness = theme.StrokeThickness["1"],
+			Color = theme.Colors.Base.Light,
 			Transparency = 0.5,
 		},
 
 		[Children] = {
 			scope:Button { -- select hitbox (forgot abt it)
 				Size = UDim2.fromScale(1, 1),
-				BackgroundColor3 = scope:Computed(function(use)
-					local theme = props.theme
-					return use(theme.Colors.Base.Light)
-				end),
+				BackgroundColor3 = theme.Colors.Base.Light,
 				OnActivate = function()
 					if props.onSelect and not props.onPreview then
 						props.onSelect(props.itemData.Name)
@@ -78,10 +67,7 @@ return function(props: ItemCardProps): Frame
 				Size = UDim2.fromScale(1, 0.15),
 				Position = UDim2.fromScale(0, 0.7),
 				Text = props.itemData.Name,
-				TextColor3 = scope:Computed(function(use)
-					local theme = props.theme
-					return use(theme.Colors.Secondary.Main)
-				end),
+				TextColor3 = theme.Colors.Secondary.Main,
 				TextSize = 18,
 				TextXAlignment = Enum.TextXAlignment.Center :: any,
 				Font = Enum.Font.GothamBold :: any,
@@ -94,10 +80,7 @@ return function(props: ItemCardProps): Frame
 				Size = UDim2.fromScale(1, 0.1),
 				Position = UDim2.fromScale(0, 0.9),
 				Text = `{props.itemData.Price} Points`,
-				TextColor3 = scope:Computed(function(use)
-					local theme = props.theme
-					return use(theme.Colors.Success.Main)
-				end),
+				TextColor3 = theme.Colors.Success.Main,
 				TextSize = 12,
 				TextXAlignment = Enum.TextXAlignment.Center :: any,
 				Font = Enum.Font.Gotham :: any,

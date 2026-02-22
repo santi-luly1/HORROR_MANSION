@@ -53,8 +53,8 @@ type RoundController = {
 	Start: (self: RoundController) -> (),
 
 	-- public API
-	Begin: (self: RoundController, preferredKiller: string) -> TypedPromise<{ Model }>,
-	Stop: (self: RoundController) -> TypedPromise<{ Model }>,
+	Begin: (self: RoundController, preferredKiller: string, skipped: boolean?) -> TypedPromise<{ Model }>,
+	Stop: (self: RoundController, preferredKiller: string?, skipped: boolean?) -> TypedPromise<{ Model }>,
 	OnIntermission: (self: RoundController) -> boolean,
 
 	-- private
@@ -66,7 +66,7 @@ type RoundController = {
 
 	-- private methods
 	_startRound: (self: RoundController, preferredKiller: string) -> TypedPromise<{ Model }>,
-	_endRound: (self: RoundController) -> TypedPromise<{ Model }>,
+	_endRound: (self: RoundController, preferredKiller: string?, skipped: boolean?) -> TypedPromise<{ Model }>,
 	_cleanupRound: (self: RoundController, maid: Maid.Maid) -> (),
 }
 
@@ -82,7 +82,7 @@ function RoundController:Start()
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
 
-	self:_startRound("**") -- start the main loop.
+	self:Begin("**") -- start the main loop.
 end
 
 --------------------------------------------------------------------
@@ -154,8 +154,7 @@ function RoundController:_startRound(preferredKiller: string): TypedPromise<{ Mo
 						task.defer(function()
 							local remaining = KillerController:GetCurrentKillers()
 							if #remaining == 0 and not self._isEnding then -- it was the last killer, so time for cleanup.
-								self:_cleanupRound(maid)
-								self:_endRound():catch(warn)
+								self:Stop():catch(warn)
 							else
 								local announcement = Instance.new("Message") -- just announce
 								announcement.Parent = workspace
@@ -227,8 +226,7 @@ function RoundController:_startRound(preferredKiller: string): TypedPromise<{ Mo
 
 					if self._inProgress and not self._isEnding then
 						task.defer(function()
-							self:_cleanupRound(maid)
-							self:_endRound():catch(warn)
+							self:Stop():catch(warn)
 						end)
 					end
 				end))
@@ -253,45 +251,49 @@ function RoundController:_cleanupRound(maid: Maid.Maid)
 	self._maid = nil
 end
 
-function RoundController:_endRound(): TypedPromise<{ Model }>
+function RoundController:_endRound(preferredKiller: string?, skipped: boolean?): TypedPromise<{ Model }>
 	return Promise.new(function(resolve, reject)
 		if self._isEnding then
-			return reject("Round already ending.")
+			return reject("Round already ending")
 		end
 		self._isEnding = true
 
-		local survivors = {} :: { string }
-		for _, player in ipairs(Players:GetPlayers()) do
-			if player:GetAttribute("Dead") == false then
-				table.insert(survivors, player.Name)
-				PlayerDataHandler:UpdatePlayerStat(player, "Survivals", 1)
-			else
-				player:SetAttribute("Dead", false) -- just reset back the attribute
+		if not skipped then -- start command for example would skip the round, so it doesn't really count as a survival
+			local survivors = {} :: { string }
+			for _, player in ipairs(Players:GetPlayers()) do
+				if player:GetAttribute("Dead") == false then
+					table.insert(survivors, player.Name)
+					PlayerDataHandler:UpdatePlayerStat(player, "Survivals", 1)
+				else
+					player:SetAttribute("Dead", false) -- just reset back the attribute
+				end
 			end
-		end
 
-		local announcement = Instance.new("Message") -- TODO: maybe make it a little notification?
-		announcement.Parent = workspace
+			local announcement = Instance.new("Message") -- TODO: maybe make it a little notification?
+			announcement.Parent = workspace
 
-		if #survivors == 0 then
-			announcement.Text = "No survivors."
-		elseif #survivors == 1 then
-			announcement.Text = `Survivor: {survivors[1]}.`
+			if #survivors == 0 then
+				announcement.Text = "No survivors."
+			elseif #survivors == 1 then
+				announcement.Text = `Survivor: {survivors[1]}.`
+			else
+				table.sort(survivors)
+				local lastIdx = #survivors
+				announcement.Text =
+					`Survivors: {table.concat(survivors, ", ", 1, lastIdx - 1)} and {survivors[lastIdx]}.`
+			end
+			Debris:AddItem(announcement, 3)
+			countdownHint.Text = "Round ended - Starting next round in 5s..."
 		else
-			table.sort(survivors)
-			local lastIdx = #survivors
-			announcement.Text = `Survivors: {table.concat(survivors, ", ", 1, lastIdx - 1)} and {survivors[lastIdx]}.`
+			countdownHint.Text = "Round skipped - Starting new round"
 		end
-		Debris:AddItem(announcement, 3)
-
-		countdownHint.Text = "Round ended - Starting next round in 5s..."
 
 		task.wait(5)
 
 		self._isEnding = false
 
 		self
-			:_startRound("**") -- TODO: probably add duos or just multiple killers to survive?
+			:Begin(preferredKiller or "**") -- TODO: probably add duos or just multiple killers to survive?
 			:andThen(resolve)
 			:catch(reject)
 	end)
@@ -301,6 +303,14 @@ end
 --- Public API
 --------------------------------------------------------------------
 function RoundController:Begin(preferredKiller: string): TypedPromise<{ Model }>
+	if self:OnIntermission() then
+		return Promise.reject("Cannot start round during intermission")
+	end
+
+	if self._inProgress then
+		return self:Stop(preferredKiller, true):catch(warn)
+	end
+
 	return self:_startRound(preferredKiller)
 end
 
@@ -308,11 +318,11 @@ function RoundController:OnIntermission(): boolean
 	return self._isEnding and not self._inProgress
 end
 
-function RoundController:Stop(): TypedPromise<{ Model }>
+function RoundController:Stop(preferredKiller: string?, skipped: boolean?): TypedPromise<{ Model }>
 	if self._maid then
 		self:_cleanupRound(self._maid)
 	end
-	return self:_endRound()
+	return self:_endRound(preferredKiller, skipped)
 end
 
 return RoundController

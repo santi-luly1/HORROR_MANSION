@@ -3,7 +3,9 @@ local Services = game:GetService("ServerScriptService").Server
 local RoundController = require(Services.RoundController)
 
 return function(context, name: string)
-	RoundController:Begin(name)
+	context:Reply(`Ending round...`, Color3.fromRGB(100, 200, 225))
+
+	RoundController:Begin(name, true)
 		:andThen(function(killers)
 			for _, killer in ipairs(killers) do
 				context:Reply(`Round started with '{killer.Name}'.`, Color3.fromRGB(0, 255, 0))

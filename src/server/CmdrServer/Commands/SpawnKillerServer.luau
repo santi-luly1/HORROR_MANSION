@@ -1,4 +1,5 @@
 --!strict
+local killersCount = #game:GetService("ServerStorage").Killers:GetChildren()
 local Services = game:GetService("ServerScriptService").Server
 
 local KillerController = require(Services.KillerController)
@@ -13,7 +14,7 @@ return function(context, name: string, spawnIndex: number)
 	if name == "*" then
 		KillerController:SpawnAll(spawnIndex)
 			:andThen(function(killers)
-				context:Reply(`Spawned {#killers} killers`, Color3.fromRGB(0, 255, 0))
+				context:Reply(`Spawned {#killers} killers out of {killersCount}`, Color3.fromRGB(0, 255, 0))
 			end)
 			:catch(function(e)
 				warn(`[Command]: {e}`)
@@ -26,7 +27,7 @@ return function(context, name: string, spawnIndex: number)
 			end)
 			:catch(function(e)
 				warn(`[Command]: {e}`)
-				context:Reply(`Failed to spawn '{name}': {e}`, Color3.fromRGB(255, 0, 0))
+				context:Reply(`Failed to spawn: {e}`, Color3.fromRGB(255, 0, 0))
 			end)
 	end
 

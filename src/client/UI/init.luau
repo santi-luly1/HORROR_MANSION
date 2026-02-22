@@ -104,7 +104,7 @@ function UI:Init()
 	self._shopEnabled = self._scope:Value(true) -- false
 end
 
-function UI:Start(themeState: Fusion.Computed<FusionTheme>?): GuiBase
+function UI:Start(themeState): GuiBase
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
 
@@ -156,10 +156,7 @@ function UI:_buildMainContainerUI()
 		Position = UDim2.fromScale(1, 1),
 		Size = UDim2.fromScale(0.05, 0.1),
 		Image = "",
-		Color = self._scope:Computed(function(use)
-			local theme = self._currentTheme
-			return use(theme.Colors.Primary.Main)
-		end),
+		Color = self._currentTheme.Colors.Primary.Main,
 		OnActivate = function()
 			self._shopEnabled:set(not Fusion.peek(self._shopEnabled))
 		end,
@@ -214,10 +211,7 @@ function UI:_buildItemsScroller()
 			return purchasableItems
 		end),
 		Stroke = {
-			Color = self._scope:Computed(function(use)
-				local theme = self._currentTheme
-				return use(theme.Colors.Error.Main)
-			end),
+			Color = self._currentTheme.Colors.Error.Main,
 			Thickness = 0.75,
 			Transparency = 0,
 			LineJoinMode = Enum.LineJoinMode.Round,
@@ -236,10 +230,7 @@ function UI:_buildDetailsPanel()
 	return self._scope:Frame {
 		Name = "DetailsPanel",
 		BackgroundTransparency = 0.9,
-		BackgroundColor3 = self._scope:Computed(function(use)
-			local theme = self._currentTheme
-			return use(theme.Colors.Base.Dark)
-		end),
+		BackgroundColor3 = self._currentTheme.Colors.Base.Dark,
 		Size = UDim2.fromScale(0.275, 1),
 		Position = UDim2.fromScale(1, 0),
 		AnchorPoint = Vector2.new(1, 0),
@@ -253,33 +244,17 @@ function UI:_buildDetailsPanel()
 				end),
 
 				Font = Enum.Font.GothamBold,
-				TextSize = self._scope:Computed(function(use)
-					local theme = self._currentTheme
-					return use(theme.TextSize["1.25"])
-				end),
-				TextColor3 = self._scope:Computed(function(use)
-					local theme = self._currentTheme
-					return use(theme.Colors.Primary.Main)
-				end),
+				TextSize = self._currentTheme.TextSize["1.25"],
+				TextColor3 = self._currentTheme.Colors.Primary.Main,
 				BackgroundTransparency = 0.75,
-				BackgroundColor3 = self._scope:Computed(function(use)
-					local theme = self._currentTheme
-					return use(theme.Colors.Primary.Dark)
-				end),
-
+				BackgroundColor3 = self._currentTheme.Colors.Primary.Dark,
 				Size = UDim2.fromScale(0.75, 0.05),
 				Position = UDim2.fromScale(0.125, 0.05),
 				TextXAlignment = Enum.TextXAlignment.Center,
 
 				Stroke = {
-					Color = self._scope:Computed(function(use)
-						local theme = self._currentTheme
-						return use(theme.Colors.Primary.Dark)
-					end),
-					Thickness = self._scope:Computed(function(use)
-						local theme = self._currentTheme
-						return use(theme.StrokeThickness["2"])
-					end),
+					Color = self._currentTheme.Colors.Primary.Dark,
+					Thickness = self._currentTheme.StrokeThickness["2"],
 					Transparency = 0,
 					ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 					LineJoinMode = Enum.LineJoinMode.Round,
@@ -295,32 +270,17 @@ function UI:_buildDetailsPanel()
 				end),
 
 				Font = Enum.Font.GothamBold,
-				TextSize = self._scope:Computed(function(use)
-					local theme = self._currentTheme
-					return use(theme.TextSize["1.25"])
-				end),
-				TextColor3 = self._scope:Computed(function(use)
-					local theme = self._currentTheme
-					return use(theme.Colors.Primary.Main)
-				end),
+				TextSize = self._currentTheme.TextSize["1.25"],
+				TextColor3 = self._currentTheme.Colors.Primary.Main,
 				BackgroundTransparency = 0.75,
-				BackgroundColor3 = self._scope:Computed(function(use)
-					local theme = self._currentTheme
-					return use(theme.Colors.Primary.Dark)
-				end),
+				BackgroundColor3 = self._currentTheme.Colors.Primary.Dark,
 				Position = UDim2.fromScale(0.125, 0.125),
 				Size = UDim2.fromScale(0.75, 0.05),
 				TextXAlignment = Enum.TextXAlignment.Center,
 
 				Stroke = {
-					Color = self._scope:Computed(function(use)
-						local theme = self._currentTheme
-						return use(theme.Colors.Primary.Dark)
-					end),
-					Thickness = self._scope:Computed(function(use)
-						local theme = self._currentTheme
-						return use(theme.StrokeThickness["2"])
-					end),
+					Color = self._currentTheme.Colors.Primary.Dark,
+					Thickness = self._currentTheme.StrokeThickness["2"],
 					Transparency = 0,
 					ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 					LineJoinMode = Enum.LineJoinMode.Round,
@@ -362,10 +322,7 @@ function UI:_buildDetailsPanel()
 				Name = "PurchaseButton",
 				Content = { "Purchase" },
 				Size = UDim2.fromScale(0.8, 0.1),
-				BackgroundColor3 = self._scope:Computed(function(use)
-					local theme = self._currentTheme
-					return use(theme.Colors.Success.Main)
-				end),
+				BackgroundColor3 = self._currentTheme.Colors.Success.Main,
 				TextColor3 = Color3.fromRGB(255, 255, 255),
 				AnchorPoint = Vector2.new(0.5, 0),
 				Position = UDim2.fromScale(0.5, 0.825),
@@ -387,10 +344,7 @@ function UI:_buildShopFrame()
 		Size = UDim2.fromScale(0.985, 0.9),
 		Position = UDim2.fromScale(0.5, 0.54),
 		Stroke = {
-			Color = self._scope:Computed(function(use)
-				local theme = self._currentTheme
-				return use(theme.Colors.Primary.Light)
-			end),
+			Color = self._currentTheme.Colors.Primary.Light,
 			Thickness = 2.75,
 			Transparency = 0,
 			LineJoinMode = Enum.LineJoinMode.Round,
@@ -408,19 +362,13 @@ function UI:_buildShopContainer()
 	return self._scope:Frame {
 		Name = "ShopContainer",
 		BackgroundTransparency = 0.25,
-		BackgroundColor3 = self._scope:Computed(function(use)
-			local theme = self._currentTheme
-			return use(theme.Colors.Base.Dark)
-		end),
+		BackgroundColor3 = self._currentTheme.Colors.Base.Dark,
 		Size = UDim2.fromScale(0.5, 0.6),
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
 		Corner = { Radius = UDim.new(0, 5) },
 		Stroke = {
-			Color = self._scope:Computed(function(use)
-				local theme = self._currentTheme
-				return use(theme.Colors.Primary.Main)
-			end),
+			Color = self._currentTheme.Colors.Primary.Main,
 			Thickness = 2,
 			Transparency = 0,
 			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,

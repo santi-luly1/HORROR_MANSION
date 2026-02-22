@@ -54,6 +54,8 @@ function PlayerDeathHandler:Start()
 				hum.Died:Once(function()
 					warn(`[{script.Name}] Player {player.Name} has died.`)
 					player:SetAttribute("Dead", true)
+
+					--generic sound
 					local track = Instance.new("Sound")
 					track.SoundId = `rbxassetid://{SoundsIndex[math.random(1, #SoundsIndex)]}`
 					track.Parent = character.PrimaryPart

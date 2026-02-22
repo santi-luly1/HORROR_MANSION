@@ -10,6 +10,7 @@
 		01/28/26 --> Added multiple killers support and signals.
 		01/30/26 --> Added GetRandomIndex API, and added killer sounds.
 		02/15/26 --> Added SpecialKillerBehavior support and removed sounds index.
+		02/21/26 --> Fixed SpawnAll, it was failing for the slightest rejection.
 	]
 ]=]
 
@@ -106,6 +107,8 @@ end
 function KillerController:Start()
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
+
+	math.randomseed(os.clock())
 end
 
 --------------------------------------------------------------------
@@ -126,7 +129,7 @@ function KillerController:_spawn(name: string, spawnIndex: number): TypedPromise
 		end
 
 		if not self:IsValidName(name) then
-			return reject(`Name '{name}' is invalid.`)
+			return reject(`Name '{name}' is invalid`)
 		end
 
 		if spawnIndex < 1 then
@@ -164,7 +167,7 @@ function KillerController:_spawn(name: string, spawnIndex: number): TypedPromise
 		for _, existing in ipairs(self._killers) do
 			if existing ~= clone and existing.Name == name and existing.Parent then
 				clone:Destroy()
-				return reject(`Killer '{name}' already spawned.`) --maybe shoudl I allow this?
+				return reject(`Killer '{name}' already spawned`) --maybe shoudl I allow this?
 			end
 		end
 		table.insert(self._killers, clone)
@@ -187,7 +190,7 @@ function KillerController:_spawn(name: string, spawnIndex: number): TypedPromise
 
 				local track = Instance.new("Sound")
 				track.Parent = hrp
-				track.Volume = 2 -- a bit loud?
+				track.Volume = 0.5
 				track.Ended:Once(function()
 					track:Destroy()
 				end)
@@ -230,20 +233,18 @@ end
 function KillerController:SpawnKillers(names: { string }, spawnIndex: number): TypedPromise<{ Model }>
 	return Promise.new(function(resolve, reject)
 		local promises = {}
-		local usedIndices = {} -- Track used spawns if random
 
-		for i, name in ipairs(names) do
-			local idx = spawnIndex
-			if idx < 1 then
-				idx = self:GetRandomIndex()
-				while usedIndices[idx] and i <= #workspace.Map.spawns:GetChildren() do -- gambling time
-					idx = self:GetRandomIndex()
-				end
-				usedIndices[idx] = true
-			end
-
+		for _, name in ipairs(names) do
+			spawnIndex = spawnIndex > 0 and spawnIndex or self:GetRandomIndex()
 			if self:IsValidName(name) then
-				table.insert(promises, self:SpawnKiller(name, idx))
+				local wrapped = self:SpawnKiller(name, spawnIndex)
+					:andThen(function(model)
+						return { ok = true, result = model }
+					end)
+					:catch(function(err)
+						return { ok = false, result = err }
+					end)
+				table.insert(promises, wrapped)
 			end
 		end
 
@@ -254,12 +255,16 @@ function KillerController:SpawnKillers(names: { string }, spawnIndex: number): T
 		Promise.all(promises)
 			:andThen(function(results)
 				local killers = {}
+				local errors = {}
+
 				for _, result in ipairs(results) do
-					table.insert(killers, result)
+					table.insert(result.ok and killers or errors, result.result)
 				end
-				return resolve(killers)
+
+				return #killers > 0 and resolve(killers)
+					or reject(`All {#errors} killer spawns failed: {table.concat(errors, ", ")}`)
 			end)
-			:catch(reject)
+			:catch(warn)
 	end)
 end
 

@@ -26,7 +26,7 @@ function Hacker:Init(model: Model, maid)
 
 	local ambience = Instance.new("Sound")
 	ambience.Name = "Ambience"
-	ambience.SoundId = "rbxassetid://"
+	ambience.SoundId = "rbxassetid://123437024423007"
 	ambience.Looped = true
 	ambience.Volume = 0.5
 	ambience.Parent = hrp
@@ -54,11 +54,24 @@ function Hacker:InitAI(model)
 end
 
 function Hacker:OnKilledPlayer(model: Model, victim: Model)
-	return Registry._default:OnKilledPlayer(model, victim)
+	local track = Instance.new("Sound")
+	track.Parent = model.PrimaryPart
+	track.Volume = 2 -- a bit loud?
+	track.Ended:Once(function()
+		track:Destroy()
+	end)
+	track.SoundId = self:GetKillSound()
+	track:Play()
+
+	warn(`{model.Name} says L to {victim.Name}`)
 end
 
 function Hacker:Damage(model, humanoid)
-	return Registry._default:Damage(model, humanoid)
+	humanoid:TakeDamage(20)
+
+	if humanoid.Health <= 0 then
+		self:OnKilledPlayer(model, humanoid.Parent :: Model)
+	end
 end
 
 function Hacker:OnDamaged(health)
@@ -66,11 +79,11 @@ function Hacker:OnDamaged(health)
 end
 
 function Hacker:GetBonkSound(): string
-	return Registry._default:GetBonkSound()
+	return `rbxassetid://99928861785298`
 end
 
 function Hacker:GetKillSound(): string
-	return `rbxassetid://139771888058836`
+	return `rbxassetid://4697392376`
 end
 
 function Hacker:GetBonkDelay()
