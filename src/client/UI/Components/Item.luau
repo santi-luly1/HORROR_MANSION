@@ -4,89 +4,216 @@ local Packages = ReplicatedStorage:WaitForChild("Packages")
 
 local Fusion = require(Packages:WaitForChild("fusion"))
 local OnyxUI = require(Packages:WaitForChild("onyx-ui"))
+local Themes = require(script.Parent.Parent.Themes)
 
-local Components = OnyxUI.Components
 local Children = Fusion.Children
+local Peek = Fusion.peek
 
 export type ItemCardProps = {
-	scope: Fusion.Scope,
+	scope: Fusion.Scope<any>,
 	itemData: {
 		Price: number,
 		Name: string,
 		TextureId: string,
 	},
-	theme: OnyxUI.Theme,
-	onPreview: boolean?, -- I should come up with better names, but just to verify the right size (if on the items list or the preview frame)
+	theme: Fusion.Value<Themes.ThemeSpec>,
+	onPreview: boolean?,
 	onSelect: (selectedTool: string) -> ()?,
 }
 
 return function(props: ItemCardProps): Frame
-	local scope = props.scope:innerScope(Fusion, Components)
+	local scope = props.scope:innerScope(Fusion, OnyxUI.Util, OnyxUI.Components)
 	local theme = props.theme
 
-	local component = scope:Card {
+	local isHovered = scope:Value(false)
+	local isPressed = scope:Value(false)
+	local entryDelay = scope:Value(math.random() * 0.15)
+
+	local scale = scope:Computed(function(use)
+		local hover = use(isHovered)
+		local pressed = use(isPressed)
+		if pressed then
+			return 0.95
+		elseif hover then
+			return 1.05
+		else
+			return 1
+		end
+	end)
+
+	local springScale = scope:Spring(scale, 40, 0.8)
+
+	local strokeThickness = scope:Computed(function(use)
+		local hover = use(isHovered)
+		local t = use(theme)
+		if hover then
+			return use(t.StrokeThickness["2"])
+		else
+			return use(t.StrokeThickness["1"])
+		end
+	end)
+
+	local springStroke = scope:Spring(strokeThickness, 50, 0.9)
+
+	local backgroundTransparency = scope:Computed(function(use)
+		local hover = use(isHovered)
+		if hover then
+			return 0.2
+		else
+			return 0.5
+		end
+	end)
+
+	local springBgTrans = scope:Spring(backgroundTransparency, 30, 0.95)
+
+	local entryPosition = scope:Value(UDim2.fromScale(0.5, 0.6))
+	local targetPosition = UDim2.fromScale(0.5, 0.5)
+	local springPosition = scope:Spring(entryPosition, 35, 0.7)
+
+	task.delay(Peek(entryDelay), function()
+		entryPosition:set(targetPosition)
+	end)
+
+	return scope:Card {
 		Name = `Card_{props.itemData.Name}`,
-		AnchorPoint = Vector2.new(0.5, 0.5), -- they're managed by the scrolling frame anyways, so no issue I guess.
-		Position = UDim2.fromScale(0.5, 0.5),
-		Size = props.onPreview and UDim2.fromScale(1, 1) or UDim2.new(0.55, 0, 0, 250),
-		BackgroundTransparency = 0.5,
-		BackgroundColor3 = theme.Colors.Base.Light,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = springPosition,
+		Size = props.onPreview and UDim2.fromScale(1, 1) or UDim2.new(1.05, 0, 0, 250),
+		BackgroundTransparency = springBgTrans,
+		BackgroundColor3 = scope:Computed(function(use)
+			local t = use(theme)
+			return use(t.Colors.Base.Light)
+		end),
+
+		Scale = {
+			Scale = springScale,
+		},
+
 		Stroke = {
-			Thickness = theme.StrokeThickness["1"],
-			Color = theme.Colors.Base.Light,
-			Transparency = 0.5,
+			Thickness = springStroke,
+			Color = scope:Computed(function(use)
+				local t = use(theme)
+				local hover = use(isHovered)
+				if hover then
+					return use(t.Colors.Primary.Main)
+				else
+					return use(t.Colors.Base.Light)
+				end
+			end),
+			Transparency = 0.3,
+		},
+
+		Corner = {
+			Radius = scope:Computed(function(use)
+				local t = use(theme)
+				local value = use(t.CornerRadius.Base) :: any
+				return UDim.new(0, value)
+			end),
 		},
 
 		[Children] = {
-			scope:Button { -- select hitbox (forgot abt it)
+			scope:Button {
+				Name = "Hitbox",
 				Size = UDim2.fromScale(1, 1),
-				BackgroundColor3 = theme.Colors.Base.Light,
+				Style = "Ghost",
+				OnHover = function()
+					isHovered:set(true)
+				end,
+				OnHoverEnd = function()
+					isHovered:set(false)
+					isPressed:set(false)
+				end,
+				OnHold = function()
+					isPressed:set(true)
+				end,
+				OnHoldEnd = function()
+					isPressed:set(false)
+				end,
 				OnActivate = function()
 					if props.onSelect and not props.onPreview then
 						props.onSelect(props.itemData.Name)
 					end
 				end,
 			},
-			-- Item Image
+
 			scope:Image {
 				Name = "Icon",
 				AnchorPoint = Vector2.new(0.5, 0.5),
-				Size = UDim2.fromScale(0.85, 1),
 				Position = UDim2.fromScale(0.5, 0.3),
-				Image = props.itemData.TextureId, -- already has a default fallback
 				BackgroundTransparency = 1,
+				Size = scope:Computed(function(use)
+					local hover = use(isHovered)
+					return hover and UDim2.fromScale(0.9, 1.05) or UDim2.fromScale(0.85, 0.85)
+				end),
+				Image = props.itemData.TextureId,
 				Aspect = {
 					Ratio = 1,
 				},
 			},
 
-			-- Item Name
 			scope:Text {
 				Name = "ItemName",
-				AnchorPoint = Vector2.new(0, 0.5),
-				Size = UDim2.fromScale(1, 0.15),
-				Position = UDim2.fromScale(0, 0.7),
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = scope:Computed(function(use)
+					local hover = use(isHovered)
+					return hover and UDim2.fromScale(0.5, 0.68) or UDim2.fromScale(0.5, 0.7)
+				end),
+				Size = UDim2.fromScale(0.95, 0.2),
 				Text = props.itemData.Name,
-				TextColor3 = theme.Colors.Secondary.Main,
-				TextSize = 18,
-				TextXAlignment = Enum.TextXAlignment.Center :: any,
-				Font = Enum.Font.GothamBold :: any,
+				TextColor3 = scope:Computed(function(use)
+					local t = use(theme)
+					local hover = use(isHovered)
+
+					return hover and use(t.Colors.Primary.Main) or use(t.Colors.Secondary.Main)
+				end),
+				TextSize = scope:Computed(function(use)
+					local t = use(theme)
+					local value = use(t.TextSize.Base) :: any
+					return value * 1.25
+				end),
+				TextXAlignment = Enum.TextXAlignment.Center,
+				TextYAlignment = Enum.TextYAlignment.Center,
+				Font = scope:Computed(function(use)
+					local t = use(theme)
+					return use(t.Font.Heading)
+				end),
+				Stroke = {
+					Enabled = true,
+					Thickness = scope:Computed(function(use)
+						local t = use(theme)
+						return use(t.StrokeThickness.Base)
+					end),
+					Transparency = 0,
+					Color = scope:Computed(function(use)
+						local t = use(theme)
+						local hover = use(isHovered)
+
+						return hover and use(t.Colors.Secondary.Main) or use(t.Colors.Primary.Main)
+					end),
+					LineJoinMode = Enum.LineJoinMode.Round,
+					ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
+				},
 			},
 
-			-- Price
 			scope:Text {
 				Name = "Price",
-				AnchorPoint = Vector2.new(0, 0.5),
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.88),
 				Size = UDim2.fromScale(1, 0.1),
-				Position = UDim2.fromScale(0, 0.9),
 				Text = `{props.itemData.Price} Points`,
-				TextColor3 = theme.Colors.Success.Main,
-				TextSize = 12,
-				TextXAlignment = Enum.TextXAlignment.Center :: any,
-				Font = Enum.Font.Gotham :: any,
+				TextColor3 = scope:Computed(function(use)
+					local t = use(theme)
+					return use(t.Colors.Success.Main)
+				end),
+				TextSize = scope:Computed(function(use)
+					local t = use(theme)
+					local value = use(t.TextSize.Base) :: any
+					return value * 1.25
+				end),
+				TextXAlignment = Enum.TextXAlignment.Center,
+				TextYAlignment = Enum.TextYAlignment.Center,
+				Font = Enum.Font.GothamBold,
 			},
 		},
 	}
-
-	return component
 end
