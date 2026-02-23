@@ -1,6 +1,6 @@
-# DEV
+# NOTE
 
-Development branch, then PR to main branch.
+This game is a remake/modded version of the already existing game "The HORROR Mansion" by @K1ir (https://www.roblox.com/ja/games/522527978/The-Horror-Mansion), made just for fun and probing with public frameworks.
 
 # HORROR_MANSION
 
