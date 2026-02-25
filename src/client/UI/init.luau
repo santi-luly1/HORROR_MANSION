@@ -141,7 +141,7 @@ function UI:Start(): GuiBase
 end
 
 --------------------------------------------------------------------
---- Handlers
+--- Private Methods
 --------------------------------------------------------------------
 function UI:_onSelectItem(itemName: string)
 	self._selectedItem:set(itemName)

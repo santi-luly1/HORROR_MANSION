@@ -6,12 +6,14 @@
 
     CHANGELOG: [
 		02/14/26 --> Initial version of the module.
+		02/24/26 --> Added SpecialItemBehavior support (smth like SpecialKillerBehavior).
 	]
 ]=]
 
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ServerStorage = game:GetService("ServerStorage")
@@ -21,10 +23,12 @@ local Networking = ReplicatedStorage:WaitForChild("Network")
 
 local Maid = require(Packages:WaitForChild("maid"))
 local Promise = require(Packages:WaitForChild("promise"))
+local Signal = require(Packages:WaitForChild("signal"))
 local t = require(Packages:WaitForChild("t"))
 
 local ItemControllerNet = require(Networking:WaitForChild("ItemController"))
 local PlayerDataHandler = require(script.Parent:WaitForChild("PlayerDataHandler"))
+local SpecialItemBehavior = require(script:WaitForChild("SpecialItemBehavior"))
 
 --------------------------------------------------------------------
 --- Module
@@ -32,6 +36,7 @@ local PlayerDataHandler = require(script.Parent:WaitForChild("PlayerDataHandler"
 local ItemController = {
 	_init = false,
 	_start = false,
+	_activeItems = {},
 } :: ItemController
 
 --------------------------------------------------------------------
@@ -50,6 +55,13 @@ type ItemData = {
 	TextureId: string,
 }
 
+type ActiveItem = {
+	Tool: Tool,
+	Player: Player,
+	Behavior: SpecialItemBehavior.BehaviorModule,
+	Maid: Maid.Maid,
+}
+
 type ItemController = {
 	-- lifecycle
 	Init: (self: ItemController) -> (),
@@ -62,10 +74,19 @@ type ItemController = {
 	IsValidItem: (self: ItemController, itemName: string) -> boolean,
 	GetAvailableItems: (self: ItemController) -> { string },
 
+	-- signals
+	ItemPurchased: Signal.Signal<Player, string>,
+	ItemEquipped: Signal.Signal<Player, string>,
+	ItemUsed: Signal.Signal<Player, string>,
+
 	-- private
 	_maid: Maid.Maid,
 	_init: boolean,
 	_start: boolean,
+	_activeItems: { [Tool]: ActiveItem },
+	_getItemData: (itemName: string) -> ItemData?,
+	_setupTool: (self: ItemController, tool: Tool, player: Player) -> (),
+	_cleanupTool: (self: ItemController, tool: Tool) -> (),
 }
 
 local purchaseCheck = t.tuple(t.instanceOf("Player"), t.string)
@@ -94,21 +115,32 @@ function ItemController:Init()
 	self._init = true
 
 	self._maid = Maid.new()
+	self.ItemPurchased = Signal.new()
+	self.ItemEquipped = Signal.new()
+	self.ItemUsed = Signal.new()
 
-	-- handle client requests
+	SpecialItemBehavior:Init()
+
+	workspace.DescendantAdded:Connect(function(descendant) -- dodgy?????????????? nah
+		if descendant:IsA("Tool") then
+			self:_setupTool(descendant :: Tool, Players:GetPlayerFromCharacter(descendant.Parent))
+		end
+	end)
+
 	ItemControllerNet.PurchaseItem.OnServerInvoke = function(player: Player, itemName: string)
-		local status -- so uglyyyyyyyyy ughhhhhhhhhhhhhh
 		if not RunService:IsRunning() then -- we're on a story (maybe?).
 			return `Successfully purchased {itemName}`
 		end
 
+		local status -- so uglyyyyyyyyy ughhhhhhhhhhhhhh
 		self:PurchaseItem(player, itemName)
 			:andThen(function(info: string)
 				status = info
 			end)
 			:catch(function(e)
 				status = e
-			end):await()
+			end)
+			:await()
 
 		return status
 	end
@@ -121,6 +153,14 @@ function ItemController:Init()
 		local data = self:GetItemData(itemName)
 		return data or nil
 	end
+
+	self._maid:GiveTask(Players.PlayerRemoving:Connect(function(player: Player)
+		for tool, data in pairs(self._activeItems) do
+			if data.Player == player then
+				self:_cleanupTool(tool)
+			end
+		end
+	end))
 end
 
 function ItemController:Start()
@@ -129,15 +169,68 @@ function ItemController:Start()
 end
 
 --------------------------------------------------------------------
+--- Private Methods
+--------------------------------------------------------------------
+function ItemController:_setupTool(tool: Tool, player: Player)
+	local itemData = getItemData(tool.Name)
+	if not itemData then
+		return
+	end
+
+	if self._activeItems[tool] then
+		return
+	end
+
+	local maid = Maid.new()
+	local behavior = SpecialItemBehavior:Get(tool.Name)
+
+	xpcall(function()
+		behavior(tool, player, maid)
+	end, function(e)
+		warn(`{tool.Name}'s behavior has encoutered an error:\n{e}`)
+	end)
+
+	local activeItem: ActiveItem = {
+		Tool = tool,
+		Player = player,
+		Behavior = behavior,
+		Maid = maid,
+	}
+
+	self._activeItems[tool] = activeItem
+
+	maid:GiveTask(tool.AncestryChanged:Connect(function()
+		if
+			not tool:IsDescendantOf(workspace)
+			and not tool:IsDescendantOf(player.Backpack)
+			and not tool:IsDescendantOf(player.StarterGear)
+			and not tool:IsDescendantOf(player.Character :: Model) -- silence LLS
+		then
+			self:_cleanupTool(tool)
+		end
+	end))
+
+	self._maid:GiveTask(maid)
+	ItemControllerNet.ItemGranted:FireClient(player, tool) -- re-fire, since the client has already cleared its connections, so it need to remake them.
+	self.ItemEquipped:Fire(player, tool.Name)
+end
+
+function ItemController:_cleanupTool(tool: Tool)
+	local activeItem = self._activeItems[tool]
+	if not activeItem then
+		return
+	end
+
+	activeItem.Maid:Destroy()
+	self._activeItems[tool] = nil
+end
+
+--------------------------------------------------------------------
 --- Public API
 --------------------------------------------------------------------
 function ItemController:PurchaseItem(player: Player, itemName: string): TypedPromise<string>
 	return Promise.new(function(resolve, reject, onCancel)
-		local maid = Maid.new()
-
-		if onCancel(function()
-			maid:Destroy()
-		end) then
+		if onCancel(function() end) then
 			return
 		end
 
@@ -162,6 +255,7 @@ function ItemController:PurchaseItem(player: Player, itemName: string): TypedPro
 				points = data.Points
 			end)
 			:await() -- await or else this will be skipped (oopsie)
+
 		if points < itemData.Price then
 			return reject("Insufficient points")
 		end
@@ -170,9 +264,14 @@ function ItemController:PurchaseItem(player: Player, itemName: string): TypedPro
 			:andThen(function()
 				local tool: Tool = ItemsFolder[itemData.Name]:Clone()
 				tool.Parent = player.StarterGear
-				tool:Clone().Parent = player.Backpack -- so the player gets the item instantely instead of having to reset.
-				maid:LinkToInstance(tool)
-				self._maid:GiveTask(maid)
+
+				local backpackTool = tool:Clone() -- should I be using the tool ot backpackTool next?
+				backpackTool.Parent = player.Backpack -- so the player gets the item instantely instead of having to reset.
+
+				--self:_setupTool(backpackTool, player) -- nope, this should be automatically handled by ChildAdded event inside Init
+
+				ItemControllerNet.ItemGranted:FireClient(player, backpackTool)
+
 				return resolve(`Successfully purchased {itemName}`)
 			end)
 			:catch(reject)

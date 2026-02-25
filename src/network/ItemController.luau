@@ -5,6 +5,7 @@
 
     CHANGELOG: [
 		02/14/26 --> Added initial remote functions.
+		02/24/26 --> Added ItemGranted item (for SpecialItemBehavior support).
 	]
 ]=]
 
@@ -19,4 +20,5 @@ return {
 	PurchaseItem = Net:RemoteFunction("PurchaseItem"),
 	GetAvailableItems = Net:RemoteFunction("GetAvailableItems"),
 	GetItemData = Net:RemoteFunction("GetItemData"),
+	ItemGranted = Net:RemoteEvent("ItemGranted"),
 }

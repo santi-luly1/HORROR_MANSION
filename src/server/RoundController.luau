@@ -40,7 +40,9 @@ local RoundController = {
 --------------------------------------------------------------------
 local countdownHint = Instance.new("Hint")
 countdownHint.Parent = workspace
-local TOTAL_ROUND_DURATION = 20
+local TOTAL_ROUND_DURATION = 120
+local ANNOUNCEMENT_LIFETIME = 3
+local INTERMISSION_TIMEOUT = 10
 
 --------------------------------------------------------------------
 --- Types
@@ -86,7 +88,7 @@ function RoundController:Start()
 end
 
 --------------------------------------------------------------------
---- Handlers
+--- Private Methods
 --------------------------------------------------------------------
 function RoundController:_startRound(preferredKiller: string): TypedPromise<{ Model }>
 	return Promise.new(function(resolve, reject, onCancel)
@@ -159,7 +161,7 @@ function RoundController:_startRound(preferredKiller: string): TypedPromise<{ Mo
 								local announcement = Instance.new("Message") -- just announce
 								announcement.Parent = workspace
 								announcement.Text = `{killer.Name} has been killed.`
-								Debris:AddItem(announcement, 3)
+								Debris:AddItem(announcement, ANNOUNCEMENT_LIFETIME)
 							end
 						end)
 					end)
@@ -282,13 +284,14 @@ function RoundController:_endRound(preferredKiller: string?, skipped: boolean?):
 				announcement.Text =
 					`Survivors: {table.concat(survivors, ", ", 1, lastIdx - 1)} and {survivors[lastIdx]}.`
 			end
-			Debris:AddItem(announcement, 3)
-			countdownHint.Text = "Round ended - Starting next round in 5s..."
-		else
-			countdownHint.Text = "Round skipped - Starting new round"
+			Debris:AddItem(announcement, ANNOUNCEMENT_LIFETIME)
+			task.wait(ANNOUNCEMENT_LIFETIME) -- little gap between the survivors and the actual intermission
 		end
 
-		task.wait(5)
+		for i = INTERMISSION_TIMEOUT, 0, -1 do
+			countdownHint.Text = `Round {skipped and "skipped" or "ended"} - Starting next round in {i}s...`
+			task.wait(1)
+		end
 
 		self._isEnding = false
 

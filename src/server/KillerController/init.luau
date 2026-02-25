@@ -120,7 +120,7 @@ local function getSpawnCFrame(index: number): (number, CFrame)
 end
 
 --------------------------------------------------------------------
---- Handlers
+--- Private Methods
 --------------------------------------------------------------------
 function KillerController:_spawn(name: string, spawnIndex: number): TypedPromise<Model, number>
 	return Promise.new(function(resolve, reject, onCancel)

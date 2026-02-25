@@ -69,7 +69,7 @@ function _BOILERPLATE_Client:Start()
 end
 
 --------------------------------------------------------------------
---- Handlers
+--- Private Methods
 --------------------------------------------------------------------
 function _BOILERPLATE_Client:doSomething(a: TYPE): TypedPromise<>
 	return Promise.new(function(resolve, reject, onCancel)

@@ -1,5 +1,5 @@
 --!strict
-local default = require(script.Default) -- poor performance?
+local default = require(script.Default)
 
 local SpecialKillerBehavior = {
 	_behaviours = {},

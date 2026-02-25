@@ -160,7 +160,7 @@ function PlayerDataHandler:Start()
 end
 
 --------------------------------------------------------------------
---- Handlers
+--- Private Methods
 --------------------------------------------------------------------
 function PlayerDataHandler:_load(player: Player): TypedPromise<PlayerProfile>
 	if self._loadingPromises[player] then
