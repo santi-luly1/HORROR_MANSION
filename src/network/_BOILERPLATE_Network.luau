@@ -1,6 +1,6 @@
 --[=[
     Boilerplate for networking stuff
-	@class _BOILERPLATE_Networking
+	@class _BOILERPLATE_Network
     @author: santi-luly1
 
     CHANGELOG: [

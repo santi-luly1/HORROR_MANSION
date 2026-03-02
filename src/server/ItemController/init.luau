@@ -7,6 +7,7 @@
     CHANGELOG: [
 		02/14/26 --> Initial version of the module.
 		02/24/26 --> Added SpecialItemBehavior support (smth like SpecialKillerBehavior).
+		02/25/26 --> Auto-purchase flashlight on join.
 	]
 ]=]
 
@@ -22,13 +23,16 @@ local Packages = ReplicatedStorage:WaitForChild("Packages")
 local Networking = ReplicatedStorage:WaitForChild("Network")
 
 local Maid = require(Packages:WaitForChild("maid"))
+local PlayerDataHandlerTypes = require(script.Parent.Types.PlayerDataHandlerTypes)
 local Promise = require(Packages:WaitForChild("promise"))
+local Services = require(script.Parent.Services)
 local Signal = require(Packages:WaitForChild("signal"))
+local Types = require(script.Parent.Types.ItemControllerTypes)
 local t = require(Packages:WaitForChild("t"))
 
-local ItemControllerNet = require(Networking:WaitForChild("ItemController"))
-local PlayerDataHandler = require(script.Parent:WaitForChild("PlayerDataHandler"))
+local ItemControllerNet = require(Networking:WaitForChild("ItemControllerNetwork"))
 local SpecialItemBehavior = require(script:WaitForChild("SpecialItemBehavior"))
+local PlayerDataHandler = (nil :: any) :: PlayerDataHandlerTypes.PlayerDataHandler
 
 --------------------------------------------------------------------
 --- Module
@@ -37,64 +41,19 @@ local ItemController = {
 	_init = false,
 	_start = false,
 	_activeItems = {},
-} :: ItemController
+} :: Types.ItemController
 
 --------------------------------------------------------------------
 --- Variables
 --------------------------------------------------------------------
 local ItemsFolder = ServerStorage:WaitForChild("Items")
 
---------------------------------------------------------------------
---- Types
---------------------------------------------------------------------
-type TypedPromise<T...> = Promise.TypedPromise<T...>
-
-type ItemData = {
-	Price: number,
-	Name: string,
-	TextureId: string,
-}
-
-type ActiveItem = {
-	Tool: Tool,
-	Player: Player,
-	Behavior: SpecialItemBehavior.BehaviorModule,
-	Maid: Maid.Maid,
-}
-
-type ItemController = {
-	-- lifecycle
-	Init: (self: ItemController) -> (),
-	Start: (self: ItemController) -> (),
-
-	-- public API
-	PurchaseItem: (self: ItemController, player: Player, itemName: string) -> TypedPromise<string>,
-	GetItemData: (self: ItemController, itemName: string) -> ItemData?,
-	HasItem: (self: ItemController, player: Player, itemName: string) -> boolean,
-	IsValidItem: (self: ItemController, itemName: string) -> boolean,
-	GetAvailableItems: (self: ItemController) -> { string },
-
-	-- signals
-	ItemPurchased: Signal.Signal<Player, string>,
-	ItemEquipped: Signal.Signal<Player, string>,
-	ItemUsed: Signal.Signal<Player, string>,
-
-	-- private
-	_maid: Maid.Maid,
-	_init: boolean,
-	_start: boolean,
-	_activeItems: { [Tool]: ActiveItem },
-	_getItemData: (itemName: string) -> ItemData?,
-	_setupTool: (self: ItemController, tool: Tool, player: Player) -> (),
-	_cleanupTool: (self: ItemController, tool: Tool) -> (),
-}
-
 local purchaseCheck = t.tuple(t.instanceOf("Player"), t.string)
 
 --------------------------------------------------------------------
 --- Helpers
 --------------------------------------------------------------------
-local function getItemData(itemName: string): ItemData?
+local function getItemData(itemName: string): Types.ItemData?
 	local item = ItemsFolder:FindFirstChild(itemName)
 	if not item then
 		return nil
@@ -114,7 +73,6 @@ function ItemController:Init()
 	assert(not self._init, `[{script.Name}] - Module already initialized.`)
 	self._init = true
 
-	self._maid = Maid.new()
 	self.ItemPurchased = Signal.new()
 	self.ItemEquipped = Signal.new()
 	self.ItemUsed = Signal.new()
@@ -122,8 +80,14 @@ function ItemController:Init()
 	SpecialItemBehavior:Init()
 
 	workspace.DescendantAdded:Connect(function(descendant) -- dodgy?????????????? nah
-		if descendant:IsA("Tool") then
-			self:_setupTool(descendant :: Tool, Players:GetPlayerFromCharacter(descendant.Parent))
+		if not descendant:IsA("Tool") then
+			return
+		end
+
+		local tool: Tool = descendant
+		local player = Players:GetPlayerFromCharacter(tool.Parent)
+		if player then
+			self:_setupTool(tool, player)
 		end
 	end)
 
@@ -154,18 +118,32 @@ function ItemController:Init()
 		return data or nil
 	end
 
-	self._maid:GiveTask(Players.PlayerRemoving:Connect(function(player: Player)
+	Players.PlayerRemoving:Connect(function(player: Player)
 		for tool, data in pairs(self._activeItems) do
 			if data.Player == player then
 				self:_cleanupTool(tool)
 			end
 		end
-	end))
+	end)
 end
 
 function ItemController:Start()
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
+
+	PlayerDataHandler = Services.WaitFor("PlayerDataHandler") :: PlayerDataHandlerTypes.PlayerDataHandler
+
+	Players.PlayerAdded:Connect(function(player: Player)
+		PlayerDataHandler.ProfileLoaded:Once(function(plr: Player)
+			if plr ~= player then
+				return
+			end
+
+			self:PurchaseItem(player, "Flashlight"):catch(warn) -- starter flashlight
+		end)
+	end)
+
+	Services.Register(script.Name, self)
 end
 
 --------------------------------------------------------------------
@@ -190,7 +168,7 @@ function ItemController:_setupTool(tool: Tool, player: Player)
 		warn(`{tool.Name}'s behavior has encoutered an error:\n{e}`)
 	end)
 
-	local activeItem: ActiveItem = {
+	local activeItem: Types.ActiveItem = {
 		Tool = tool,
 		Player = player,
 		Behavior = behavior,
@@ -210,7 +188,6 @@ function ItemController:_setupTool(tool: Tool, player: Player)
 		end
 	end))
 
-	self._maid:GiveTask(maid)
 	ItemControllerNet.ItemGranted:FireClient(player, tool) -- re-fire, since the client has already cleared its connections, so it need to remake them.
 	self.ItemEquipped:Fire(player, tool.Name)
 end
@@ -228,7 +205,7 @@ end
 --------------------------------------------------------------------
 --- Public API
 --------------------------------------------------------------------
-function ItemController:PurchaseItem(player: Player, itemName: string): TypedPromise<string>
+function ItemController:PurchaseItem(player: Player, itemName: string): Types.TypedPromise<string>
 	return Promise.new(function(resolve, reject, onCancel)
 		if onCancel(function() end) then
 			return
@@ -249,10 +226,9 @@ function ItemController:PurchaseItem(player: Player, itemName: string): TypedPro
 			return reject("Item already bought")
 		end
 
-		local points --why do I have to make it like this? so ugly
-		PlayerDataHandler:GetPlayerData(player)
+		local _, points: number = PlayerDataHandler:GetPlayerData(player)
 			:andThen(function(data)
-				points = data.Points
+				return data.Points
 			end)
 			:await() -- await or else this will be skipped (oopsie)
 
@@ -265,7 +241,7 @@ function ItemController:PurchaseItem(player: Player, itemName: string): TypedPro
 				local tool: Tool = ItemsFolder[itemData.Name]:Clone()
 				tool.Parent = player.StarterGear
 
-				local backpackTool = tool:Clone() -- should I be using the tool ot backpackTool next?
+				local backpackTool = tool:Clone()
 				backpackTool.Parent = player.Backpack -- so the player gets the item instantely instead of having to reset.
 
 				--self:_setupTool(backpackTool, player) -- nope, this should be automatically handled by ChildAdded event inside Init
@@ -278,7 +254,7 @@ function ItemController:PurchaseItem(player: Player, itemName: string): TypedPro
 	end)
 end
 
-function ItemController:GetItemData(itemName: string): ItemData?
+function ItemController:GetItemData(itemName: string): Types.ItemData?
 	return getItemData(itemName)
 end
 

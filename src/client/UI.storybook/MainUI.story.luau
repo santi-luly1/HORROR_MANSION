@@ -1,19 +1,18 @@
 --!strict
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterPlayer = game:GetService("StarterPlayer")
 local Packages = ReplicatedStorage:WaitForChild("Packages")
 
 local Fusion = require(Packages:WaitForChild("fusion"))
 local OnyxUI = require(Packages:WaitForChild("onyx-ui"))
+local Themes = require(StarterPlayer.StarterPlayerScripts.Client.UI.Themes)
+local UI = require(script.Parent.Parent.UI)
 
 local scoped = Fusion.scoped
 local Components = OnyxUI.Components
 
-local UI = require(script.Parent.Parent.UI)
-
 return function(Target: Instance)
 	local scope = scoped(Fusion, Components)
-
-	local themes = require(script.Parent.Parent.UI.Themes)
 
 	local isLight = scope:Value(false)
 
@@ -45,7 +44,7 @@ return function(Target: Instance)
 
 		OnActivate = function()
 			isLight:set(not Fusion.peek(isLight))
-			UI:SetTheme(Fusion.peek(isLight) and themes.ColdDawn or themes.CrimsonFog)
+			UI:SetTheme(Fusion.peek(isLight) and Themes.ColdDawn or Themes.CrimsonFog)
 		end,
 	}
 

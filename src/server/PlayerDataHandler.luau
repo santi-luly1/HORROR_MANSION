@@ -30,7 +30,9 @@ local Networking = ReplicatedStorage:WaitForChild("Network")
 local Maid = require(Packages:WaitForChild("maid"))
 local ProfileStore = require(ServerPackages:WaitForChild("profilestore"))
 local Promise = require(Packages:WaitForChild("promise"))
+local Services = require(script.Parent.Services)
 local Signal = require(Packages:WaitForChild("signal"))
+local Types = require(script.Parent.Types.PlayerDataHandlerTypes)
 local t = require(Packages:WaitForChild("t"))
 
 local PlayerDataNet = require(Networking:WaitForChild("PlayerDataNetwork"))
@@ -42,11 +44,10 @@ local PlayerDataHandler = {
 	_init = false,
 	_start = false,
 	_profiles = {},
-	_store = nil,
 	_maids = {},
 	_signals = {},
 	_loadingPromises = {}, -- track in-progress loads to prevent race conditions
-} :: PlayerDataHandler
+} :: Types.PlayerDataHandler
 
 --------------------------------------------------------------------
 --- Variables
@@ -58,7 +59,7 @@ local PROFILE_VERSION = 1 -- bump when template changes
 local SIGNAL_NAMES = {
 	Survivals = "SurvivalsChanged",
 	Points = "PointsChanged",
-} :: { [ValidStats]: string }
+} :: { [Types.ValidStats]: string }
 
 --------------------------------------------------------------------
 --- Template
@@ -67,50 +68,7 @@ local TEMPLATE = {
 	Survivals = 0,
 	Points = 0,
 	Version = PROFILE_VERSION, -- versioning
-} :: PlayerData
-
---------------------------------------------------------------------
---- Types
---------------------------------------------------------------------
-type TypedPromise<T...> = Promise.TypedPromise<T...>
-type PlayerProfile = ProfileStore.Profile<PlayerData>
-type ProfileStateChangedSignal = Signal.Signal<Player, PlayerProfile>
-export type ValidStats = "Survivals" | "Points"
-export type PlayerData = {
-	Survivals: number,
-	Points: number,
-	Version: number,
-}
-type PlayerDataHandler = {
-	-- lifecycle
-	Init: (self: PlayerDataHandler) -> (),
-	Start: (self: PlayerDataHandler) -> (),
-
-	-- public API
-	GetPlayerData: (self: PlayerDataHandler, Player) -> TypedPromise<PlayerData>,
-	SetPlayerStat: (self: PlayerDataHandler, Player, ValidStats, number) -> TypedPromise<boolean>,
-	UpdatePlayerStat: (self: PlayerDataHandler, Player, ValidStats, number) -> TypedPromise<number>,
-	ObserveSurvivals: (self: PlayerDataHandler, Player, (number) -> ()) -> TypedPromise<Signal.Connection>,
-	ObservePoints: (self: PlayerDataHandler, Player, (number) -> ()) -> TypedPromise<Signal.Connection>,
-	ClearPlayerData: (self: PlayerDataHandler, Player) -> TypedPromise<boolean>,
-
-	-- events
-	ProfileLoaded: ProfileStateChangedSignal,
-	ProfileReleased: ProfileStateChangedSignal,
-
-	-- private
-	_init: boolean,
-	_start: boolean,
-	_store: ProfileStore.ProfileStore<PlayerData>,
-	_profiles: { [Player]: PlayerProfile },
-	_maids: { [Player]: Maid.Maid },
-	_signals: { [Player]: { [string]: Signal.Signal<number> } },
-	_loadingPromises: { [Player]: TypedPromise<PlayerProfile> },
-
-	-- private methods
-	_load: (self: PlayerDataHandler, Player) -> TypedPromise<PlayerProfile>,
-	_release: (self: PlayerDataHandler, Player) -> TypedPromise<()>,
-}
+} :: Types.PlayerData
 
 local playerCheck = t.instanceOf("Player")
 local updateCheck = t.tuple(t.instanceOf("Player"), t.literal("Survivals", "Points"), t.number)
@@ -124,8 +82,8 @@ function PlayerDataHandler:Init()
 
 	self._store = ProfileStore.New(DATASTORE_KEY, TEMPLATE)
 
-	self.ProfileLoaded = Signal.new() :: ProfileStateChangedSignal
-	self.ProfileReleased = Signal.new() :: ProfileStateChangedSignal
+	self.ProfileLoaded = Signal.new() :: Types.ProfileStateChangedSignal
+	self.ProfileReleased = Signal.new() :: Types.ProfileStateChangedSignal
 end
 
 function PlayerDataHandler:Start()
@@ -157,12 +115,14 @@ function PlayerDataHandler:Start()
 			createProfileForPlayer(player)
 		end)
 	end
+
+	Services.Register(script.Name, self)
 end
 
 --------------------------------------------------------------------
 --- Private Methods
 --------------------------------------------------------------------
-function PlayerDataHandler:_load(player: Player): TypedPromise<PlayerProfile>
+function PlayerDataHandler:_load(player: Player): Types.TypedPromise<Types.PlayerProfile>
 	if self._loadingPromises[player] then
 		return self._loadingPromises[player]
 	end
@@ -174,7 +134,7 @@ function PlayerDataHandler:_load(player: Player): TypedPromise<PlayerProfile>
 		end
 
 		-- retry with back-off
-		local profile: PlayerProfile?
+		local profile: Types.PlayerProfile?
 		for attempt = 1, MAX_RETRIES do
 			profile = self._store:StartSessionAsync(`P_{player.UserId}`, {
 				Cancel = function()
@@ -267,7 +227,7 @@ function PlayerDataHandler:_load(player: Player): TypedPromise<PlayerProfile>
 	return promise
 end
 
-function PlayerDataHandler:_release(player: Player): TypedPromise<()>
+function PlayerDataHandler:_release(player: Player): Types.TypedPromise<()>
 	return Promise.new(function(resolve, reject)
 		local ok, err = playerCheck(player)
 		if not ok then
@@ -303,7 +263,7 @@ end
 --------------------------------------------------------------------
 --- Public API
 --------------------------------------------------------------------
-function PlayerDataHandler:GetPlayerData(player: Player): TypedPromise<PlayerData>
+function PlayerDataHandler:GetPlayerData(player: Player): Types.TypedPromise<Types.PlayerData>
 	return Promise.new(function(resolve, reject)
 		local ok, err = playerCheck(player)
 		if not ok then
@@ -323,7 +283,11 @@ function PlayerDataHandler:GetPlayerData(player: Player): TypedPromise<PlayerDat
 	end)
 end
 
-function PlayerDataHandler:SetPlayerStat(player: Player, statName: ValidStats, value: number): TypedPromise<boolean>
+function PlayerDataHandler:SetPlayerStat(
+	player: Player,
+	statName: Types.ValidStats,
+	value: number
+): Types.TypedPromise<boolean>
 	return Promise.new(function(resolve, reject)
 		local ok, err = updateCheck(player, statName, value)
 		if not ok then
@@ -335,7 +299,7 @@ function PlayerDataHandler:SetPlayerStat(player: Player, statName: ValidStats, v
 			return reject(`[{script.Name}] profile not loaded for {player.Name}`)
 		end
 
-		local data = profile.Data :: PlayerData
+		local data = profile.Data :: Types.PlayerData
 		if data[statName] == value then
 			return resolve(true)
 		end
@@ -346,7 +310,11 @@ function PlayerDataHandler:SetPlayerStat(player: Player, statName: ValidStats, v
 	end)
 end
 
-function PlayerDataHandler:UpdatePlayerStat(player: Player, statName: ValidStats, delta: number): TypedPromise<number>
+function PlayerDataHandler:UpdatePlayerStat(
+	player: Player,
+	statName: Types.ValidStats,
+	delta: number
+): Types.TypedPromise<number>
 	return Promise.new(function(resolve, reject)
 		local ok, err = updateCheck(player, statName, delta)
 		if not ok then
@@ -358,7 +326,7 @@ function PlayerDataHandler:UpdatePlayerStat(player: Player, statName: ValidStats
 			return reject(`[{script.Name}] profile not loaded for {player.Name}`)
 		end
 
-		local data = profile.Data :: PlayerData
+		local data = profile.Data :: Types.PlayerData
 		local newValue = data[statName] + delta
 
 		if data[statName] == newValue then
@@ -371,7 +339,10 @@ function PlayerDataHandler:UpdatePlayerStat(player: Player, statName: ValidStats
 	end)
 end
 
-function PlayerDataHandler:ObserveSurvivals(player: Player, callback: (number) -> ()): TypedPromise<Signal.Connection>
+function PlayerDataHandler:ObserveSurvivals(
+	player: Player,
+	callback: (number) -> ()
+): Types.TypedPromise<Signal.Connection>
 	return Promise.new(function(resolve, reject)
 		local ok, err = playerCheck(player)
 		if not ok then
@@ -387,7 +358,10 @@ function PlayerDataHandler:ObserveSurvivals(player: Player, callback: (number) -
 	end)
 end
 
-function PlayerDataHandler:ObservePoints(player: Player, callback: (number) -> ()): TypedPromise<Signal.Connection>
+function PlayerDataHandler:ObservePoints(
+	player: Player,
+	callback: (number) -> ()
+): Types.TypedPromise<Signal.Connection>
 	return Promise.new(function(resolve, reject)
 		local ok, err = playerCheck(player)
 		if not ok then
@@ -406,7 +380,7 @@ end
 --------------------------------------------------------------------
 --- Studio-only
 --------------------------------------------------------------------
-function PlayerDataHandler:ClearPlayerData(player: Player): TypedPromise<boolean>
+function PlayerDataHandler:ClearPlayerData(player: Player): Types.TypedPromise<boolean>
 	if not RunService:IsStudio() then
 		return Promise.reject(`[{script.Name}] ClearPlayerData can only be used in Studio`)
 	end

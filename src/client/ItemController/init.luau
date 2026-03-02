@@ -15,41 +15,44 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Packages = ReplicatedStorage:WaitForChild("Packages")
+local Controllers = require(script.Parent.Controllers)
 local Maid = require(Packages:WaitForChild("maid"))
+local Types = require(script.Parent.Types.ItemControllerTypes)
 
-local ItemControllerNet = require(ReplicatedStorage:WaitForChild("Network"):WaitForChild("ItemController"))
+local ItemControllerNet = require(ReplicatedStorage:WaitForChild("Network"):WaitForChild("ItemControllerNetwork"))
 
 --------------------------------------------------------------------
 --- Module
 --------------------------------------------------------------------
 local ItemController = {
+	_init = false,
+	_start = false,
 	_listeners = {},
-	_maids = {} :: { [Tool]: Maid.Maid },
-}
+	_maids = {},
+} :: Types.ItemController
 
 --------------------------------------------------------------------
 --- Variables
 --------------------------------------------------------------------
-local default = require(script:WaitForChild("Default"))
-
---------------------------------------------------------------------
---- Types
---------------------------------------------------------------------
+require(script:WaitForChild("Default"))
 
 --------------------------------------------------------------------
 --- Init / Start
 --------------------------------------------------------------------
 function ItemController:Init()
+	assert(not self._init, `[{script.Name}] - Module already initialized.`)
+	self._init = true
+
 	for _, module in ipairs(script:GetChildren()) do
 		if module.Name == "Default" then
 			continue
 		end
 
-		self._listeners[module.Name] = require(module) :: default.ItemListener
+		self._listeners[module.Name] = require(module) :: Types.ItemListener
 	end
 
 	ItemControllerNet.ItemGranted.OnClientEvent:Connect(function(tool: Tool)
-		local listenerClass: default.ItemListener = self._listeners[tool.Name]
+		local listenerClass: Types.ItemListener = self._listeners[tool.Name]
 
 		if not listenerClass then -- we don't really want a "default" for the client.
 			return
@@ -64,6 +67,13 @@ function ItemController:Init()
 			self:_cleanup(tool)
 		end)
 	end)
+end
+
+function ItemController:Start()
+	assert(not self._start, `[{script.Name}] - Module already started.`)
+	self._start = true
+
+	Controllers.Register(script.Name, self)
 end
 
 --------------------------------------------------------------------

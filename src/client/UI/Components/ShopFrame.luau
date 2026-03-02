@@ -1,10 +1,11 @@
 --!strict
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterPlayer = game:GetService("StarterPlayer")
 local Packages = ReplicatedStorage:WaitForChild("Packages")
 
 local Fusion = require(Packages:WaitForChild("fusion"))
 local OnyxUI = require(Packages:WaitForChild("onyx-ui"))
-local Themes = require(script.Parent.Parent.Themes)
+local Themes = require(StarterPlayer.StarterPlayerScripts.Client.UI.Themes)
 
 local Children = Fusion.Children
 
@@ -52,7 +53,8 @@ return function(props: Props): Frame
 					local alpha = use(springContentAlpha)
 					return 0.75 * alpha
 				end),
-				30, 0.9
+				30,
+				0.9
 			),
 			Transparency = scope:Computed(function(use)
 				return 1 - use(springContentAlpha)

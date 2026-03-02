@@ -9,6 +9,7 @@
 		01/04/26 --> Support for individual components and easier story management.
         01/31/26 --> Added reactive theme support for UI Labs integration.
 		02/14/26 --> Initial UI major stage (points shop).
+		03/01/26 --> Added map voting UI.
 	]
 ]=]
 
@@ -21,56 +22,26 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Packages = ReplicatedStorage:WaitForChild("Packages")
 local Networking = ReplicatedStorage:WaitForChild("Network")
 
+local Controllers = require(script.Parent.Controllers)
 local Fusion = require(Packages:WaitForChild("fusion"))
 local Maid = require(Packages:WaitForChild("maid"))
 local OnyxUI = require(Packages:WaitForChild("onyx-ui"))
+local Types = require(script.Parent.Types.UITypes)
 
 local Components = OnyxUI.Components
 local scoped = Fusion.scoped
 local Children = Fusion.Children
 
-local ItemControllerNet = require(Networking:WaitForChild("ItemController"))
+local ItemControllerNet = require(Networking:WaitForChild("ItemControllerNetwork"))
 local PlayerDataNet = require(Networking:WaitForChild("PlayerDataNetwork"))
 local UIThemes = require(script:WaitForChild("Themes"))
 
+local MapVotingControllerNet = require(Networking:WaitForChild("VotingController"))
+local MapVotingFrame = require(script.Components.MapVotingFrame)
 local ShopContainer = require(script.Components.ShopContainer)
 local ShopFrame = require(script.Components.ShopFrame)
 local ShopToggleButton = require(script.Components.ShopToggleButton)
 local Themes = require(script.Themes)
-
---------------------------------------------------------------------
---- Types
---------------------------------------------------------------------
-type FusionTheme = OnyxUI.Theme
-type PurchaseStatusTone = "idle" | "pending" | "success" | "error"
-
-type UI = {
-	-- lifecycle
-	Init: (self: UI) -> (),
-	Start: (self: UI) -> GuiBase,
-	Stop: (self: UI) -> (),
-	SetTheme: (self: UI, theme: FusionTheme) -> (),
-	SetThemeByName: (self: UI, themeName: string) -> boolean,
-
-	-- private
-	_init: boolean,
-	_start: boolean,
-	_scope: Fusion.Scope<any>,
-	_currentTheme: FusionTheme,
-	_maid: Maid.Maid,
-	_shopEnabled: Fusion.Value<boolean>,
-	_purchaseStatus: Fusion.Value<string>,
-	_purchaseStatusColor: Fusion.Value<Color3>,
-	_activeTab: Fusion.Value<number>,
-	_pointsCount: Fusion.Value<number>,
-	_survivalsCount: Fusion.Value<number>,
-	_selectedItem: Fusion.Value<string>,
-
-	-- private methods
-	_buildContent: (self: UI) -> Frame,
-	_onSelectItem: (self: UI, itemName: string) -> (),
-	_handlePurchase: (self: UI) -> (),
-}
 
 --------------------------------------------------------------------
 --- Module
@@ -78,7 +49,7 @@ type UI = {
 local UI = {
 	_init = false,
 	_start = false,
-} :: UI
+} :: Types.UI
 
 --------------------------------------------------------------------
 --- Variables
@@ -100,8 +71,51 @@ function UI:Init()
 	self._activeTab = self._scope:Value(1)
 	self._purchaseStatus = self._scope:Value("")
 	self._purchaseStatusColor = self._scope:Value(Color3.fromRGB(255, 255, 255))
-	self._shopEnabled = self._scope:Value(true)
+	self._shopEnabled = self._scope:Value(false)
 	self._currentTheme = self._scope:Value(nil)
+	self._mapOptions = self._scope:Value({})
+	self._votes = self._scope:Value({})
+	self._votingTimer = self._scope:Value(0)
+	self._votingWinner = self._scope:Value(nil)
+	self._votingVisible = self._scope:Value(true)
+
+	self._maid:GiveTask(
+		MapVotingControllerNet.VotingStarted.OnClientEvent:Connect(
+			function(mapOptions: { Types.MapData }, duration: number)
+				self._mapOptions:set(mapOptions)
+				self._votes:set({})
+				self._votingTimer:set(duration)
+				self._votingWinner:set(nil)
+				self._votingVisible:set(true)
+
+				task.spawn(function()
+					local remaining = duration
+					while
+						remaining > 0
+						and Fusion.peek(self._votingVisible)
+						and Fusion.peek(self._votingWinner) == nil
+					do
+						task.wait(1)
+						remaining -= 1
+						self._votingTimer:set(remaining)
+					end
+				end)
+			end
+		)
+	)
+
+	self._maid:GiveTask(
+		MapVotingControllerNet.VoteUpdated.OnClientEvent:Connect(function(_, _, allVotes: { [string]: number })
+			self._votes:set(allVotes)
+		end)
+	)
+
+	self._maid:GiveTask(MapVotingControllerNet.VotingEnded.OnClientEvent:Connect(function(winningMap: string)
+		self._votingWinner:set(winningMap)
+		task.delay(3, function()
+			self._votingVisible:set(false)
+		end)
+	end))
 
 	self._maid:GiveTask(PlayerDataNet.PointsChanged.OnClientEvent:Connect(function(new: number)
 		self._pointsCount:set(new)
@@ -123,6 +137,8 @@ function UI:Start(): GuiBase
 	end)
 
 	local playerGui = player and player:FindFirstChild("PlayerGui")
+
+	Controllers.Register(script.Name, self)
 
 	if playerGui then
 		self._maid:LinkToInstance(player)
@@ -208,6 +224,21 @@ function UI:_buildContent(): Frame
 				end,
 				shopFrameElement = shopFrame,
 			},
+			MapVotingFrame {
+				scope = self._scope,
+				theme = self._currentTheme,
+				visible = self._votingVisible,
+				mapOptions = self._mapOptions :: any,
+				votes = self._votes,
+				timer = self._votingTimer,
+				winner = self._votingWinner,
+				onVote = function(mapName: string)
+					MapVotingControllerNet.CastVote:InvokeServer(mapName)
+				end,
+				onClose = function()
+					self._votingVisible:set(false)
+				end,
+			},
 		},
 	}
 end
@@ -215,7 +246,7 @@ end
 --------------------------------------------------------------------
 --- Public API
 --------------------------------------------------------------------
-function UI:SetTheme(theme: FusionTheme)
+function UI:SetTheme(theme: Types.FusionTheme)
 	self._currentTheme:set(theme)
 end
 

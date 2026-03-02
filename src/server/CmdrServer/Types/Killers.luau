@@ -9,7 +9,7 @@ return function(registry)
 		)
 	else
 		local ReplicatedStorage = game:GetService("ReplicatedStorage")
-		local KillerControllerNet = require(ReplicatedStorage.Network.KillerController)
+		local KillerControllerNet = require(ReplicatedStorage.Network.KillerControllerNetwork)
 
 		local enum = KillerControllerNet.GetKillersName:InvokeServer()
 		registry:RegisterType("killers", registry.Cmdr.Util.MakeEnumType(script.Name, enum))

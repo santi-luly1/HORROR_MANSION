@@ -18,6 +18,8 @@ local player = Players.LocalPlayer
 
 local Cmdr = require(ReplicatedStorage:WaitForChild("CmdrClient") :: ModuleScript)
 local CmdrConfig = require(ReplicatedStorage.Shared.CmdrConfig)
+local Controllers = require(script.Parent.Controllers)
+local Types = require(script.Parent.Types.CmdrClientTypes)
 
 --------------------------------------------------------------------
 --- Module
@@ -25,30 +27,11 @@ local CmdrConfig = require(ReplicatedStorage.Shared.CmdrConfig)
 local CmdrClient = {
 	_init = false,
 	_start = false,
-} :: CmdrClient
+} :: Types.CmdrClient
 
 --------------------------------------------------------------------
 --- Variables
 --------------------------------------------------------------------
-
---------------------------------------------------------------------
---- Types
---------------------------------------------------------------------
-type CmdrClient = {
-	-- lifecycle
-	Init: (self: CmdrClient) -> (),
-	Start: (self: CmdrClient) -> (),
-
-	-- public API
-
-	-- events
-
-	-- private
-	_init: boolean,
-	_start: boolean,
-
-	-- private methods
-}
 
 --------------------------------------------------------------------
 --- Init / Start
@@ -65,6 +48,8 @@ function CmdrClient:Start()
 	if table.find(CmdrConfig.Permissions.Admin, player.UserId) then
 		Cmdr:SetActivationKeys({ Enum.KeyCode.F2 })
 	end
+
+	Controllers.Register(script.Name, self)
 end
 
 --------------------------------------------------------------------

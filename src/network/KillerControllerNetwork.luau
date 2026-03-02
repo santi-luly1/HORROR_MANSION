@@ -1,6 +1,6 @@
 --[=[
     Networking for the KillerController module.
-	@class KillerController
+	@class KillerControllerNetwork
     @author: santi-luly1
 
     CHANGELOG: [

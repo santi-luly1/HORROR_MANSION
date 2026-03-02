@@ -1,6 +1,6 @@
 --[=[
     Networking for the ItemController module
-	@class ItemController
+	@class ItemControllerNetwork
     @author: santi-luly1
 
     CHANGELOG: [

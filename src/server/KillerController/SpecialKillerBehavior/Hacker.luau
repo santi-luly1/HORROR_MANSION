@@ -35,7 +35,7 @@ function Hacker:Init(model: Model, maid)
 	maid:GiveTask(ambience)
 end
 
-function Hacker:InitAI(model)
+function Hacker:InitAI(model: Model)
 	local hrp = model:FindFirstChild("HumanoidRootPart") :: Part
 	local humanoid = model:FindFirstChild("Humanoid") :: Humanoid
 	return task.spawn(function()
@@ -54,16 +54,7 @@ function Hacker:InitAI(model)
 end
 
 function Hacker:OnKilledPlayer(model: Model, victim: Model)
-	local track = Instance.new("Sound")
-	track.Parent = model.PrimaryPart
-	track.Volume = 2 -- a bit loud?
-	track.Ended:Once(function()
-		track:Destroy()
-	end)
-	track.SoundId = self:GetKillSound()
-	track:Play()
-
-	warn(`{model.Name} says L to {victim.Name}`)
+	return Registry._default.OnKilledPlayer(self, model, victim)
 end
 
 function Hacker:Damage(model, humanoid)

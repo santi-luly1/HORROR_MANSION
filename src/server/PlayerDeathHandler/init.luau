@@ -14,6 +14,8 @@
 --- Dependencies
 --------------------------------------------------------------------
 local Players = game:GetService("Players")
+local Services = require(script.Parent.Services)
+local Types = require(script.Parent.Types.PlayerDeathHandlerTypes)
 
 --------------------------------------------------------------------
 --- Module
@@ -21,16 +23,12 @@ local Players = game:GetService("Players")
 local PlayerDeathHandler = {
 	_init = false,
 	_start = false,
-}
+} :: Types.PlayerDeathHandler
 
 --------------------------------------------------------------------
 --- Variables
 --------------------------------------------------------------------
 local SoundsIndex = require(script.Sounds)
-
---------------------------------------------------------------------
---- Types
---------------------------------------------------------------------
 
 --------------------------------------------------------------------
 --- Init / Start
@@ -52,7 +50,7 @@ function PlayerDeathHandler:Start()
 			local hum = character:WaitForChild("Humanoid", 30) :: Humanoid -- will this yield for the entire server? Hmmm
 			if hum then
 				hum.Died:Once(function()
-					warn(`[{script.Name}] Player {player.Name} has died.`)
+					--warn(`[{script.Name}] Player {player.Name} has died.`)
 					player:SetAttribute("Dead", true)
 
 					--generic sound
@@ -67,6 +65,8 @@ function PlayerDeathHandler:Start()
 			end
 		end)
 	end)
+
+	Services.Register(script.Name, self)
 end
 
 --------------------------------------------------------------------

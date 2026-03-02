@@ -25,11 +25,13 @@ local Networking = ReplicatedStorage:WaitForChild("Network")
 
 local Maid = require(Packages:WaitForChild("maid"))
 local Promise = require(Packages:WaitForChild("promise"))
+local Services = require(script.Parent.Services)
 local Signal = require(Packages:WaitForChild("signal"))
 local SpecialKillerBehavior = require(script:WaitForChild("SpecialKillerBehavior"))
+local Types = require(script.Parent.Types.KillerControllerTypes)
 local t = require(Packages:WaitForChild("t"))
 
-local KillerControllerNet = require(Networking:WaitForChild("KillerController"))
+local KillerControllerNet = require(Networking:WaitForChild("KillerControllerNetwork"))
 
 --------------------------------------------------------------------
 --- Module
@@ -38,8 +40,7 @@ local KillerController = {
 	_init = false,
 	_start = false,
 	_killers = {},
-	_maid = nil,
-} :: KillerController
+} :: Types.KillerController
 
 --------------------------------------------------------------------
 --- Variables
@@ -54,35 +55,6 @@ do
 		NAMES[i + 2] = m.Name
 	end
 end
-
---------------------------------------------------------------------
---- Types
---------------------------------------------------------------------
-type TypedPromise<T...> = Promise.TypedPromise<T...>
-type KillerController = {
-	-- lifecycle
-	Init: (self: KillerController) -> (),
-	Start: (self: KillerController) -> (),
-
-	-- public API
-	SpawnKillers: (self: KillerController, names: { string }, spawnIndex: number) -> TypedPromise<{ Model }>,
-	SpawnAll: (self: KillerController, spawnIndex: number) -> TypedPromise<{ Model }>,
-	SpawnKiller: (self: KillerController, name: string, spawnIndex: number) -> TypedPromise<Model, number>,
-	GetCurrentKillers: (self: KillerController) -> { Model },
-	Clear: (self: KillerController) -> (),
-	IsValidName: (self: KillerController, name: string) -> boolean,
-	GetKillersName: (self: KillerController) -> { string },
-	GetRandomIndex: (self: KillerController) -> number,
-	KillerSpawned: Signal.Signal<Model, number>,
-	KillerCleared: Signal.Signal<string>,
-
-	-- private
-	_maid: Maid.Maid,
-	_init: boolean,
-	_start: boolean,
-	_killers: { Model },
-	_spawn: (self: KillerController, name: string, spawnIndex: number) -> TypedPromise<Model, number>,
-}
 
 local spawnCheck = t.tuple(t.string, t.number)
 
@@ -109,6 +81,8 @@ function KillerController:Start()
 	self._start = true
 
 	math.randomseed(os.clock())
+
+	Services.Register(script.Name, self)
 end
 
 --------------------------------------------------------------------
@@ -122,7 +96,7 @@ end
 --------------------------------------------------------------------
 --- Private Methods
 --------------------------------------------------------------------
-function KillerController:_spawn(name: string, spawnIndex: number): TypedPromise<Model, number>
+function KillerController:_spawn(name: string, spawnIndex: number): Types.TypedPromise<Model, number>
 	return Promise.new(function(resolve, reject, onCancel)
 		if not spawnCheck(name, spawnIndex) then
 			return reject(`[{script.Name}] bad argument(s)`)
@@ -230,7 +204,7 @@ end
 --------------------------------------------------------------------
 --- Public API
 --------------------------------------------------------------------
-function KillerController:SpawnKillers(names: { string }, spawnIndex: number): TypedPromise<{ Model }>
+function KillerController:SpawnKillers(names: { string }, spawnIndex: number): Types.TypedPromise<{ Model }>
 	return Promise.new(function(resolve, reject)
 		local promises = {}
 
@@ -268,7 +242,7 @@ function KillerController:SpawnKillers(names: { string }, spawnIndex: number): T
 	end)
 end
 
-function KillerController:SpawnAll(spawnIndex: number): TypedPromise<{ Model }> --chaos
+function KillerController:SpawnAll(spawnIndex: number): Types.TypedPromise<{ Model }> --chaos
 	local validNames = {}
 	for _, name in ipairs(self:GetKillersName()) do
 		if self:IsValidName(name) then
@@ -278,7 +252,7 @@ function KillerController:SpawnAll(spawnIndex: number): TypedPromise<{ Model }> 
 	return self:SpawnKillers(validNames, spawnIndex)
 end
 
-function KillerController:SpawnKiller(name: string, spawnIndex: number): TypedPromise<Model, number>
+function KillerController:SpawnKiller(name: string, spawnIndex: number): Types.TypedPromise<Model, number>
 	if name == "*" then
 		error("Bulk spawn not allowed from this API.")
 	elseif name == "**" then

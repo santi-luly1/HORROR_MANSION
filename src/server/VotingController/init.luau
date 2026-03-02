@@ -1,0 +1,296 @@
+--!strict
+--[=[
+    Server-side map voting manager.
+    @class VotingController
+    @author: santi-luly1
+
+    CHANGELOG: [
+        03/01/26 --> Initial version.
+    ]
+]=]
+
+--------------------------------------------------------------------
+--- Dependencies
+--------------------------------------------------------------------
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+
+local Packages = ReplicatedStorage:WaitForChild("Packages")
+local Networking = ReplicatedStorage:WaitForChild("Network")
+local Maid = require(Packages:WaitForChild("maid"))
+local Promise = require(Packages:WaitForChild("promise"))
+
+local RoundControllerTypes = require(script.Parent.Types.RoundControllerTypes)
+local Services = require(script.Parent.Services)
+local Signal = require(Packages:WaitForChild("signal"))
+local Types = require(script.Parent.Types.VotingControllerTypes)
+local VotingControllerNet = require(Networking:WaitForChild("VotingController"))
+local t = require(Packages:WaitForChild("t"))
+
+local SpecialMapBehavior = require(script:WaitForChild("SpecialMapBehavior"))
+local RoundController: RoundControllerTypes.RoundController
+
+--------------------------------------------------------------------
+--- Module
+--------------------------------------------------------------------
+local VotingController = {
+	_init = false,
+	_start = false,
+	_isVoting = false,
+	_votes = {},
+	_mapOptions = {},
+	_winningMap = "N/A",
+} :: Types.VotingController
+
+--------------------------------------------------------------------
+--- Variables
+--------------------------------------------------------------------
+local MapsFolder = ServerStorage:WaitForChild("Maps")
+local VOTING_DURATION = 10
+
+local voteCheck = t.tuple(t.instanceOf("Player"), t.string)
+
+--------------------------------------------------------------------
+--- Helpers
+--------------------------------------------------------------------
+local function getMapData(mapName: string): Types.MapData?
+	local map = MapsFolder:FindFirstChild(mapName)
+	if not map then
+		return nil
+	end
+
+	return {
+		Name = map.Name,
+		Thumbnail = map:GetAttribute("Thumbnail") or "",
+	}
+end
+
+local function getRandomMaps(count: number): { string }
+	local allMaps = MapsFolder:GetChildren()
+	local selected = {}
+	local used: { [number]: boolean } = {}
+
+	for _ = 1, count do
+		local index
+		repeat
+			index = math.random(1, #allMaps)
+		until not used[index]
+
+		used[index] = true
+		table.insert(selected, allMaps[index].Name)
+	end
+
+	return selected
+end
+
+--------------------------------------------------------------------
+--- Init / Start
+--------------------------------------------------------------------
+function VotingController:Init()
+	assert(not self._init, `[{script.Name}] - Module already initialized.`)
+	self._init = true
+	Services.Register(script.Name, self)
+
+	self._maid = Maid.new()
+	self.VotingStarted = Signal.new()
+	self.VotingEnded = Signal.new()
+	self.VoteCast = Signal.new()
+
+	SpecialMapBehavior:Init()
+
+	VotingControllerNet.CastVote.OnServerInvoke = function(player: Player, mapName: string)
+		return self:CastVote(player, mapName)
+	end
+
+	VotingControllerNet.GetMapOptions.OnServerInvoke = function()
+		return self._mapOptions
+	end
+
+	VotingControllerNet.GetVotes.OnServerInvoke = function()
+		return self:GetVotes()
+	end
+end
+
+function VotingController:Start()
+	assert(not self._start, `[{script.Name}] - Module already started.`)
+	self._start = true
+
+	math.randomseed(os.clock())
+
+	RoundController = Services.WaitFor("RoundController") :: RoundControllerTypes.RoundController
+	VOTING_DURATION = RoundController:GetIntermissionTimeout()
+	self._maid:GiveTask(RoundController.RoundEnded:Connect(function(skipped: boolean)
+		if skipped then
+			return
+		end
+
+		self:StartVoting()
+			:andThen(function(winningMap) --TODO: do not hard-code the map's name to "Map"
+				workspace.Map:Destroy()
+				local newMapClone = MapsFolder[winningMap]:Clone() :: Model
+				local mapMaid = Maid.new()
+				newMapClone.Parent = workspace
+				newMapClone.Name = "Map"
+
+				mapMaid:LinkToInstance(newMapClone)
+				SpecialMapBehavior:Get(winningMap):OnMapLoaded(newMapClone, mapMaid)
+
+				for _, player in ipairs(Players:GetPlayers()) do
+					player:LoadCharacterAsync()
+				end
+
+				RoundController:Stop("**", true):catch(warn)
+			end)
+			:catch(warn)
+	end))
+end
+
+--------------------------------------------------------------------
+--- Public API
+--------------------------------------------------------------------
+function VotingController:StartVoting(mapNames: { string }?): Types.TypedPromise<string>
+	return Promise.new(function(resolve, reject, onCancel)
+		if self._isVoting then
+			return reject("Voting already in progress")
+		end
+
+		self._isVoting = true
+		table.clear(self._votes)
+		self._winningMap = "N/A"
+
+		local options = mapNames or getRandomMaps(3)
+		self._mapOptions = {}
+
+		for _, name in ipairs(options) do
+			local data = getMapData(name)
+			if data then
+				table.insert(self._mapOptions, data)
+			end
+		end
+
+		if #self._mapOptions == 0 then -- just in case.
+			self._isVoting = false
+			return reject("No valid maps to vote on")
+		end
+
+		VotingControllerNet.VotingStarted:FireAllClients(self._mapOptions, VOTING_DURATION)
+		self.VotingStarted:Fire(self._mapOptions)
+
+		local startTime = tick()
+		self._countdownThread = task.spawn(function()
+			while self._isVoting and tick() - startTime < VOTING_DURATION do
+				task.wait(0.1)
+			end
+
+			if self._isVoting then
+				local winner = self:EndVoting()
+				return resolve(winner)
+			end
+		end)
+
+		if
+			onCancel(function()
+				self._isVoting = false
+				if self._countdownThread then
+					task.cancel(self._countdownThread)
+				end
+			end)
+		then
+			return
+		end
+	end)
+end
+
+function VotingController:EndVoting(): string
+	if not self._isVoting then
+		return self._winningMap
+	end
+
+	self._isVoting = false
+
+	local voteCounts = {} :: { [string]: number }
+	for _, mapName in pairs(self._votes) do
+		voteCounts[mapName] = (voteCounts[mapName] or 0) + 1
+	end
+
+	local maxVotes = 0
+	local winner = self._mapOptions[1] and self._mapOptions[1].Name or "N/A"
+	local ties: { string } = {}
+
+	for mapName, count in pairs(voteCounts) do
+		if count > maxVotes then
+			maxVotes = count
+			winner = mapName
+			table.clear(ties)
+			table.insert(ties, mapName)
+		elseif count == maxVotes then
+			table.insert(ties, mapName)
+		end
+	end
+
+	if #ties > 1 then
+		winner = ties[math.random(1, #ties)]
+	end
+
+	self._winningMap = winner
+
+	VotingControllerNet.VotingEnded:FireAllClients(winner, voteCounts)
+	self.VotingEnded:Fire(winner, voteCounts)
+
+	return winner
+end
+
+function VotingController:CastVote(player: Player, mapName: string): boolean
+	if not self._isVoting then
+		return false
+	end
+
+	local ok, err = voteCheck(player, mapName)
+	if not ok then
+		warn(`[{script.Name}] Invalid vote: {err}`)
+		return false
+	end
+
+	local validOption = false
+	for _, option in ipairs(self._mapOptions) do
+		if option.Name == mapName then
+			validOption = true
+			break
+		end
+	end
+
+	if not validOption then
+		return false
+	end
+
+	local previousVote = self._votes[player]
+	self._votes[player] = mapName
+
+	VotingControllerNet.VoteUpdated:FireAllClients(player.UserId, mapName, self:GetVotes())
+	self.VoteCast:Fire(player, mapName, previousVote)
+
+	return true
+end
+
+function VotingController:GetMapOptions(): { Types.MapData }
+	return self._mapOptions
+end
+
+function VotingController:GetWinningMap(): string
+	return self._winningMap
+end
+
+function VotingController:IsVoting(): boolean
+	return self._isVoting
+end
+
+function VotingController:GetVotes(): { [string]: number }
+	local counts: { [string]: number } = {}
+	for _, mapName in pairs(self._votes) do
+		counts[mapName] = (counts[mapName] or 0) + 1
+	end
+	return counts
+end
+
+return VotingController

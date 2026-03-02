@@ -14,8 +14,9 @@ return function(tool: Tool, maid: Maid.Maid)
 	--Rescripted by Luckymaxer
 	--[MODIFIED]
 
-	local ServerControl = tool:WaitForChild("ServerControl") :: RemoteFunction
-	local ClientControl = tool:WaitForChild("ClientControl") :: RemoteFunction
+	-- those `Infinite yield` errors were annoying me
+	local ServerControl = tool:WaitForChild("ServerControl", 120) :: RemoteFunction
+	local ClientControl = tool:WaitForChild("ClientControl", 120) :: RemoteFunction
 
 	local Character
 	local Humanoid

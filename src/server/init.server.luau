@@ -1,3 +1,4 @@
+--!strict
 --[=[
     Server bootstrapper
 	@class Server
@@ -6,15 +7,20 @@
     CHANGELOG: [
 		12/26/25 --> New server bootstrapper
         12/31/25 --> Added proper loader
+        03/01/26 --> Lighting setup and updated init loader
 	]
-
-    NOTE > maybe I should consider requireing all of the modules inside an "Services" module or smth, feel like cacheing the
-    modules would improve performance and reduce bugs (vars would initialize just once)
 ]=]
 
-local Packages = game:GetService("ReplicatedStorage").Packages
+local Lighting = game:GetService("Lighting")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Packages = ReplicatedStorage.Packages
 
 local Loader = require(Packages:WaitForChild("loader"))
+local Services = require(script:WaitForChild("Services"))
 
-Loader.SpawnAll(Loader.LoadChildren(script), "Init")
-Loader.SpawnAll(Loader.LoadChildren(script), "Start")
+-- initial set-up
+Lighting.Ambient = Color3.fromRGB(0, 0, 0)
+
+local modules = Loader.LoadChildren(script)
+Services.initModules(modules, "Init"):await()
+Loader.SpawnAll(modules, "Start")

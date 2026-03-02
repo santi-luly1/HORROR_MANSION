@@ -14,6 +14,8 @@
 --------------------------------------------------------------------
 local ServerPackages = script.Parent.Packages
 local Cmdr = require(ServerPackages:WaitForChild("cmdr"))
+local Services = require(script.Parent.Services)
+local Types = require(script.Parent.Types.CmdrServerTypes)
 
 --------------------------------------------------------------------
 --- Module
@@ -21,30 +23,11 @@ local Cmdr = require(ServerPackages:WaitForChild("cmdr"))
 local CmdrServer = {
 	_init = false,
 	_start = false,
-}
+} :: Types.CmdrServer
 
 --------------------------------------------------------------------
 --- Variables
 --------------------------------------------------------------------
-
---------------------------------------------------------------------
---- Types
---------------------------------------------------------------------
-type CmdrServer = {
-	-- lifecycle
-	Init: (self: CmdrServer) -> (),
-	Start: (self: CmdrServer) -> (),
-
-	-- public API
-
-	-- events
-
-	-- private
-	_init: boolean,
-	_start: boolean,
-
-	-- private methods
-}
 
 --------------------------------------------------------------------
 --- Init / Start
@@ -61,6 +44,8 @@ function CmdrServer:Start()
 	Cmdr:RegisterCommandsIn(script.Commands)
 	Cmdr:RegisterHooksIn(script.Hooks)
 	Cmdr:RegisterTypesIn(script.Types)
+
+	Services.Register(script.Name, self)
 end
 
 --------------------------------------------------------------------

@@ -67,7 +67,7 @@ function Default:Damage(model, humanoid)
 end
 
 function Default:OnDamaged(_health)
-	print("ouch!")
+	--print("ouch!")
 end
 
 function Default:GetBonkSound(): string

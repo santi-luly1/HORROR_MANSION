@@ -15,6 +15,8 @@
 local Packages = game:GetService("ReplicatedStorage").Packages
 
 local Promise = require(Packages:WaitForChild("promise"))
+local Services = require(script.Parent.Services)
+local Types = require(script.Parent.Types._BOILERPLATE_ServerTypes)
 local t = require(Packages:WaitForChild("t"))
 
 --------------------------------------------------------------------
@@ -23,7 +25,7 @@ local t = require(Packages:WaitForChild("t"))
 local _BOILERPLATE_Server = {
 	_init = false,
 	_start = false,
-} :: _BOILERPLATE_Server
+} :: Types._BOILERPLATE_Server
 
 --------------------------------------------------------------------
 --- Variables
@@ -33,26 +35,6 @@ local _
 --------------------------------------------------------------------
 --- Types
 --------------------------------------------------------------------
-type TypedPromise<T...> = Promise.TypedPromise<T...>
-
-type _BOILERPLATE_Server = {
-	-- lifecycle
-	Init: (self: _BOILERPLATE_Server) -> (),
-	Start: (self: _BOILERPLATE_Server) -> (),
-
-	-- public API
-
-	-- events
-
-	-- private
-	_init: boolean,
-	_start: boolean,
-
-	-- private methods
-	doSomething: (self: _BOILERPLATE_Server, a: TYPE) -> TypedPromise<>,
-}
-
-export type TYPE = "a" | "b"
 local TYPE = t.optional(t.string)
 
 --------------------------------------------------------------------
@@ -66,12 +48,14 @@ end
 function _BOILERPLATE_Server:Start()
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
+
+	Services.Register(script.Name, self)
 end
 
 --------------------------------------------------------------------
 --- Private Methods
 --------------------------------------------------------------------
-function _BOILERPLATE_Server:doSomething(a: TYPE): TypedPromise<>
+function _BOILERPLATE_Server:doSomething(a: Types.TYPE): Types.TypedPromise<()>
 	return Promise.new(function(resolve, reject, onCancel)
 		if not TYPE(a) then
 			return reject(`[{script.Name}] bad argument #1 (string expected)`)
