@@ -13,6 +13,7 @@
 		01/11/26 --> Entire module is now typechecked.
 		01/30/26 --> Removed Promise.try for a better Promise chain.
 		02/16/26 --> Fixed race conditions.
+		03/13/26 --> Added signal checks to avoid stat updates during player removal (AI).
 	]
 ]=]
 
@@ -299,13 +300,18 @@ function PlayerDataHandler:SetPlayerStat(
 			return reject(`[{script.Name}] profile not loaded for {player.Name}`)
 		end
 
+		local sig = self._signals[player]
+		if not sig then
+			return reject(`[{script.Name}] signals not initialized for {player.Name}`)
+		end
+
 		local data = profile.Data :: Types.PlayerData
 		if data[statName] == value then
 			return resolve(true)
 		end
 
 		data[statName] = value
-		self._signals[player][SIGNAL_NAMES[statName]]:Fire(value)
+		sig[SIGNAL_NAMES[statName]]:Fire(value)
 		return resolve(true)
 	end)
 end
@@ -326,6 +332,11 @@ function PlayerDataHandler:UpdatePlayerStat(
 			return reject(`[{script.Name}] profile not loaded for {player.Name}`)
 		end
 
+		local sig = self._signals[player]
+		if not sig then
+			return reject(`[{script.Name}] signals not initialized for {player.Name}`)
+		end
+
 		local data = profile.Data :: Types.PlayerData
 		local newValue = data[statName] + delta
 
@@ -334,7 +345,7 @@ function PlayerDataHandler:UpdatePlayerStat(
 		end
 
 		data[statName] = newValue
-		self._signals[player][SIGNAL_NAMES[statName]]:Fire(newValue)
+		sig[SIGNAL_NAMES[statName]]:Fire(newValue)
 		return resolve(newValue)
 	end)
 end

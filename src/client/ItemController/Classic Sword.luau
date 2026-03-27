@@ -14,9 +14,7 @@ return function(tool: Tool, maid: Maid.Maid)
 		mouse.Icon = tool.Enabled and Mouse_Icon or Reloading_Icon
 	end
 
-	maid:GiveTask(tool.Equipped:Connect(function()
-		updateIcon()
-	end))
+	maid:GiveTask(tool.Equipped:Connect(updateIcon))
 	maid:GiveTask(tool.Unequipped:Connect(function()
 		mouse.Icon = ""
 	end))

@@ -57,4 +57,4 @@ export type PlayerDataHandler = {
 	_release: (self: PlayerDataHandler, Player) -> TypedPromise<()>,
 }
 
-return (nil :: any) :: PlayerDataHandler
+return nil

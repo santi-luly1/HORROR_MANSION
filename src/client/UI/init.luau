@@ -30,6 +30,7 @@ local Types = require(script.Parent.Types.UITypes)
 
 local Components = OnyxUI.Components
 local scoped = Fusion.scoped
+local peek = Fusion.peek
 local Children = Fusion.Children
 
 local ItemControllerNet = require(Networking:WaitForChild("ItemControllerNetwork"))
@@ -77,7 +78,7 @@ function UI:Init()
 	self._votes = self._scope:Value({})
 	self._votingTimer = self._scope:Value(0)
 	self._votingWinner = self._scope:Value(nil)
-	self._votingVisible = self._scope:Value(true)
+	self._votingVisible = self._scope:Value(false)
 
 	self._maid:GiveTask(
 		MapVotingControllerNet.VotingStarted.OnClientEvent:Connect(
@@ -90,11 +91,7 @@ function UI:Init()
 
 				task.spawn(function()
 					local remaining = duration
-					while
-						remaining > 0
-						and Fusion.peek(self._votingVisible)
-						and Fusion.peek(self._votingWinner) == nil
-					do
+					while remaining > 0 and peek(self._votingVisible) and peek(self._votingWinner) == nil do
 						task.wait(1)
 						remaining -= 1
 						self._votingTimer:set(remaining)
@@ -160,23 +157,25 @@ end
 --- Private Methods
 --------------------------------------------------------------------
 function UI:_onSelectItem(itemName: string)
+	local theme = peek(self._currentTheme)
 	self._selectedItem:set(itemName)
 	self._purchaseStatus:set("")
-	self._purchaseStatusColor:set(Fusion.peek(Fusion.peek(self._currentTheme).Colors.Primary.Main))
+	self._purchaseStatusColor:set(peek(theme.Colors.Primary.Main))
 end
 
 function UI:_handlePurchase()
+	local theme = peek(self._currentTheme)
 	self._purchaseStatus:set("Purchasing...")
-	self._purchaseStatusColor:set(Fusion.peek(Fusion.peek(self._currentTheme).Colors.Primary.Main))
+	self._purchaseStatusColor:set(peek(theme.Colors.Primary.Main))
 
-	local status = ItemControllerNet.PurchaseItem:InvokeServer(Fusion.peek(self._selectedItem))
+	local status = ItemControllerNet.PurchaseItem:InvokeServer(peek(self._selectedItem))
 	local text = tostring(status)
 	self._purchaseStatus:set(text)
 
 	if string.find(string.lower(text), "success", 1, true) then
-		self._purchaseStatusColor:set(Fusion.peek(Fusion.peek(self._currentTheme).Colors.Success.Main))
+		self._purchaseStatusColor:set(peek(theme.Colors.Success.Main))
 	else
-		self._purchaseStatusColor:set(Fusion.peek(Fusion.peek(self._currentTheme).Colors.Error.Main))
+		self._purchaseStatusColor:set(peek(theme.Colors.Error.Main))
 	end
 end
 
@@ -209,7 +208,7 @@ function UI:_buildContent(): Frame
 				theme = self._currentTheme,
 				shopEnabled = self._shopEnabled,
 				onToggle = function()
-					self._shopEnabled:set(not Fusion.peek(self._shopEnabled))
+					self._shopEnabled:set(not peek(self._shopEnabled))
 				end,
 			},
 			ShopContainer {

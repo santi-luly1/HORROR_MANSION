@@ -42,4 +42,5 @@
   "luau-lsp.completion.imports.enabled": true,
   "luau-lsp.inlayHints.variableTypes": true,
   "files.autoSaveDelay": 2500,
+  "stylua.targetReleaseVersion": "latest"
 }

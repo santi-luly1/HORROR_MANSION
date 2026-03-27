@@ -6,6 +6,7 @@
 
     CHANGELOG: [
         03/01/26 --> Initial version.
+		03/13/26 --> Ensured StartVoting promise resolves when voting ends early or cancels.
     ]
 ]=]
 
@@ -156,6 +157,16 @@ function VotingController:StartVoting(mapNames: { string }?): Types.TypedPromise
 		end
 
 		self._isVoting = true
+		local resolved = false
+		local function finalize(winner: string)
+			if resolved then
+				return
+			end
+			resolved = true
+			self._voteResolve = nil
+			return resolve(winner)
+		end
+		self._voteResolve = finalize
 		table.clear(self._votes)
 		self._winningMap = "N/A"
 
@@ -171,6 +182,7 @@ function VotingController:StartVoting(mapNames: { string }?): Types.TypedPromise
 
 		if #self._mapOptions == 0 then -- just in case.
 			self._isVoting = false
+			self._voteResolve = nil
 			return reject("No valid maps to vote on")
 		end
 
@@ -185,7 +197,7 @@ function VotingController:StartVoting(mapNames: { string }?): Types.TypedPromise
 
 			if self._isVoting then
 				local winner = self:EndVoting()
-				return resolve(winner)
+				return finalize(winner)
 			end
 		end)
 
@@ -195,6 +207,8 @@ function VotingController:StartVoting(mapNames: { string }?): Types.TypedPromise
 				if self._countdownThread then
 					task.cancel(self._countdownThread)
 				end
+				self._voteResolve = nil
+				return reject("Voting cancelled")
 			end)
 		then
 			return
@@ -237,6 +251,10 @@ function VotingController:EndVoting(): string
 
 	VotingControllerNet.VotingEnded:FireAllClients(winner, voteCounts)
 	self.VotingEnded:Fire(winner, voteCounts)
+
+	if self._voteResolve then
+		self._voteResolve(winner)
+	end
 
 	return winner
 end

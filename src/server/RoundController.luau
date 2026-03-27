@@ -11,6 +11,7 @@
 		02/14/26 --> If the killer dies, now the round ends with a message, and better hint message.
 		02/16/26 --> Better script performance.
 		03/01/26 --> Added points rewards once the round ended, signals for round end and start, and GetIntermissionTimeout API.
+		03/13/26 --> Added IsEnding guard to block round starts during teardown (AI).
 	]
 ]=]
 
@@ -307,6 +308,10 @@ end
 --- Public API
 --------------------------------------------------------------------
 function RoundController:Begin(preferredKiller: string): Types.TypedPromise<{ Model }>
+	if self._isEnding then
+		return Promise.reject("Round is ending")
+	end
+
 	if self:OnIntermission() then
 		return Promise.reject("Cannot start round during intermission")
 	end
@@ -343,6 +348,10 @@ end
 
 function RoundController:GetIntermissionTimeout(): number
 	return INTERMISSION_TIMEOUT
+end
+
+function RoundController:IsEnding(): boolean
+	return self._isEnding
 end
 
 return RoundController

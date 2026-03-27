@@ -17,4 +17,4 @@ export type CmdrServer = {
 	-- private methods
 }
 
-return (nil :: any) :: CmdrServer
+return nil

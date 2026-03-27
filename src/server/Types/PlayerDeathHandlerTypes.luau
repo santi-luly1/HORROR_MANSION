@@ -8,4 +8,4 @@ export type PlayerDeathHandler = {
 	_start: boolean,
 }
 
-return (nil :: any) :: PlayerDeathHandler
+return nil

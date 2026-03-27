@@ -22,6 +22,7 @@ export type RoundController = {
 	Stop: (self: RoundController, preferredKiller: string?, skipped: boolean?) -> TypedPromise<()>,
 	OnIntermission: (self: RoundController) -> boolean,
 	GetIntermissionTimeout: (self: RoundController) -> number,
+	IsEnding: (self: RoundController) -> boolean,
 
 	-- signals
 	RoundStarted: Signal.Signal<string>,
@@ -41,4 +42,4 @@ export type RoundController = {
 	_intermissionCountdown: (self: RoundController, skipped: boolean) -> TypedPromise<()>,
 }
 
-return (nil :: any) :: RoundController
+return nil

@@ -29,4 +29,4 @@ export type _BOILERPLATE_Server = {
 
 export type TYPE = "a" | "b"
 
-return (nil :: any) :: _BOILERPLATE_Server
+return nil

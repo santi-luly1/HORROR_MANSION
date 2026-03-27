@@ -34,7 +34,8 @@ export type KillerController = {
 	_init: boolean,
 	_start: boolean,
 	_killers: { Model },
+	_spawningNames: { [string]: boolean },
 	_spawn: (self: KillerController, name: string, spawnIndex: number) -> TypedPromise<Model, number>,
 }
 
-return (nil :: any) :: KillerController
+return nil

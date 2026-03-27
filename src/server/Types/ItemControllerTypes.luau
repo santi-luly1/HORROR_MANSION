@@ -50,4 +50,4 @@ export type ItemController = {
 	_cleanupTool: (self: ItemController, tool: Tool) -> (),
 }
 
-return (nil :: any) :: ItemController
+return nil

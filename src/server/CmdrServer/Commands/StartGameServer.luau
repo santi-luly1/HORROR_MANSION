@@ -3,6 +3,11 @@ local Services = game:GetService("ServerScriptService").Server
 local RoundController = require(Services.RoundController)
 
 return function(context, name: string)
+	if RoundController:IsEnding() then
+		context:Reply(`Round is ending, try again in a moment.`, Color3.fromRGB(255, 200, 0))
+		return ""
+	end
+
 	context:Reply(`Ending round...`, Color3.fromRGB(100, 200, 225))
 
 	RoundController:Begin(name, true)

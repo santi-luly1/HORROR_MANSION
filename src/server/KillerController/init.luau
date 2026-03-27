@@ -11,6 +11,7 @@
 		01/30/26 --> Added GetRandomIndex API, and added killer sounds.
 		02/15/26 --> Added SpecialKillerBehavior support and removed sounds index.
 		02/21/26 --> Fixed SpawnAll, it was failing for the slightest rejection.
+		03/13/26 --> Added spawn lock to prevent concurrent duplicate killer spawns (AI).
 	]
 ]=]
 
@@ -40,6 +41,7 @@ local KillerController = {
 	_init = false,
 	_start = false,
 	_killers = {},
+	_spawningNames = {}, -- db-lock like
 } :: Types.KillerController
 
 --------------------------------------------------------------------
@@ -106,6 +108,15 @@ function KillerController:_spawn(name: string, spawnIndex: number): Types.TypedP
 			return reject(`Name '{name}' is invalid`)
 		end
 
+		if self._spawningNames[name] then
+			return reject(`Killer '{name}' spawn already in progress`)
+		end
+		self._spawningNames[name] = true
+
+		local function releaseSpawnLock()
+			self._spawningNames[name] = nil
+		end
+
 		if spawnIndex < 1 then
 			spawnIndex = self:GetRandomIndex()
 		end
@@ -113,6 +124,7 @@ function KillerController:_spawn(name: string, spawnIndex: number): Types.TypedP
 		local maid = Maid.new()
 
 		if onCancel(function()
+			releaseSpawnLock()
 			maid:Destroy()
 		end) then
 			return
@@ -120,6 +132,7 @@ function KillerController:_spawn(name: string, spawnIndex: number): Types.TypedP
 
 		local template = KillersFolder:FindFirstChild(name) :: Model?
 		if not template then
+			releaseSpawnLock()
 			return reject("Killer not found")
 		end
 
@@ -141,6 +154,7 @@ function KillerController:_spawn(name: string, spawnIndex: number): Types.TypedP
 		for _, existing in ipairs(self._killers) do
 			if existing ~= clone and existing.Name == name and existing.Parent then
 				clone:Destroy()
+				releaseSpawnLock()
 				return reject(`Killer '{name}' already spawned`) --maybe shoudl I allow this?
 			end
 		end
@@ -197,6 +211,7 @@ function KillerController:_spawn(name: string, spawnIndex: number): Types.TypedP
 
 		self._maid:GiveTask(maid)
 		self.KillerSpawned:Fire(clone, index)
+		releaseSpawnLock()
 		return resolve(clone, index)
 	end)
 end

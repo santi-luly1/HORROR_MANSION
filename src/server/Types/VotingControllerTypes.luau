@@ -45,6 +45,7 @@ export type VotingController = {
 	_mapOptions: { MapData },
 	_winningMap: string,
 	_countdownThread: thread?,
+	_voteResolve: (winner: string) -> ()?,
 }
 
-return (nil :: any) :: VotingController
+return nil

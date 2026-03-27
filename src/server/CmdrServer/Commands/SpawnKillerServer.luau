@@ -10,6 +10,10 @@ return function(context, name: string, spawnIndex: number)
 		context:Reply(`Can't spawn killers during intermission!`, Color3.fromRGB(255, 200, 0))
 		return ""
 	end
+	if RoundController:IsEnding() then
+		context:Reply(`Can't spawn killers while round is ending!`, Color3.fromRGB(255, 200, 0))
+		return ""
+	end
 
 	if name == "*" then
 		KillerController:SpawnAll(spawnIndex)
