@@ -17,5 +17,5 @@ local Loader = require(Packages:WaitForChild("loader"))
 local Controllers = require(script:WaitForChild("Controllers"))
 
 local modules = Loader.LoadChildren(script)
-Controllers.initModules(modules, "Init"):await()
+Controllers:initModules(modules):await()
 Loader.SpawnAll(modules, "Start")

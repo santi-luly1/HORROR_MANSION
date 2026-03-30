@@ -4,20 +4,15 @@
 local Packages = game:GetService("ReplicatedStorage"):WaitForChild("Packages")
 
 local Maid = require(Packages:WaitForChild("maid"))
+local _CONTROLLER = require(script.Parent._CONTROLLER)
 
 --------------------------------------------------------------------
 --- Types
 --------------------------------------------------------------------
 export type ItemListener = (tool: Tool, maid: Maid.Maid) -> ()
 
-export type ItemController = {
-	-- lifecycle
-	Init: (self: ItemController) -> (),
-	Start: (self: ItemController) -> (),
-
+export type ItemController = _CONTROLLER.CONTROLLER<ItemController> & {
 	-- private
-	_init: boolean,
-	_start: boolean,
 	_listeners: { [string]: ItemListener },
 	_maids: { [Tool]: Maid.Maid },
 

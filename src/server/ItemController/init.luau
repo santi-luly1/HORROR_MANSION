@@ -1,8 +1,8 @@
 --!strict
 --[=[
-    Server-side item manager for players.
 	@class ItemController
-    @author: santi-luly1
+    @author santi-luly1
+    @description Server-side item manager for players.
 
     CHANGELOG: [
 		02/14/26 --> Initial version of the module.
@@ -25,7 +25,6 @@ local Networking = ReplicatedStorage:WaitForChild("Network")
 local Maid = require(Packages:WaitForChild("maid"))
 local PlayerDataHandlerTypes = require(script.Parent.Types.PlayerDataHandlerTypes)
 local Promise = require(Packages:WaitForChild("promise"))
-local Services = require(script.Parent.Services)
 local Signal = require(Packages:WaitForChild("signal"))
 local Types = require(script.Parent.Types.ItemControllerTypes)
 local t = require(Packages:WaitForChild("t"))
@@ -48,6 +47,8 @@ local ItemController = {
 --------------------------------------------------------------------
 local ItemsFolder = ServerStorage:WaitForChild("Items")
 
+ItemController.Dependencies = { "PlayerDataHandler" }
+
 local purchaseCheck = t.tuple(t.instanceOf("Player"), t.string)
 
 --------------------------------------------------------------------
@@ -69,9 +70,11 @@ end
 --------------------------------------------------------------------
 --- Init / Start
 --------------------------------------------------------------------
-function ItemController:Init()
+function ItemController:Init(registry)
 	assert(not self._init, `[{script.Name}] - Module already initialized.`)
 	self._init = true
+
+	PlayerDataHandler = registry.PlayerDataHandler
 
 	self.ItemPurchased = Signal.new()
 	self.ItemEquipped = Signal.new()
@@ -131,8 +134,6 @@ function ItemController:Start()
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
 
-	PlayerDataHandler = Services.WaitFor("PlayerDataHandler") :: PlayerDataHandlerTypes.PlayerDataHandler
-
 	Players.PlayerAdded:Connect(function(player: Player)
 		PlayerDataHandler.ProfileLoaded:Once(function(plr: Player)
 			if plr ~= player then
@@ -142,8 +143,6 @@ function ItemController:Start()
 			self:PurchaseItem(player, "Flashlight"):catch(warn) -- starter flashlight
 		end)
 	end)
-
-	Services.Register(script.Name, self)
 end
 
 --------------------------------------------------------------------

@@ -1,11 +1,11 @@
 --!strict
 --[=[
-    Controllers registry
 	@class Controllers
-    @author: santi-luly1
+    @description Controllers registry
 
     CHANGELOG: [
 		03/01/26 --> Initial version of the module.
+		03/30/26 --> Dependency graph (ai refactor).
 	]
 ]=]
 
@@ -17,73 +17,120 @@ export type ControllerRegistry = {
 	CmdrClient: typeof(require(Types.CmdrClientTypes)),
 	ItemController: typeof(require(Types.ItemControllerTypes)),
 	UI: typeof(require(Types.UITypes)),
-	_BOILERPLATE_Client: typeof(require(Types._BOILERPLATE_ClientTypes)),
 }
 
 local Controllers = {}
-local registry: { [string]: any } = {}
-
-local pending: { [string]: { (any) -> () } } = {}
+local registry = {} :: ControllerRegistry
 
 function Controllers.Register<T>(name: string, controller: T)
 	assert(not registry[name], `Controller '{name}' already registered`)
 	registry[name] = controller
+end
 
-	-- Notify anyone waiting
-	local callbacks = pending[name]
-	if callbacks then
-		for _, cb in ipairs(callbacks) do
-			task.spawn(cb, controller)
+local function buildGraph(modules: { [string]: any })
+	local graph = {}
+
+	for name, mod in modules do
+		local deps = mod.Dependencies or {}
+		graph[name] = deps
+	end
+
+	return graph
+end
+
+local function detectCycles(graph) -- ai made
+	local visited = {}
+	local stack = {}
+
+	local function visit(node, path)
+		if stack[node] then
+			error(`Circular dependency detected: {table.concat(path, " -> ")} -> {node}`)
 		end
-		pending[name] = nil
+
+		if visited[node] then
+			return
+		end
+
+		visited[node] = true
+		stack[node] = true
+
+		for _, dep in ipairs(graph[node] or {}) do
+			visit(dep, { unpack(path), node })
+		end
+
+		stack[node] = nil
+	end
+
+	for node in graph do
+		visit(node, {})
 	end
 end
 
-function Controllers.Get<T>(name: string): T
-	local controller = registry[name]
-	assert(controller, `Controller '{name}' not found.`)
-	return controller
-end
+local function topoSort(graph) -- ai made
+	local visited = {}
+	local result = {}
 
-function Controllers.WaitFor<T>(name: string, timeout: number?): T
-	if registry[name] then
-		return registry[name]
+	local function visit(node)
+		if visited[node] then
+			return
+		end
+		visited[node] = true
+
+		for _, dep in ipairs(graph[node] or {}) do
+			visit(dep)
+		end
+
+		table.insert(result, node)
 	end
 
-	timeout = timeout or 5
-
-	local _, result = Promise.new(function(resolve, reject)
-		pending[name] = pending[name] or {}
-		table.insert(pending[name], resolve)
-
-		task.delay(timeout, function()
-			if not registry[name] then
-				reject(`Timeout waiting for controller '{name}'`)
-			end
-		end)
-	end):await()
+	for node in graph do
+		visit(node)
+	end
 
 	return result
 end
 
-function Controllers.initModules(modules: { [string]: any }, methodName: string)
+function Controllers:initModules(modules: { [string]: any } & ControllerRegistry) -- ai refactor
+	local graph = buildGraph(modules)
+
+	for name, deps in graph do
+		for _, dep in deps do
+			assert(modules[dep], `Controller '{name}' depends on missing '{dep}'`)
+		end
+	end
+
+	detectCycles(graph)
+
+	local order = topoSort(graph)
+
 	local promises = {}
 
-	for name, mod in modules do
-		local method = mod[methodName]
-		if type(method) == "function" then
-			local success, result = pcall(method, mod)
-			if success and Promise.is(result) then
-				local timeoutPromise = Promise.delay(10):andThen(function()
-					error(`Controller '{name}' timed out during {methodName}`)
+	for _, name in ipairs(order) do
+		local mod = modules[name]
+
+		self.Register(name, mod)
+
+		if type(mod.Init) == "function" then
+			local success, result = pcall(function()
+				return mod:Init(registry)
+			end)
+
+			if not success then
+				warn(`Controller '{name}' crashed during Init: {result}`)
+				continue
+			end
+
+			if Promise.is(result) then
+				local wrapped = Promise.race({
+					result,
+					Promise.delay(10):andThen(function()
+						error(`Controller '{name}' Init timed out`)
+					end),
+				}):catch(function(err)
+					warn(`Controller '{name}' failed async Init: {err}`)
 				end)
 
-				table.insert(
-					promises,
-					Promise.race({ result, timeoutPromise }):catch(function(err)
-						warn(`Controller '{name}' failed during {methodName}: {err}`)
-					end)
-				)
+				table.insert(promises, wrapped)
 			end
 		end
 	end

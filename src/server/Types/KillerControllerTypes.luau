@@ -6,17 +6,14 @@ local Packages = game:GetService("ReplicatedStorage").Packages
 local Maid = require(Packages.maid)
 local Promise = require(Packages:WaitForChild("promise"))
 local Signal = require(Packages:WaitForChild("signal"))
+local _SERVICE = require(script.Parent._SERVICE)
 
 --------------------------------------------------------------------
 --- Types
 --------------------------------------------------------------------
 export type TypedPromise<T...> = Promise.TypedPromise<T...>
 
-export type KillerController = {
-	-- lifecycle
-	Init: (self: KillerController) -> (),
-	Start: (self: KillerController) -> (),
-
+export type KillerController = _SERVICE.SERVICE<KillerController> & {
 	-- public API
 	SpawnKillers: (self: KillerController, names: { string }, spawnIndex: number) -> TypedPromise<{ Model }>,
 	SpawnAll: (self: KillerController, spawnIndex: number) -> TypedPromise<{ Model }>,
@@ -31,11 +28,9 @@ export type KillerController = {
 
 	-- private
 	_maid: Maid.Maid,
-	_init: boolean,
-	_start: boolean,
 	_killers: { Model },
 	_spawningNames: { [string]: boolean },
 	_spawn: (self: KillerController, name: string, spawnIndex: number) -> TypedPromise<Model, number>,
 }
 
-return nil
+return (nil :: any) :: KillerController

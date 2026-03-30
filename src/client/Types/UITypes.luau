@@ -8,6 +8,7 @@ local Fusion = require(Packages:WaitForChild("fusion"))
 local Maid = require(Packages:WaitForChild("maid"))
 local OnyxUI = require(Packages:WaitForChild("onyx-ui"))
 local Themes = require(StarterPlayer.StarterPlayerScripts.Client.UI.Themes)
+local _CONTROLLER = require(script.Parent._CONTROLLER)
 
 --------------------------------------------------------------------
 --- Types
@@ -20,11 +21,11 @@ export type MapData = {
 	DisplayName: string,
 }
 
-export type UI = {
+export type UI = _CONTROLLER.CONTROLLER<UI> & {
 	-- lifecycle
-	Init: (self: UI) -> (),
-	Start: (self: UI) -> GuiBase,
 	Stop: (self: UI) -> (),
+
+	-- public API
 	SetTheme: (self: UI, theme: FusionTheme) -> (),
 	SetThemeByName: (self: UI, themeName: string) -> boolean,
 

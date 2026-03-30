@@ -1,7 +1,7 @@
 --[=[
-    Cmdr client initializer
 	@class CmdrClient
-    @author: santi-luly1
+    @author santi-luly1
+    @description Cmdr client initializer
 
     CHANGELOG: [
 		01/01/26 --> Added Cmdr for initialization only.
@@ -18,7 +18,6 @@ local player = Players.LocalPlayer
 
 local Cmdr = require(ReplicatedStorage:WaitForChild("CmdrClient") :: ModuleScript)
 local CmdrConfig = require(ReplicatedStorage.Shared.CmdrConfig)
-local Controllers = require(script.Parent.Controllers)
 local Types = require(script.Parent.Types.CmdrClientTypes)
 
 --------------------------------------------------------------------
@@ -48,8 +47,6 @@ function CmdrClient:Start()
 	if table.find(CmdrConfig.Permissions.Admin, player.UserId) then
 		Cmdr:SetActivationKeys({ Enum.KeyCode.F2 })
 	end
-
-	Controllers.Register(script.Name, self)
 end
 
 --------------------------------------------------------------------

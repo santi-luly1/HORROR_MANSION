@@ -1,8 +1,8 @@
 --!strict
 --[=[
-    Server bootstrapper
 	@class Server
-    @author: santi-luly1
+    @author santi-luly1
+    @description Server bootstrapper
 
     CHANGELOG: [
 		12/26/25 --> New server bootstrapper
@@ -22,5 +22,5 @@ local Services = require(script:WaitForChild("Services"))
 Lighting.Ambient = Color3.fromRGB(0, 0, 0)
 
 local modules = Loader.LoadChildren(script)
-Services.initModules(modules, "Init"):await()
+Services:initModules(modules):await()
 Loader.SpawnAll(modules, "Start")

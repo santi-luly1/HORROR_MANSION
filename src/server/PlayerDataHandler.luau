@@ -1,8 +1,8 @@
 --!strict
 --[=[
-	Main API for player data
 	@class PlayerDataHandler
-	@author: santi-luly1
+    @author santi-luly1
+	@description Main API for player data
 
 	CHANGELOG:
 		12/25/25 --> Added t module support & methods now returns promises.
@@ -31,7 +31,6 @@ local Networking = ReplicatedStorage:WaitForChild("Network")
 local Maid = require(Packages:WaitForChild("maid"))
 local ProfileStore = require(ServerPackages:WaitForChild("profilestore"))
 local Promise = require(Packages:WaitForChild("promise"))
-local Services = require(script.Parent.Services)
 local Signal = require(Packages:WaitForChild("signal"))
 local Types = require(script.Parent.Types.PlayerDataHandlerTypes)
 local t = require(Packages:WaitForChild("t"))
@@ -99,12 +98,6 @@ function PlayerDataHandler:Start()
 		self:_load(player)
 			:andThen(function()
 				print(`[{script.Name}] loaded {player.Name}'s profile`)
-				task.spawn(function()
-					while RunService:IsStudio() and self._profiles[player] do
-						task.wait(1)
-						self:UpdatePlayerStat(player, "Points", 5):catch(warn)
-					end
-				end)
 			end)
 			:catch(warn)
 	end
@@ -116,8 +109,6 @@ function PlayerDataHandler:Start()
 			createProfileForPlayer(player)
 		end)
 	end
-
-	Services.Register(script.Name, self)
 end
 
 --------------------------------------------------------------------

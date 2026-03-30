@@ -1,8 +1,8 @@
 --!strict
 --[=[
-    Main server game loop handler
 	@class RoundController
-    @author: santi-luly1
+    @author santi-luly1
+    @description Main server game loop handler
 
     CHANGELOG: [
 		01/21/26 --> Initial version of the module.
@@ -28,7 +28,6 @@ local Signal = require(Packages:WaitForChild("signal"))
 
 local KillerControllerTypes = require(script.Parent.Types.KillerControllerTypes)
 local PlayerDataHandlerTypes = require(script.Parent.Types.PlayerDataHandlerTypes)
-local Services = require(script.Parent.Services)
 local Types = require(script.Parent.Types.RoundControllerTypes)
 
 local KillerController: KillerControllerTypes.KillerController
@@ -52,12 +51,17 @@ local TOTAL_ROUND_DURATION = 120
 local ANNOUNCEMENT_LIFETIME = 3
 local INTERMISSION_TIMEOUT = 10
 
+RoundController.Dependencies = { "KillerController", "PlayerDataHandler" }
+
 --------------------------------------------------------------------
 --- Init / Start
 --------------------------------------------------------------------
-function RoundController:Init()
+function RoundController:Init(registry)
 	assert(not self._init, `[{script.Name}] - Module already initialized.`)
 	self._init = true
+
+	KillerController = registry.KillerController
+	PlayerDataHandler = registry.PlayerDataHandler
 
 	self.RoundStarted = Signal.new()
 	self.RoundEnded = Signal.new()
@@ -67,12 +71,7 @@ function RoundController:Start()
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
 
-	KillerController = Services.WaitFor("KillerController") :: KillerControllerTypes.KillerController
-	PlayerDataHandler = Services.WaitFor("PlayerDataHandler") :: PlayerDataHandlerTypes.PlayerDataHandler
-
 	self:Begin("**") -- start the main loop.
-
-	Services.Register(script.Name, self)
 end
 
 --------------------------------------------------------------------

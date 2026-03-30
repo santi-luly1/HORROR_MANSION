@@ -1,8 +1,8 @@
 --!strict
 --[=[
-    Boilerplate for server stuff
 	@class _BOILERPLATE_Server
-    @author: santi-luly1
+    @author author
+    @description Boilerplate for server stuff
 
     CHANGELOG: [
 		MM/DD/YY --> change
@@ -15,7 +15,6 @@
 local Packages = game:GetService("ReplicatedStorage").Packages
 
 local Promise = require(Packages:WaitForChild("promise"))
-local Services = require(script.Parent.Services)
 local Types = require(script.Parent.Types._BOILERPLATE_ServerTypes)
 local t = require(Packages:WaitForChild("t"))
 
@@ -48,8 +47,6 @@ end
 function _BOILERPLATE_Server:Start()
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
-
-	Services.Register(script.Name, self)
 end
 
 --------------------------------------------------------------------

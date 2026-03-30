@@ -6,17 +6,14 @@ local Packages = game:GetService("ReplicatedStorage").Packages
 local Maid = require(Packages.maid)
 local Promise = require(Packages:WaitForChild("promise"))
 local Signal = require(Packages:WaitForChild("signal"))
+local _SERVICE = require(script.Parent._SERVICE)
 
 --------------------------------------------------------------------
 --- Types
 --------------------------------------------------------------------
 export type TypedPromise<T...> = Promise.TypedPromise<T...>
 
-export type RoundController = {
-	-- lifecycle
-	Init: (self: RoundController) -> (),
-	Start: (self: RoundController) -> (),
-
+export type RoundController = _SERVICE.SERVICE<RoundController> & {
 	-- public API
 	Begin: (self: RoundController, preferredKiller: string, skipped: boolean?) -> TypedPromise<{ Model }>,
 	Stop: (self: RoundController, preferredKiller: string?, skipped: boolean?) -> TypedPromise<()>,
@@ -29,8 +26,6 @@ export type RoundController = {
 	RoundEnded: Signal.Signal<boolean>,
 
 	-- private
-	_init: boolean,
-	_start: boolean,
 	_inProgress: boolean,
 	_isEnding: boolean,
 	_maid: Maid.Maid?,
@@ -42,4 +37,4 @@ export type RoundController = {
 	_intermissionCountdown: (self: RoundController, skipped: boolean) -> TypedPromise<()>,
 }
 
-return nil
+return (nil :: any) :: RoundController

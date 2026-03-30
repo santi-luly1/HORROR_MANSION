@@ -1,8 +1,8 @@
 --!strict
 --[=[
-    Server death manager for players
 	@class PlayerDeathHandler
-    @author: santi-luly1
+    @author santi-luly1
+    @description Server death manager for players
 
     CHANGELOG: [
 		12/31/25 --> Adapted from original source.
@@ -14,7 +14,6 @@
 --- Dependencies
 --------------------------------------------------------------------
 local Players = game:GetService("Players")
-local Services = require(script.Parent.Services)
 local Types = require(script.Parent.Types.PlayerDeathHandlerTypes)
 
 --------------------------------------------------------------------
@@ -65,8 +64,6 @@ function PlayerDeathHandler:Start()
 			end
 		end)
 	end)
-
-	Services.Register(script.Name, self)
 end
 
 --------------------------------------------------------------------

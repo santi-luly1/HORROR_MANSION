@@ -1,11 +1,11 @@
-export type PlayerDeathHandler = {
-	-- lifecycle
-	Init: (self: PlayerDeathHandler) -> (),
-	Start: (self: PlayerDeathHandler) -> (),
+--------------------------------------------------------------------
+--- Dependencies
+--------------------------------------------------------------------
+local _SERVICE = require(script.Parent._SERVICE)
 
-	-- private
-	_init: boolean,
-	_start: boolean,
-}
+--------------------------------------------------------------------
+--- Types
+--------------------------------------------------------------------
+export type PlayerDeathHandler = _SERVICE.SERVICE<PlayerDeathHandler> & {}
 
-return nil
+return (nil :: any) :: PlayerDeathHandler

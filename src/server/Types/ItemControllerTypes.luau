@@ -6,6 +6,7 @@ local Packages = game:GetService("ReplicatedStorage").Packages
 local Maid = require(Packages.maid)
 local Promise = require(Packages:WaitForChild("promise"))
 local Signal = require(Packages:WaitForChild("signal"))
+local _SERVICE = require(script.Parent._SERVICE)
 
 --------------------------------------------------------------------
 --- Types
@@ -25,11 +26,7 @@ export type ActiveItem = {
 	Maid: Maid.Maid,
 }
 
-export type ItemController = {
-	-- lifecycle
-	Init: (self: ItemController) -> (),
-	Start: (self: ItemController) -> (),
-
+export type ItemController = _SERVICE.SERVICE<ItemController> & {
 	-- public API
 	PurchaseItem: (self: ItemController, player: Player, itemName: string) -> TypedPromise<string>,
 	GetItemData: (self: ItemController, itemName: string) -> ItemData?,
@@ -43,11 +40,9 @@ export type ItemController = {
 	ItemUsed: Signal.Signal<Player, string>,
 
 	-- private
-	_init: boolean,
-	_start: boolean,
 	_activeItems: { [Tool]: ActiveItem },
 	_setupTool: (self: ItemController, tool: Tool, player: Player) -> (),
 	_cleanupTool: (self: ItemController, tool: Tool) -> (),
 }
 
-return nil
+return (nil :: any) :: ItemController

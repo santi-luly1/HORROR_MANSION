@@ -1,11 +1,11 @@
-export type CmdrClient = {
-	-- lifecycle
-	Init: (self: CmdrClient) -> (),
-	Start: (self: CmdrClient) -> (),
+--------------------------------------------------------------------
+--- Dependencies
+--------------------------------------------------------------------
+local _CONTROLLER = require(script.Parent._CONTROLLER)
 
-	-- private
-	_init: boolean,
-	_start: boolean,
-}
+--------------------------------------------------------------------
+--- Types
+--------------------------------------------------------------------
+export type CmdrClient = _CONTROLLER.CONTROLLER<CmdrClient> & {}
 
 return (nil :: any) :: CmdrClient

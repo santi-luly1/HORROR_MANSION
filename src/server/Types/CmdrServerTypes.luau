@@ -1,20 +1,11 @@
 --------------------------------------------------------------------
+--- Dependencies
+--------------------------------------------------------------------
+local _SERVICE = require(script.Parent._SERVICE)
+
+--------------------------------------------------------------------
 --- Types
 --------------------------------------------------------------------
-export type CmdrServer = {
-	-- lifecycle
-	Init: (self: CmdrServer) -> (),
-	Start: (self: CmdrServer) -> (),
+export type CmdrServer = _SERVICE.SERVICE<CmdrServer> & {}
 
-	-- public API
-
-	-- events
-
-	-- private
-	_init: boolean,
-	_start: boolean,
-
-	-- private methods
-}
-
-return nil
+return (nil :: any) :: CmdrServer

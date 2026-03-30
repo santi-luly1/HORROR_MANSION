@@ -1,8 +1,8 @@
 --!strict
 --[=[
-    Mainly to recive tools from the server, so we can handle the client side.
 	@class ItemController
-    @author: santi-luly1
+    @author santi-luly1
+    @description Mainly to recive tools from the server, so we can handle the client side
 
     CHANGELOG: [
 		02/25/26 --> Initial version of the module.
@@ -15,7 +15,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Packages = ReplicatedStorage:WaitForChild("Packages")
-local Controllers = require(script.Parent.Controllers)
 local Maid = require(Packages:WaitForChild("maid"))
 local Types = require(script.Parent.Types.ItemControllerTypes)
 
@@ -72,8 +71,6 @@ end
 function ItemController:Start()
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
-
-	Controllers.Register(script.Name, self)
 end
 
 --------------------------------------------------------------------

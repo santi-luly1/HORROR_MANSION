@@ -1,8 +1,8 @@
 --!strict
 --[=[
-    UI manager for client
 	@class UI
-    @author: santi-luly1
+    @author santi-luly1
+    @description UI manager for client
 
     CHANGELOG: [
 		01/01/26 --> Created module with a simple UI for survivals and points.
@@ -22,7 +22,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Packages = ReplicatedStorage:WaitForChild("Packages")
 local Networking = ReplicatedStorage:WaitForChild("Network")
 
-local Controllers = require(script.Parent.Controllers)
 local Fusion = require(Packages:WaitForChild("fusion"))
 local Maid = require(Packages:WaitForChild("maid"))
 local OnyxUI = require(Packages:WaitForChild("onyx-ui"))
@@ -134,8 +133,6 @@ function UI:Start(): GuiBase
 	end)
 
 	local playerGui = player and player:FindFirstChild("PlayerGui")
-
-	Controllers.Register(script.Name, self)
 
 	if playerGui then
 		self._maid:LinkToInstance(player)

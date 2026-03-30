@@ -6,6 +6,7 @@ local Packages = game:GetService("ReplicatedStorage").Packages
 local Maid = require(Packages.maid)
 local Promise = require(Packages:WaitForChild("promise"))
 local Signal = require(Packages:WaitForChild("signal"))
+local _SERVICE = require(script.Parent._SERVICE)
 
 --------------------------------------------------------------------
 --- Types
@@ -17,11 +18,7 @@ export type MapData = {
 	Thumbnail: string,
 }
 
-export type VotingController = {
-	-- lifecycle
-	Init: (self: VotingController) -> (),
-	Start: (self: VotingController) -> (),
-
+export type VotingController = _SERVICE.SERVICE<VotingController> & {
 	-- public API
 	StartVoting: (self: VotingController, mapNames: { string }?) -> TypedPromise<string>,
 	EndVoting: (self: VotingController) -> string,
@@ -38,8 +35,6 @@ export type VotingController = {
 
 	-- private
 	_maid: Maid.Maid,
-	_init: boolean,
-	_start: boolean,
 	_isVoting: boolean,
 	_votes: { [Player]: string },
 	_mapOptions: { MapData },
@@ -48,4 +43,4 @@ export type VotingController = {
 	_voteResolve: (winner: string) -> ()?,
 }
 
-return nil
+return (nil :: any) :: VotingController

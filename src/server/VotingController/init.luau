@@ -1,8 +1,8 @@
 --!strict
 --[=[
-    Server-side map voting manager.
     @class VotingController
-    @author: santi-luly1
+    @author santi-luly1
+    @description Server-side map voting manager
 
     CHANGELOG: [
         03/01/26 --> Initial version.
@@ -23,7 +23,6 @@ local Maid = require(Packages:WaitForChild("maid"))
 local Promise = require(Packages:WaitForChild("promise"))
 
 local RoundControllerTypes = require(script.Parent.Types.RoundControllerTypes)
-local Services = require(script.Parent.Services)
 local Signal = require(Packages:WaitForChild("signal"))
 local Types = require(script.Parent.Types.VotingControllerTypes)
 local VotingControllerNet = require(Networking:WaitForChild("VotingController"))
@@ -49,6 +48,8 @@ local VotingController = {
 --------------------------------------------------------------------
 local MapsFolder = ServerStorage:WaitForChild("Maps")
 local VOTING_DURATION = 10
+
+VotingController.Dependencies = { "RoundController" }
 
 local voteCheck = t.tuple(t.instanceOf("Player"), t.string)
 
@@ -88,10 +89,11 @@ end
 --------------------------------------------------------------------
 --- Init / Start
 --------------------------------------------------------------------
-function VotingController:Init()
+function VotingController:Init(registry)
 	assert(not self._init, `[{script.Name}] - Module already initialized.`)
 	self._init = true
-	Services.Register(script.Name, self)
+
+	RoundController = registry.RoundController
 
 	self._maid = Maid.new()
 	self.VotingStarted = Signal.new()
@@ -119,7 +121,6 @@ function VotingController:Start()
 
 	math.randomseed(os.clock())
 
-	RoundController = Services.WaitFor("RoundController") :: RoundControllerTypes.RoundController
 	VOTING_DURATION = RoundController:GetIntermissionTimeout()
 	self._maid:GiveTask(RoundController.RoundEnded:Connect(function(skipped: boolean)
 		if skipped then
@@ -140,6 +141,8 @@ function VotingController:Start()
 				for _, player in ipairs(Players:GetPlayers()) do
 					player:LoadCharacterAsync()
 				end
+
+				--TODO: add an intermission time between map changes, maybe 15s?
 
 				RoundController:Stop("**", true):catch(warn)
 			end)

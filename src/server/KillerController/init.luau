@@ -1,8 +1,8 @@
 --!strict
 --[=[
-    Main API for killer(s) management
 	@class KillerController
-    @author: santi-luly1
+    @author santi-luly1
+    @description Main API for killer(s) management
 
     CHANGELOG: [
 		01/10/26 --> Adapted from original source.
@@ -26,7 +26,6 @@ local Networking = ReplicatedStorage:WaitForChild("Network")
 
 local Maid = require(Packages:WaitForChild("maid"))
 local Promise = require(Packages:WaitForChild("promise"))
-local Services = require(script.Parent.Services)
 local Signal = require(Packages:WaitForChild("signal"))
 local SpecialKillerBehavior = require(script:WaitForChild("SpecialKillerBehavior"))
 local Types = require(script.Parent.Types.KillerControllerTypes)
@@ -83,8 +82,6 @@ function KillerController:Start()
 	self._start = true
 
 	math.randomseed(os.clock())
-
-	Services.Register(script.Name, self)
 end
 
 --------------------------------------------------------------------

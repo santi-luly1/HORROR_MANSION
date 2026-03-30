@@ -7,6 +7,7 @@ local Packages = ReplicatedStorage:WaitForChild("Packages")
 local Maid = require(Packages:WaitForChild("maid"))
 local Promise = require(Packages:WaitForChild("promise"))
 local Signal = require(Packages:WaitForChild("signal"))
+local _SERVICE = require(script.Parent._SERVICE)
 
 local ServerPackages = script.Parent.Parent.Packages
 local ProfileStore = require(ServerPackages:WaitForChild("profilestore"))
@@ -26,11 +27,7 @@ export type PlayerData = {
 export type PlayerProfile = ProfileStore.Profile<PlayerData>
 export type ProfileStateChangedSignal = Signal.Signal<Player, PlayerProfile>
 
-export type PlayerDataHandler = {
-	-- lifecycle
-	Init: (self: PlayerDataHandler) -> (),
-	Start: (self: PlayerDataHandler) -> (),
-
+export type PlayerDataHandler = _SERVICE.SERVICE<PlayerDataHandler> & {
 	-- public API
 	GetPlayerData: (self: PlayerDataHandler, Player) -> TypedPromise<PlayerData>,
 	SetPlayerStat: (self: PlayerDataHandler, Player, ValidStats, number) -> TypedPromise<boolean>,
@@ -44,8 +41,6 @@ export type PlayerDataHandler = {
 	ProfileReleased: ProfileStateChangedSignal,
 
 	-- private
-	_init: boolean,
-	_start: boolean,
 	_store: ProfileStore.ProfileStore<PlayerData>,
 	_profiles: { [Player]: PlayerProfile },
 	_maids: { [Player]: Maid.Maid },
@@ -57,4 +52,4 @@ export type PlayerDataHandler = {
 	_release: (self: PlayerDataHandler, Player) -> TypedPromise<()>,
 }
 
-return nil
+return (nil :: any) :: PlayerDataHandler
