@@ -1,6 +1,6 @@
 --!strict
 --[=[
-	@class KillerController
+	@class KillerService
     @author santi-luly1
     @description Main API for killer(s) management
 
@@ -8,10 +8,12 @@
 		01/10/26 --> Adapted from original source.
 		01/11/26 --> Added module-wide typechecking and random spawn selector with its APIs.
 		01/28/26 --> Added multiple killers support and signals.
-		01/30/26 --> Added GetRandomIndex API, and added killer sounds.
+		01/30/26 --> Added GetRandomSpawnIndex API, and added killer sounds.
 		02/15/26 --> Added SpecialKillerBehavior support and removed sounds index.
 		02/21/26 --> Fixed SpawnAll, it was failing for the slightest rejection.
 		03/13/26 --> Added spawn lock to prevent concurrent duplicate killer spawns (AI).
+		04/11/26 --> Re-organized the public API to make it more "human-readable" (was hurting my eyes and brain)
+		04/17/26 --> Added GetKillerInRound API
 	]
 ]=]
 
@@ -28,20 +30,20 @@ local Maid = require(Packages:WaitForChild("maid"))
 local Promise = require(Packages:WaitForChild("promise"))
 local Signal = require(Packages:WaitForChild("signal"))
 local SpecialKillerBehavior = require(script:WaitForChild("SpecialKillerBehavior"))
-local Types = require(script.Parent.Types.KillerControllerTypes)
+local Types = require(script.Parent.Types.KillerServiceTypes)
 local t = require(Packages:WaitForChild("t"))
 
-local KillerControllerNet = require(Networking:WaitForChild("KillerControllerNetwork"))
+local KillerControllerNet = require(Networking:WaitForChild("KillerServiceNetwork"))
 
 --------------------------------------------------------------------
 --- Module
 --------------------------------------------------------------------
-local KillerController = {
+local KillerService = {
 	_init = false,
 	_start = false,
 	_killers = {},
 	_spawningNames = {}, -- db-lock like
-} :: Types.KillerController
+} :: Types.KillerService
 
 --------------------------------------------------------------------
 --- Variables
@@ -62,7 +64,7 @@ local spawnCheck = t.tuple(t.string, t.number)
 --------------------------------------------------------------------
 --- Init / Start
 --------------------------------------------------------------------
-function KillerController:Init()
+function KillerService:Init()
 	assert(not self._init, `[{script.Name}] - Module already initialized.`)
 	self._init = true
 
@@ -77,7 +79,7 @@ function KillerController:Init()
 	end
 end
 
-function KillerController:Start()
+function KillerService:Start()
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
 
@@ -95,7 +97,7 @@ end
 --------------------------------------------------------------------
 --- Private Methods
 --------------------------------------------------------------------
-function KillerController:_spawn(name: string, spawnIndex: number): Types.TypedPromise<Model, number>
+function KillerService:_spawn(name: string, spawnIndex: number): Types.TypedPromise<Model, number>
 	return Promise.new(function(resolve, reject, onCancel)
 		if not spawnCheck(name, spawnIndex) then
 			return reject(`[{script.Name}] bad argument(s)`)
@@ -114,9 +116,7 @@ function KillerController:_spawn(name: string, spawnIndex: number): Types.TypedP
 			self._spawningNames[name] = nil
 		end
 
-		if spawnIndex < 1 then
-			spawnIndex = self:GetRandomIndex()
-		end
+		spawnIndex = spawnIndex > 0 and spawnIndex or self:GetRandomSpawnIndex()
 
 		local maid = Maid.new()
 
@@ -159,7 +159,7 @@ function KillerController:_spawn(name: string, spawnIndex: number): Types.TypedP
 
 		behaviour:Init(clone, maid)
 
-		hitbox.Transparency = 0.8
+		hitbox.Transparency = 0.9
 		local canHit = true -- typical debounce
 		maid:GiveTask(hitbox.Touched:Connect(function(hit)
 			local char = hit.Parent :: Model
@@ -192,7 +192,7 @@ function KillerController:_spawn(name: string, spawnIndex: number): Types.TypedP
 		humanoid.Died:Once(function()
 			maid:Destroy()
 		end)
-		maid:GiveTask(humanoid.HealthChanged:Connect(function(health)
+		maid:GiveTask(humanoid.HealthChanged:Connect(function(health) -- killer is not really intended to heal anyways.
 			behaviour:OnDamaged(health)
 		end))
 
@@ -216,55 +216,44 @@ end
 --------------------------------------------------------------------
 --- Public API
 --------------------------------------------------------------------
-function KillerController:SpawnKillers(names: { string }, spawnIndex: number): Types.TypedPromise<{ Model }>
-	return Promise.new(function(resolve, reject)
-		local promises = {}
-
-		for _, name in ipairs(names) do
-			spawnIndex = spawnIndex > 0 and spawnIndex or self:GetRandomIndex()
-			if self:IsValidName(name) then
-				local wrapped = self:SpawnKiller(name, spawnIndex)
-					:andThen(function(model)
-						return { ok = true, result = model }
-					end)
-					:catch(function(err)
-						return { ok = false, result = err }
-					end)
-				table.insert(promises, wrapped)
-			end
-		end
-
-		if #promises == 0 then
-			return reject("No valid killers to spawn")
-		end
-
-		Promise.all(promises)
-			:andThen(function(results)
-				local killers = {}
-				local errors = {}
-
-				for _, result in ipairs(results) do
-					table.insert(result.ok and killers or errors, result.result)
-				end
-
-				return #killers > 0 and resolve(killers)
-					or reject(`All {#errors} killer spawns failed: {table.concat(errors, ", ")}`)
-			end)
-			:catch(warn)
-	end)
+function KillerService:GetRandomSpawnIndex(): number
+	local spawns = workspace.Map.spawns:GetChildren()
+	return math.random(1, #spawns)
 end
 
-function KillerController:SpawnAll(spawnIndex: number): Types.TypedPromise<{ Model }> --chaos
-	local validNames = {}
-	for _, name in ipairs(self:GetKillersName()) do
-		if self:IsValidName(name) then
-			table.insert(validNames, name)
+function KillerService:GetKillersName(): { string }
+	return NAMES
+end
+
+function KillerService:GetKillerInRound(name: string): Model?
+	local killer
+	for _, k in ipairs(self._killers) do
+		if k.Name == name then
+			killer = k
 		end
 	end
-	return self:SpawnKillers(validNames, spawnIndex)
+
+	return killer
 end
 
-function KillerController:SpawnKiller(name: string, spawnIndex: number): Types.TypedPromise<Model, number>
+function KillerService:IsValidName(name: string, includeSpecial: boolean?): boolean
+	if includeSpecial then
+		return table.find(NAMES, name) ~= nil
+	end
+
+	return table.find(NAMES, name) ~= nil and name ~= "*" and name ~= "**"
+end
+
+function KillerService:GetCurrentKillers(): { Model }
+	return self._killers
+end
+
+function KillerService:Clear()
+	self._maid:DoCleaning() -- kills every sub-maid and its clones
+	table.clear(self._killers)
+end
+
+function KillerService:SpawnKiller(name: string, spawnIndex: number): Types.TypedPromise<Model, number>
 	if name == "*" then
 		error("Bulk spawn not allowed from this API.")
 	elseif name == "**" then
@@ -275,27 +264,63 @@ function KillerController:SpawnKiller(name: string, spawnIndex: number): Types.T
 	end
 end
 
-function KillerController:GetCurrentKillers(): { Model }
-	return self._killers
+function KillerService:SpawnKillers(names: { string }, spawnIndex: number): Types.TypedPromise<{ Model }>
+	local promises = {} -- valid killers to spawn
+
+	for _, name in ipairs(names) do
+		-- spawnIndex = spawnIndex > 0 and spawnIndex or self:GetRandomSpawnIndex() -- _spawn() already handles this..
+		if self:IsValidName(name) then
+			table.insert(
+				promises,
+				self:SpawnKiller(name, spawnIndex)
+					:andThen(function(model)
+						return { ok = true, result = model }
+					end)
+					:catch(function(err)
+						return { ok = false, result = tostring(err) }
+					end)
+			)
+		end
+	end
+
+	if #promises == 0 then
+		return Promise.reject("No valid killers to spawn")
+	end
+
+	return Promise.all(promises):andThen(function(results)
+		local killers = {}
+		local errors = {}
+
+		for _, r in ipairs(results) do
+			if r.ok then
+				table.insert(killers, r.result)
+			else
+				table.insert(errors, r.result)
+			end
+		end
+
+		if #killers > 0 then -- this section could be shorter, just let it be simple for now.
+			return killers
+		else
+			return Promise.reject(`All {#errors} killer spawns failed: {table.concat(errors, ", ")}`)
+		end
+	end)
 end
 
-function KillerController:GetRandomIndex(): number
-	local spawns = workspace.Map.spawns:GetChildren()
-	return math.random(1, #spawns)
+function KillerService:SpawnAll(spawnIndex: number): Types.TypedPromise<{ Model }>
+	local validNames = {}
+
+	for _, name in ipairs(self:GetKillersName()) do
+		if self:IsValidName(name) then
+			table.insert(validNames, name)
+		end
+	end
+
+	if #validNames == 0 then
+		return Promise.reject("No valid killers available to spawn")
+	end
+
+	return self:SpawnKillers(validNames, spawnIndex)
 end
 
-function KillerController:GetKillersName(): { string }
-	return NAMES
-end
-
-function KillerController:IsValidName(name: string): boolean
-	-- "*" = all "**" = random
-	return table.find(NAMES, name) and name ~= "*" and name ~= "**" or false
-end
-
-function KillerController:Clear()
-	self._maid:DoCleaning() -- kills every sub-maid and its clones
-	table.clear(self._killers)
-end
-
-return KillerController
+return KillerService

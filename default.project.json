@@ -17,11 +17,14 @@
 
     "ServerScriptService": {
       "Server": {
-        "$path": "src/server",
-        "Packages": {
+        "$path": "src/server"
+      }
+    },
+
+    "ServerStorage": {
+      "ServerPackages": {
           "$path": "ServerPackages"
         }
-      }
     },
 
     "StarterPlayer": {

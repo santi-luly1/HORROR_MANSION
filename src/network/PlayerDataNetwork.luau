@@ -1,5 +1,5 @@
 --[=[
-    Networking for the PlayerDataHandler module.
+    Networking for the PlayerDataService module.
 	@class PlayerDataNetwork
     @author: santi-luly1
 

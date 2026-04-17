@@ -1,5 +1,6 @@
 --!strict
 --[=[
+	Maybe I could give this module some use, like being the one handling the player's death instead of just "Humanoid.Health = 0" on modules.
 	@class PlayerDeathHandler
     @author santi-luly1
     @description Server death manager for players

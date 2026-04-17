@@ -12,7 +12,8 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local ServerPackages = script.Parent.Packages
+local ServerStorage = game:GetService("ServerStorage")
+local ServerPackages = ServerStorage:WaitForChild("ServerPackages")
 local Cmdr = require(ServerPackages:WaitForChild("cmdr"))
 local Types = require(script.Parent.Types.CmdrServerTypes)
 

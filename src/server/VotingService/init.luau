@@ -1,6 +1,6 @@
 --!strict
 --[=[
-    @class VotingController
+    @class VotingService
     @author santi-luly1
     @description Server-side map voting manager
 
@@ -22,34 +22,33 @@ local Networking = ReplicatedStorage:WaitForChild("Network")
 local Maid = require(Packages:WaitForChild("maid"))
 local Promise = require(Packages:WaitForChild("promise"))
 
-local RoundControllerTypes = require(script.Parent.Types.RoundControllerTypes)
+local RoundServiceTypes = require(script.Parent.Types.RoundServiceTypes)
 local Signal = require(Packages:WaitForChild("signal"))
-local Types = require(script.Parent.Types.VotingControllerTypes)
-local VotingControllerNet = require(Networking:WaitForChild("VotingController"))
+local Types = require(script.Parent.Types.VotingServiceTypes)
+local VotingControllerNet = require(Networking:WaitForChild("VotingServiceNetwork"))
 local t = require(Packages:WaitForChild("t"))
 
 local SpecialMapBehavior = require(script:WaitForChild("SpecialMapBehavior"))
-local RoundController: RoundControllerTypes.RoundController
+local RoundService: RoundServiceTypes.RoundService
 
 --------------------------------------------------------------------
 --- Module
 --------------------------------------------------------------------
-local VotingController = {
+local VotingService = {
 	_init = false,
 	_start = false,
 	_isVoting = false,
 	_votes = {},
 	_mapOptions = {},
 	_winningMap = "N/A",
-} :: Types.VotingController
+} :: Types.VotingService
+VotingService.Dependencies = { "RoundService" }
 
 --------------------------------------------------------------------
 --- Variables
 --------------------------------------------------------------------
 local MapsFolder = ServerStorage:WaitForChild("Maps")
 local VOTING_DURATION = 10
-
-VotingController.Dependencies = { "RoundController" }
 
 local voteCheck = t.tuple(t.instanceOf("Player"), t.string)
 
@@ -64,7 +63,7 @@ local function getMapData(mapName: string): Types.MapData?
 
 	return {
 		Name = map.Name,
-		Thumbnail = map:GetAttribute("Thumbnail") or "",
+		Thumbnail = `rbxassetid://{map:GetAttribute("thumbnail_id") or 13239978947}`,
 	}
 end
 
@@ -89,11 +88,11 @@ end
 --------------------------------------------------------------------
 --- Init / Start
 --------------------------------------------------------------------
-function VotingController:Init(registry)
+function VotingService:Init(registry)
 	assert(not self._init, `[{script.Name}] - Module already initialized.`)
 	self._init = true
 
-	RoundController = registry.RoundController
+	RoundService = registry.RoundService
 
 	self._maid = Maid.new()
 	self.VotingStarted = Signal.new()
@@ -115,14 +114,14 @@ function VotingController:Init(registry)
 	end
 end
 
-function VotingController:Start()
+function VotingService:Start()
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
 
 	math.randomseed(os.clock())
 
-	VOTING_DURATION = RoundController:GetIntermissionTimeout()
-	self._maid:GiveTask(RoundController.RoundEnded:Connect(function(skipped: boolean)
+	VOTING_DURATION = RoundService:GetIntermissionTimeout()
+	self._maid:GiveTask(RoundService.RoundEnded:Connect(function(skipped: boolean)
 		if skipped then
 			return
 		end
@@ -144,7 +143,7 @@ function VotingController:Start()
 
 				--TODO: add an intermission time between map changes, maybe 15s?
 
-				RoundController:Stop("**", true):catch(warn)
+				RoundService:Stop("**", true):catch(warn)
 			end)
 			:catch(warn)
 	end))
@@ -153,7 +152,7 @@ end
 --------------------------------------------------------------------
 --- Public API
 --------------------------------------------------------------------
-function VotingController:StartVoting(mapNames: { string }?): Types.TypedPromise<string>
+function VotingService:StartVoting(mapNames: { string }?): Types.TypedPromise<string>
 	return Promise.new(function(resolve, reject, onCancel)
 		if self._isVoting then
 			return reject("Voting already in progress")
@@ -219,7 +218,7 @@ function VotingController:StartVoting(mapNames: { string }?): Types.TypedPromise
 	end)
 end
 
-function VotingController:EndVoting(): string
+function VotingService:EndVoting(): string
 	if not self._isVoting then
 		return self._winningMap
 	end
@@ -262,7 +261,7 @@ function VotingController:EndVoting(): string
 	return winner
 end
 
-function VotingController:CastVote(player: Player, mapName: string): boolean
+function VotingService:CastVote(player: Player, mapName: string): boolean
 	if not self._isVoting then
 		return false
 	end
@@ -294,19 +293,19 @@ function VotingController:CastVote(player: Player, mapName: string): boolean
 	return true
 end
 
-function VotingController:GetMapOptions(): { Types.MapData }
+function VotingService:GetMapOptions(): { Types.MapData }
 	return self._mapOptions
 end
 
-function VotingController:GetWinningMap(): string
+function VotingService:GetWinningMap(): string
 	return self._winningMap
 end
 
-function VotingController:IsVoting(): boolean
+function VotingService:IsVoting(): boolean
 	return self._isVoting
 end
 
-function VotingController:GetVotes(): { [string]: number }
+function VotingService:GetVotes(): { [string]: number }
 	local counts: { [string]: number } = {}
 	for _, mapName in pairs(self._votes) do
 		counts[mapName] = (counts[mapName] or 0) + 1
@@ -314,4 +313,4 @@ function VotingController:GetVotes(): { [string]: number }
 	return counts
 end
 
-return VotingController
+return VotingService

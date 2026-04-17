@@ -18,15 +18,15 @@ export type MapData = {
 	Thumbnail: string,
 }
 
-export type VotingController = _SERVICE.SERVICE<VotingController> & {
+export type VotingService = _SERVICE.SERVICE<VotingService> & {
 	-- public API
-	StartVoting: (self: VotingController, mapNames: { string }?) -> TypedPromise<string>,
-	EndVoting: (self: VotingController) -> string,
-	CastVote: (self: VotingController, player: Player, mapName: string) -> boolean,
-	GetMapOptions: (self: VotingController) -> { MapData },
-	GetWinningMap: (self: VotingController) -> string?,
-	IsVoting: (self: VotingController) -> boolean,
-	GetVotes: (self: VotingController) -> { [string]: number },
+	StartVoting: (self: VotingService, mapNames: { string }?) -> TypedPromise<string>,
+	EndVoting: (self: VotingService) -> string,
+	CastVote: (self: VotingService, player: Player, mapName: string) -> boolean,
+	GetMapOptions: (self: VotingService) -> { MapData },
+	GetWinningMap: (self: VotingService) -> string?,
+	IsVoting: (self: VotingService) -> boolean,
+	GetVotes: (self: VotingService) -> { [string]: number },
 
 	-- signals
 	VotingStarted: Signal.Signal<{ MapData }>,
@@ -43,4 +43,4 @@ export type VotingController = _SERVICE.SERVICE<VotingController> & {
 	_voteResolve: (winner: string) -> ()?,
 }
 
-return (nil :: any) :: VotingController
+return (nil :: any) :: VotingService

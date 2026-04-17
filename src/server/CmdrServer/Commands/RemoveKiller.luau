@@ -1,7 +1,7 @@
 return {
 	Name = "removeKiller",
 	Aliases = { "rk" },
-	Description = "Kills the specified killer.",
+	Description = "Kills the specified killer. (This can skip the round)",
 	Group = "Admin",
 	Args = {
 		{

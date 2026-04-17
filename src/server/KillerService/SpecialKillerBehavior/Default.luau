@@ -11,7 +11,7 @@ export type BehaviorModule = {
 		model: Model,
 		maid: Maid.Maid,
 		Compute: (model: Model, maid: Maid.Maid) -> boolean -- don't really like the fact that there are multiple hard-coded typed of the same thing.
-	) -> (),
+	) -> thread,
 	OnKilledPlayer: (self: BehaviorModule, model: Model, victim: Model) -> (),
 	Damage: (self: BehaviorModule, model: Model, humanoid: Humanoid) -> (),
 	OnDamaged: (self: BehaviorModule, health: number) -> (),

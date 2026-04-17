@@ -141,19 +141,6 @@ return function(props: Props): Frame -- TODO: anims
 		end
 	end)
 
-	createMapButton({ -- TODO: DEL ME
-		Name = "algo",
-		Thumbnail = "",
-	}).Parent = mapButtonsContainer
-	createMapButton({
-		Name = "algo",
-		Thumbnail = "",
-	}).Parent = mapButtonsContainer
-	createMapButton({
-		Name = "algo",
-		Thumbnail = "",
-	}).Parent = mapButtonsContainer
-
 	return scope:New "Frame" {
 		Name = "MapVotingFrame",
 		Visible = props.visible,

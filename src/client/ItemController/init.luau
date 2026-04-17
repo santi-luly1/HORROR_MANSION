@@ -1,6 +1,6 @@
 --!strict
 --[=[
-	@class ItemController
+	@class ItemService
     @author santi-luly1
     @description Mainly to recive tools from the server, so we can handle the client side
 
@@ -15,10 +15,12 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Packages = ReplicatedStorage:WaitForChild("Packages")
+local Networking = ReplicatedStorage:WaitForChild("Network")
+
 local Maid = require(Packages:WaitForChild("maid"))
 local Types = require(script.Parent.Types.ItemControllerTypes)
 
-local ItemControllerNet = require(ReplicatedStorage:WaitForChild("Network"):WaitForChild("ItemControllerNetwork"))
+local ItemControllerNet = require(Networking:WaitForChild("ItemServiceNetwork"))
 
 --------------------------------------------------------------------
 --- Module
@@ -33,7 +35,6 @@ local ItemController = {
 --------------------------------------------------------------------
 --- Variables
 --------------------------------------------------------------------
-require(script:WaitForChild("Default"))
 
 --------------------------------------------------------------------
 --- Init / Start

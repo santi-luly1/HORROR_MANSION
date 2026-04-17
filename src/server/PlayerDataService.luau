@@ -1,6 +1,6 @@
 --!strict
 --[=[
-	@class PlayerDataHandler
+	@class PlayerDataService
     @author santi-luly1
 	@description Main API for player data
 
@@ -23,16 +23,17 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local ServerStorage = game:GetService("ServerStorage")
 
 local Packages = ReplicatedStorage:WaitForChild("Packages")
-local ServerPackages = script.Parent.Packages
+local ServerPackages = ServerStorage:WaitForChild("ServerPackages")
 local Networking = ReplicatedStorage:WaitForChild("Network")
 
 local Maid = require(Packages:WaitForChild("maid"))
 local ProfileStore = require(ServerPackages:WaitForChild("profilestore"))
 local Promise = require(Packages:WaitForChild("promise"))
 local Signal = require(Packages:WaitForChild("signal"))
-local Types = require(script.Parent.Types.PlayerDataHandlerTypes)
+local Types = require(script.Parent.Types.PlayerDataServiceTypes)
 local t = require(Packages:WaitForChild("t"))
 
 local PlayerDataNet = require(Networking:WaitForChild("PlayerDataNetwork"))
@@ -40,14 +41,14 @@ local PlayerDataNet = require(Networking:WaitForChild("PlayerDataNetwork"))
 --------------------------------------------------------------------
 --- Module
 --------------------------------------------------------------------
-local PlayerDataHandler = {
+local PlayerDataService = {
 	_init = false,
 	_start = false,
 	_profiles = {},
 	_maids = {},
 	_signals = {},
 	_loadingPromises = {}, -- track in-progress loads to prevent race conditions
-} :: Types.PlayerDataHandler
+} :: Types.PlayerDataService
 
 --------------------------------------------------------------------
 --- Variables
@@ -76,7 +77,7 @@ local updateCheck = t.tuple(t.instanceOf("Player"), t.literal("Survivals", "Poin
 --------------------------------------------------------------------
 --- Init / Start
 --------------------------------------------------------------------
-function PlayerDataHandler:Init()
+function PlayerDataService:Init()
 	assert(not self._init, `[{script.Name}] already initialized`)
 	self._init = true
 
@@ -86,7 +87,7 @@ function PlayerDataHandler:Init()
 	self.ProfileReleased = Signal.new() :: Types.ProfileStateChangedSignal
 end
 
-function PlayerDataHandler:Start()
+function PlayerDataService:Start()
 	assert(not self._start, `[{script.Name}] already started`)
 	self._start = true
 
@@ -114,7 +115,7 @@ end
 --------------------------------------------------------------------
 --- Private Methods
 --------------------------------------------------------------------
-function PlayerDataHandler:_load(player: Player): Types.TypedPromise<Types.PlayerProfile>
+function PlayerDataService:_load(player: Player): Types.TypedPromise<Types.PlayerProfile>
 	if self._loadingPromises[player] then
 		return self._loadingPromises[player]
 	end
@@ -219,7 +220,7 @@ function PlayerDataHandler:_load(player: Player): Types.TypedPromise<Types.Playe
 	return promise
 end
 
-function PlayerDataHandler:_release(player: Player): Types.TypedPromise<()>
+function PlayerDataService:_release(player: Player): Types.TypedPromise<()>
 	return Promise.new(function(resolve, reject)
 		local ok, err = playerCheck(player)
 		if not ok then
@@ -255,7 +256,7 @@ end
 --------------------------------------------------------------------
 --- Public API
 --------------------------------------------------------------------
-function PlayerDataHandler:GetPlayerData(player: Player): Types.TypedPromise<Types.PlayerData>
+function PlayerDataService:GetPlayerData(player: Player): Types.TypedPromise<Types.PlayerData>
 	return Promise.new(function(resolve, reject)
 		local ok, err = playerCheck(player)
 		if not ok then
@@ -275,7 +276,7 @@ function PlayerDataHandler:GetPlayerData(player: Player): Types.TypedPromise<Typ
 	end)
 end
 
-function PlayerDataHandler:SetPlayerStat(
+function PlayerDataService:SetPlayerStat(
 	player: Player,
 	statName: Types.ValidStats,
 	value: number
@@ -307,7 +308,7 @@ function PlayerDataHandler:SetPlayerStat(
 	end)
 end
 
-function PlayerDataHandler:UpdatePlayerStat(
+function PlayerDataService:UpdatePlayerStat(
 	player: Player,
 	statName: Types.ValidStats,
 	delta: number
@@ -341,7 +342,7 @@ function PlayerDataHandler:UpdatePlayerStat(
 	end)
 end
 
-function PlayerDataHandler:ObserveSurvivals(
+function PlayerDataService:ObserveSurvivals(
 	player: Player,
 	callback: (number) -> ()
 ): Types.TypedPromise<Signal.Connection>
@@ -360,7 +361,7 @@ function PlayerDataHandler:ObserveSurvivals(
 	end)
 end
 
-function PlayerDataHandler:ObservePoints(
+function PlayerDataService:ObservePoints(
 	player: Player,
 	callback: (number) -> ()
 ): Types.TypedPromise<Signal.Connection>
@@ -382,7 +383,7 @@ end
 --------------------------------------------------------------------
 --- Studio-only
 --------------------------------------------------------------------
-function PlayerDataHandler:ClearPlayerData(player: Player): Types.TypedPromise<boolean>
+function PlayerDataService:ClearPlayerData(player: Player): Types.TypedPromise<boolean>
 	if not RunService:IsStudio() then
 		return Promise.reject(`[{script.Name}] ClearPlayerData can only be used in Studio`)
 	end
@@ -400,4 +401,4 @@ function PlayerDataHandler:ClearPlayerData(player: Player): Types.TypedPromise<b
 	end)
 end
 
-return PlayerDataHandler
+return PlayerDataService

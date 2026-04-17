@@ -1,6 +1,6 @@
 --[=[
-    Networking for the VotingController module.
-	@class VotingControllerNetwork
+    Networking for the VotingService module.
+	@class VotingServiceNetwork
     @author: santi-luly1
 
     CHANGELOG: [

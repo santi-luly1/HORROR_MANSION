@@ -2,6 +2,7 @@
 --- Dependencies
 --------------------------------------------------------------------
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
 
 local Packages = ReplicatedStorage:WaitForChild("Packages")
 local Maid = require(Packages:WaitForChild("maid"))
@@ -9,7 +10,7 @@ local Promise = require(Packages:WaitForChild("promise"))
 local Signal = require(Packages:WaitForChild("signal"))
 local _SERVICE = require(script.Parent._SERVICE)
 
-local ServerPackages = script.Parent.Parent.Packages
+local ServerPackages = ServerStorage:WaitForChild("ServerPackages")
 local ProfileStore = require(ServerPackages:WaitForChild("profilestore"))
 
 --------------------------------------------------------------------
@@ -27,14 +28,14 @@ export type PlayerData = {
 export type PlayerProfile = ProfileStore.Profile<PlayerData>
 export type ProfileStateChangedSignal = Signal.Signal<Player, PlayerProfile>
 
-export type PlayerDataHandler = _SERVICE.SERVICE<PlayerDataHandler> & {
+export type PlayerDataService = _SERVICE.SERVICE<PlayerDataService> & {
 	-- public API
-	GetPlayerData: (self: PlayerDataHandler, Player) -> TypedPromise<PlayerData>,
-	SetPlayerStat: (self: PlayerDataHandler, Player, ValidStats, number) -> TypedPromise<boolean>,
-	UpdatePlayerStat: (self: PlayerDataHandler, Player, ValidStats, number) -> TypedPromise<number>,
-	ObserveSurvivals: (self: PlayerDataHandler, Player, (number) -> ()) -> TypedPromise<Signal.Connection>,
-	ObservePoints: (self: PlayerDataHandler, Player, (number) -> ()) -> TypedPromise<Signal.Connection>,
-	ClearPlayerData: (self: PlayerDataHandler, Player) -> TypedPromise<boolean>,
+	GetPlayerData: (self: PlayerDataService, Player) -> TypedPromise<PlayerData>,
+	SetPlayerStat: (self: PlayerDataService, Player, ValidStats, number) -> TypedPromise<boolean>,
+	UpdatePlayerStat: (self: PlayerDataService, Player, ValidStats, number) -> TypedPromise<number>,
+	ObserveSurvivals: (self: PlayerDataService, Player, (number) -> ()) -> TypedPromise<Signal.Connection>,
+	ObservePoints: (self: PlayerDataService, Player, (number) -> ()) -> TypedPromise<Signal.Connection>,
+	ClearPlayerData: (self: PlayerDataService, Player) -> TypedPromise<boolean>,
 
 	-- events
 	ProfileLoaded: ProfileStateChangedSignal,
@@ -48,8 +49,8 @@ export type PlayerDataHandler = _SERVICE.SERVICE<PlayerDataHandler> & {
 	_loadingPromises: { [Player]: TypedPromise<PlayerProfile> },
 
 	-- private methods
-	_load: (self: PlayerDataHandler, Player) -> TypedPromise<PlayerProfile>,
-	_release: (self: PlayerDataHandler, Player) -> TypedPromise<()>,
+	_load: (self: PlayerDataService, Player) -> TypedPromise<PlayerProfile>,
+	_release: (self: PlayerDataService, Player) -> TypedPromise<()>,
 }
 
-return (nil :: any) :: PlayerDataHandler
+return (nil :: any) :: PlayerDataService

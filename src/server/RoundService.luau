@@ -1,12 +1,12 @@
 --!strict
 --[=[
-	@class RoundController
+	@class RoundService
     @author santi-luly1
     @description Main server game loop handler
 
     CHANGELOG: [
 		01/21/26 --> Initial version of the module.
-		01/28/26 --> Adjusted to the new KillerController and added checks for in-progress rounds.
+		01/28/26 --> Adjusted to the new KillerService and added checks for in-progress rounds.
 		02/02/26 --> Display survivors on a Message instance.
 		02/14/26 --> If the killer dies, now the round ends with a message, and better hint message.
 		02/16/26 --> Better script performance.
@@ -26,48 +26,48 @@ local Maid = require(Packages.maid)
 local Promise = require(Packages:WaitForChild("promise"))
 local Signal = require(Packages:WaitForChild("signal"))
 
-local KillerControllerTypes = require(script.Parent.Types.KillerControllerTypes)
-local PlayerDataHandlerTypes = require(script.Parent.Types.PlayerDataHandlerTypes)
-local Types = require(script.Parent.Types.RoundControllerTypes)
+local KillerServiceTypes = require(script.Parent.Types.KillerServiceTypes)
+local PlayerDataServiceTypes = require(script.Parent.Types.PlayerDataServiceTypes)
+local Types = require(script.Parent.Types.RoundServiceTypes)
 
-local KillerController: KillerControllerTypes.KillerController
-local PlayerDataHandler: PlayerDataHandlerTypes.PlayerDataHandler
+local KillerService: KillerServiceTypes.KillerService
+local PlayerDataService: PlayerDataServiceTypes.PlayerDataService
 
 --------------------------------------------------------------------
 --- Module
 --------------------------------------------------------------------
-local RoundController = {
+local RoundService = {
 	_init = false,
 	_start = false,
 	_inProgress = false,
-} :: Types.RoundController
+} :: Types.RoundService
 
 --------------------------------------------------------------------
 --- Variables
 --------------------------------------------------------------------
+RoundService.Dependencies = { "KillerService", "PlayerDataService" }
+
 local countdownHint = Instance.new("Hint")
 countdownHint.Parent = workspace
 local TOTAL_ROUND_DURATION = 120
 local ANNOUNCEMENT_LIFETIME = 3
 local INTERMISSION_TIMEOUT = 10
 
-RoundController.Dependencies = { "KillerController", "PlayerDataHandler" }
-
 --------------------------------------------------------------------
 --- Init / Start
 --------------------------------------------------------------------
-function RoundController:Init(registry)
+function RoundService:Init(registry)
 	assert(not self._init, `[{script.Name}] - Module already initialized.`)
 	self._init = true
 
-	KillerController = registry.KillerController
-	PlayerDataHandler = registry.PlayerDataHandler
+	KillerService = registry.KillerService
+	PlayerDataService = registry.PlayerDataService
 
 	self.RoundStarted = Signal.new()
 	self.RoundEnded = Signal.new()
 end
 
-function RoundController:Start()
+function RoundService:Start()
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
 
@@ -77,7 +77,7 @@ end
 --------------------------------------------------------------------
 --- Private Methods
 --------------------------------------------------------------------
-function RoundController:_startRound(preferredKiller: string): Types.TypedPromise<{ Model }>
+function RoundService:_startRound(preferredKiller: string): Types.TypedPromise<{ Model }>
 	return Promise.new(function(resolve, reject, onCancel)
 		if self._inProgress then
 			return reject("Round already in progress")
@@ -103,8 +103,8 @@ function RoundController:_startRound(preferredKiller: string): Types.TypedPromis
 			killersToSpawn = nil -- SpawnAll handles this
 		elseif preferredKiller == "**" then
 			local all = {}
-			for _, name in ipairs(KillerController:GetKillersName()) do
-				if KillerController:IsValidName(name) then
+			for _, name in ipairs(KillerService:GetKillersName()) do
+				if KillerService:IsValidName(name) then
 					table.insert(all, name)
 				end
 			end
@@ -114,8 +114,8 @@ function RoundController:_startRound(preferredKiller: string): Types.TypedPromis
 		end
 
 		local spawnPromise: Types.TypedPromise<{ Model }> = killersToSpawn
-				and KillerController:SpawnKillers(killersToSpawn, -1)
-			or KillerController:SpawnAll(-1)
+				and KillerService:SpawnKillers(killersToSpawn, -1)
+			or KillerService:SpawnAll(-1)
 
 		return spawnPromise
 			:andThen(function(initialKillers)
@@ -142,7 +142,7 @@ function RoundController:_startRound(preferredKiller: string): Types.TypedPromis
 						end
 
 						task.defer(function()
-							local remaining = KillerController:GetCurrentKillers()
+							local remaining = KillerService:GetCurrentKillers()
 							if #remaining == 0 and not self._isEnding then -- it was the last killer, so time for cleanup.
 								self:Stop():catch(warn)
 							else
@@ -159,7 +159,7 @@ function RoundController:_startRound(preferredKiller: string): Types.TypedPromis
 					setupKillerDeathDetection(killer)
 				end
 
-				maid:GiveTask(KillerController.KillerSpawned:Connect(function(newKiller) -- get new killers mid-round
+				maid:GiveTask(KillerService.KillerSpawned:Connect(function(newKiller) -- get new killers mid-round
 					if not self._inProgress or self._isEnding then
 						return
 					end
@@ -173,7 +173,7 @@ function RoundController:_startRound(preferredKiller: string): Types.TypedPromis
 					local killerCount = 0
 
 					local function updateCache()
-						local currentKillers = KillerController:GetCurrentKillers()
+						local currentKillers = KillerService:GetCurrentKillers()
 						killerCount = #currentKillers
 
 						if killerCount ~= cachedCount then
@@ -186,7 +186,7 @@ function RoundController:_startRound(preferredKiller: string): Types.TypedPromis
 					end
 
 					maid:GiveTask(
-						KillerController.KillerSpawned:Connect(function() -- invalidate cache when new killers spawn
+						KillerService.KillerSpawned:Connect(function() -- invalidate cache when new killers spawn
 							cachedCount = -1
 						end)
 					)
@@ -230,7 +230,7 @@ function RoundController:_startRound(preferredKiller: string): Types.TypedPromis
 	end)
 end
 
-function RoundController:_cleanupRound(maid: Maid.Maid)
+function RoundService:_cleanupRound(maid: Maid.Maid)
 	if not self._inProgress then
 		return
 	end
@@ -238,11 +238,11 @@ function RoundController:_cleanupRound(maid: Maid.Maid)
 	self._inProgress = false
 	self._isEnding = true
 	maid:Destroy()
-	KillerController:Clear()
+	KillerService:Clear()
 	self._maid = nil
 end
 
-function RoundController:_intermissionCountdown(skipped: boolean): Types.TypedPromise<()>
+function RoundService:_intermissionCountdown(skipped: boolean): Types.TypedPromise<()>
 	return Promise.new(function(resolve)
 		task.spawn(function()
 			for i = INTERMISSION_TIMEOUT, 0, -1 do
@@ -254,7 +254,7 @@ function RoundController:_intermissionCountdown(skipped: boolean): Types.TypedPr
 	end)
 end
 
-function RoundController:_endRound(preferredKiller: string, skipped: boolean): Types.TypedPromise<()>
+function RoundService:_endRound(preferredKiller: string, skipped: boolean): Types.TypedPromise<()>
 	return Promise.new(function(resolve, reject)
 		if not skipped then -- start command for example would skip the round, so it doesn't really count as a survival
 			local survivors = {} :: { string }
@@ -263,7 +263,7 @@ function RoundController:_endRound(preferredKiller: string, skipped: boolean): T
 				if player:GetAttribute("Dead") == false then
 					table.insert(survivors, player.Name)
 					table.insert(survivorPlayers, player)
-					PlayerDataHandler:UpdatePlayerStat(player, "Survivals", 1)
+					PlayerDataService:UpdatePlayerStat(player, "Survivals", 1)
 				else
 					player:SetAttribute("Dead", false) -- just reset back the attribute
 				end
@@ -285,7 +285,7 @@ function RoundController:_endRound(preferredKiller: string, skipped: boolean): T
 			Debris:AddItem(announcement, ANNOUNCEMENT_LIFETIME)
 
 			for _, survivorPlayer in ipairs(survivorPlayers) do
-				PlayerDataHandler:UpdatePlayerStat(survivorPlayer, "Points", 25):catch(warn) -- TODO: Maybe instead of giving a fixed ammount, give points based off the survival duration?
+				PlayerDataService:UpdatePlayerStat(survivorPlayer, "Points", 25):catch(warn) -- TODO: Maybe instead of giving a fixed ammount, give points based off the survival duration?
 			end
 
 			task.wait(ANNOUNCEMENT_LIFETIME) -- little gap between the survivors and the actual intermission
@@ -306,7 +306,7 @@ end
 --------------------------------------------------------------------
 --- Public API
 --------------------------------------------------------------------
-function RoundController:Begin(preferredKiller: string): Types.TypedPromise<{ Model }>
+function RoundService:Begin(preferredKiller: string): Types.TypedPromise<{ Model }>
 	if self._isEnding then
 		return Promise.reject("Round is ending")
 	end
@@ -324,11 +324,11 @@ function RoundController:Begin(preferredKiller: string): Types.TypedPromise<{ Mo
 	return self:_startRound(preferredKiller)
 end
 
-function RoundController:OnIntermission(): boolean
+function RoundService:OnIntermission(): boolean
 	return self._isEnding and not self._inProgress
 end
 
-function RoundController:Stop(preferredKiller: string?, skipped: boolean?): Types.TypedPromise<()>
+function RoundService:Stop(preferredKiller: string?, skipped: boolean?): Types.TypedPromise<()>
 	if self._isEnding then
 		return Promise.reject("Round already ending")
 	end
@@ -345,12 +345,12 @@ function RoundController:Stop(preferredKiller: string?, skipped: boolean?): Type
 	return self:_endRound(preferredKiller or "**", skipped or false)
 end
 
-function RoundController:GetIntermissionTimeout(): number
+function RoundService:GetIntermissionTimeout(): number
 	return INTERMISSION_TIMEOUT
 end
 
-function RoundController:IsEnding(): boolean
+function RoundService:IsEnding(): boolean
 	return self._isEnding
 end
 
-return RoundController
+return RoundService

@@ -26,13 +26,13 @@ export type ActiveItem = {
 	Maid: Maid.Maid,
 }
 
-export type ItemController = _SERVICE.SERVICE<ItemController> & {
+export type ItemService = _SERVICE.SERVICE<ItemService> & {
 	-- public API
-	PurchaseItem: (self: ItemController, player: Player, itemName: string) -> TypedPromise<string>,
-	GetItemData: (self: ItemController, itemName: string) -> ItemData?,
-	HasItem: (self: ItemController, player: Player, itemName: string) -> boolean,
-	IsValidItem: (self: ItemController, itemName: string) -> boolean,
-	GetAvailableItems: (self: ItemController) -> { string },
+	PurchaseItem: (self: ItemService, player: Player, itemName: string) -> TypedPromise<string>,
+	GetItemData: (self: ItemService, itemName: string) -> ItemData?,
+	HasItem: (self: ItemService, player: Player, itemName: string) -> boolean,
+	IsValidItem: (self: ItemService, itemName: string) -> boolean,
+	GetAvailableItems: (self: ItemService) -> { string },
 
 	-- signals
 	ItemPurchased: Signal.Signal<Player, string>,
@@ -41,8 +41,8 @@ export type ItemController = _SERVICE.SERVICE<ItemController> & {
 
 	-- private
 	_activeItems: { [Tool]: ActiveItem },
-	_setupTool: (self: ItemController, tool: Tool, player: Player) -> (),
-	_cleanupTool: (self: ItemController, tool: Tool) -> (),
+	_setupTool: (self: ItemService, tool: Tool, player: Player) -> (),
+	_cleanupTool: (self: ItemService, tool: Tool) -> (),
 }
 
-return (nil :: any) :: ItemController
+return (nil :: any) :: ItemService

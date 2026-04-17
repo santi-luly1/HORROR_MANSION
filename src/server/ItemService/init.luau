@@ -1,6 +1,6 @@
 --!strict
 --[=[
-	@class ItemController
+	@class ItemService
     @author santi-luly1
     @description Server-side item manager for players.
 
@@ -23,31 +23,30 @@ local Packages = ReplicatedStorage:WaitForChild("Packages")
 local Networking = ReplicatedStorage:WaitForChild("Network")
 
 local Maid = require(Packages:WaitForChild("maid"))
-local PlayerDataHandlerTypes = require(script.Parent.Types.PlayerDataHandlerTypes)
+local PlayerDataServiceTypes = require(script.Parent.Types.PlayerDataServiceTypes)
 local Promise = require(Packages:WaitForChild("promise"))
 local Signal = require(Packages:WaitForChild("signal"))
-local Types = require(script.Parent.Types.ItemControllerTypes)
+local Types = require(script.Parent.Types.ItemServiceTypes)
 local t = require(Packages:WaitForChild("t"))
 
-local ItemControllerNet = require(Networking:WaitForChild("ItemControllerNetwork"))
+local ItemControllerNet = require(Networking:WaitForChild("ItemServiceNetwork"))
 local SpecialItemBehavior = require(script:WaitForChild("SpecialItemBehavior"))
-local PlayerDataHandler = (nil :: any) :: PlayerDataHandlerTypes.PlayerDataHandler
+local PlayerDataService: PlayerDataServiceTypes.PlayerDataService
 
 --------------------------------------------------------------------
 --- Module
 --------------------------------------------------------------------
-local ItemController = {
+local ItemService = {
 	_init = false,
 	_start = false,
 	_activeItems = {},
-} :: Types.ItemController
+} :: Types.ItemService
+ItemService.Dependencies = { "PlayerDataService" }
 
 --------------------------------------------------------------------
 --- Variables
 --------------------------------------------------------------------
 local ItemsFolder = ServerStorage:WaitForChild("Items")
-
-ItemController.Dependencies = { "PlayerDataHandler" }
 
 local purchaseCheck = t.tuple(t.instanceOf("Player"), t.string)
 
@@ -70,11 +69,11 @@ end
 --------------------------------------------------------------------
 --- Init / Start
 --------------------------------------------------------------------
-function ItemController:Init(registry)
+function ItemService:Init(registry)
 	assert(not self._init, `[{script.Name}] - Module already initialized.`)
 	self._init = true
 
-	PlayerDataHandler = registry.PlayerDataHandler
+	PlayerDataService = registry.PlayerDataService
 
 	self.ItemPurchased = Signal.new()
 	self.ItemEquipped = Signal.new()
@@ -130,12 +129,12 @@ function ItemController:Init(registry)
 	end)
 end
 
-function ItemController:Start()
+function ItemService:Start()
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
 
 	Players.PlayerAdded:Connect(function(player: Player)
-		PlayerDataHandler.ProfileLoaded:Once(function(plr: Player)
+		PlayerDataService.ProfileLoaded:Once(function(plr: Player)
 			if plr ~= player then
 				return
 			end
@@ -148,7 +147,7 @@ end
 --------------------------------------------------------------------
 --- Private Methods
 --------------------------------------------------------------------
-function ItemController:_setupTool(tool: Tool, player: Player)
+function ItemService:_setupTool(tool: Tool, player: Player)
 	local itemData = getItemData(tool.Name)
 	if not itemData then
 		return
@@ -191,7 +190,7 @@ function ItemController:_setupTool(tool: Tool, player: Player)
 	self.ItemEquipped:Fire(player, tool.Name)
 end
 
-function ItemController:_cleanupTool(tool: Tool)
+function ItemService:_cleanupTool(tool: Tool)
 	local activeItem = self._activeItems[tool]
 	if not activeItem then
 		return
@@ -204,7 +203,7 @@ end
 --------------------------------------------------------------------
 --- Public API
 --------------------------------------------------------------------
-function ItemController:PurchaseItem(player: Player, itemName: string): Types.TypedPromise<string>
+function ItemService:PurchaseItem(player: Player, itemName: string): Types.TypedPromise<string>
 	return Promise.new(function(resolve, reject, onCancel)
 		if onCancel(function() end) then
 			return
@@ -225,7 +224,7 @@ function ItemController:PurchaseItem(player: Player, itemName: string): Types.Ty
 			return reject("Item already bought")
 		end
 
-		local _, points: number = PlayerDataHandler:GetPlayerData(player)
+		local _, points: number = PlayerDataService:GetPlayerData(player)
 			:andThen(function(data)
 				return data.Points
 			end)
@@ -235,7 +234,7 @@ function ItemController:PurchaseItem(player: Player, itemName: string): Types.Ty
 			return reject("Insufficient points")
 		end
 
-		PlayerDataHandler:UpdatePlayerStat(player, "Points", -itemData.Price)
+		PlayerDataService:UpdatePlayerStat(player, "Points", -itemData.Price)
 			:andThen(function()
 				local tool: Tool = ItemsFolder[itemData.Name]:Clone()
 				tool.Parent = player.StarterGear
@@ -253,19 +252,19 @@ function ItemController:PurchaseItem(player: Player, itemName: string): Types.Ty
 	end)
 end
 
-function ItemController:GetItemData(itemName: string): Types.ItemData?
+function ItemService:GetItemData(itemName: string): Types.ItemData?
 	return getItemData(itemName)
 end
 
-function ItemController:HasItem(player: Player, itemName: string): boolean
+function ItemService:HasItem(player: Player, itemName: string): boolean
 	return player.StarterGear:FindFirstChild(itemName) ~= nil
 end
 
-function ItemController:IsValidItem(itemName: string): boolean
+function ItemService:IsValidItem(itemName: string): boolean
 	return getItemData(itemName) ~= nil
 end
 
-function ItemController:GetAvailableItems(): { string }
+function ItemService:GetAvailableItems(): { string }
 	local names = {}
 	for _, item in ipairs(ItemsFolder:GetChildren()) do
 		table.insert(names, item.Name)
@@ -273,4 +272,4 @@ function ItemController:GetAvailableItems(): { string }
 	return names
 end
 
-return ItemController
+return ItemService

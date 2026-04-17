@@ -32,11 +32,11 @@ local scoped = Fusion.scoped
 local peek = Fusion.peek
 local Children = Fusion.Children
 
-local ItemControllerNet = require(Networking:WaitForChild("ItemControllerNetwork"))
+local ItemServiceNet = require(Networking:WaitForChild("ItemServiceNetwork"))
 local PlayerDataNet = require(Networking:WaitForChild("PlayerDataNetwork"))
 local UIThemes = require(script:WaitForChild("Themes"))
+local VotingServiceNet = require(Networking:WaitForChild("VotingServiceNetwork"))
 
-local MapVotingControllerNet = require(Networking:WaitForChild("VotingController"))
 local MapVotingFrame = require(script.Components.MapVotingFrame)
 local ShopContainer = require(script.Components.ShopContainer)
 local ShopFrame = require(script.Components.ShopFrame)
@@ -80,33 +80,31 @@ function UI:Init()
 	self._votingVisible = self._scope:Value(false)
 
 	self._maid:GiveTask(
-		MapVotingControllerNet.VotingStarted.OnClientEvent:Connect(
-			function(mapOptions: { Types.MapData }, duration: number)
-				self._mapOptions:set(mapOptions)
-				self._votes:set({})
-				self._votingTimer:set(duration)
-				self._votingWinner:set(nil)
-				self._votingVisible:set(true)
+		VotingServiceNet.VotingStarted.OnClientEvent:Connect(function(mapOptions: { Types.MapData }, duration: number)
+			self._mapOptions:set(mapOptions)
+			self._votes:set({})
+			self._votingTimer:set(duration)
+			self._votingWinner:set(nil)
+			self._votingVisible:set(true)
 
-				task.spawn(function()
-					local remaining = duration
-					while remaining > 0 and peek(self._votingVisible) and peek(self._votingWinner) == nil do
-						task.wait(1)
-						remaining -= 1
-						self._votingTimer:set(remaining)
-					end
-				end)
-			end
-		)
+			task.spawn(function()
+				local remaining = duration
+				while remaining > 0 and peek(self._votingVisible) and peek(self._votingWinner) == nil do
+					task.wait(1)
+					remaining -= 1
+					self._votingTimer:set(remaining)
+				end
+			end)
+		end)
 	)
 
 	self._maid:GiveTask(
-		MapVotingControllerNet.VoteUpdated.OnClientEvent:Connect(function(_, _, allVotes: { [string]: number })
+		VotingServiceNet.VoteUpdated.OnClientEvent:Connect(function(_, _, allVotes: { [string]: number })
 			self._votes:set(allVotes)
 		end)
 	)
 
-	self._maid:GiveTask(MapVotingControllerNet.VotingEnded.OnClientEvent:Connect(function(winningMap: string)
+	self._maid:GiveTask(VotingServiceNet.VotingEnded.OnClientEvent:Connect(function(winningMap: string)
 		self._votingWinner:set(winningMap)
 		task.delay(3, function()
 			self._votingVisible:set(false)
@@ -165,7 +163,7 @@ function UI:_handlePurchase()
 	self._purchaseStatus:set("Purchasing...")
 	self._purchaseStatusColor:set(peek(theme.Colors.Primary.Main))
 
-	local status = ItemControllerNet.PurchaseItem:InvokeServer(peek(self._selectedItem))
+	local status = ItemServiceNet.PurchaseItem:InvokeServer(peek(self._selectedItem))
 	local text = tostring(status)
 	self._purchaseStatus:set(text)
 
@@ -180,7 +178,7 @@ function UI:_buildContent(): Frame
 	local shopFrame = ShopFrame {
 		scope = self._scope,
 		theme = self._currentTheme,
-		itemControllerNet = ItemControllerNet,
+		itemControllerNet = ItemServiceNet,
 		selectedItem = self._selectedItem,
 		survivalsCount = self._survivalsCount,
 		pointsCount = self._pointsCount,
@@ -229,7 +227,7 @@ function UI:_buildContent(): Frame
 				timer = self._votingTimer,
 				winner = self._votingWinner,
 				onVote = function(mapName: string)
-					MapVotingControllerNet.CastVote:InvokeServer(mapName)
+					VotingServiceNet.CastVote:InvokeServer(mapName)
 				end,
 				onClose = function()
 					self._votingVisible:set(false)

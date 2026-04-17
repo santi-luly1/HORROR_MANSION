@@ -1,7 +1,7 @@
 return {
 	Name = "startGame",
-	Aliases = { "start" },
-	Description = "Starts a new fresh round.",
+	Aliases = { "start", "skip", "skipRound" },
+	Description = "Starts a new fresh round. (This will skip the current one)",
 	Group = "Admin",
 	Args = {
 		{
