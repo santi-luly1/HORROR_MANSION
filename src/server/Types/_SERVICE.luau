@@ -1,10 +1,9 @@
 --------------------------------------------------------------------
 --- Types
 --------------------------------------------------------------------
-
 export type SERVICE<T> = {
 	-- lifecycle
-	Init: (self: T, registry: { [string]: any }) -> (),
+	Init: (self: T, registry: { [string]: any }) -> (), -- would prefer that registry was Service.ServiceRegistry, but it makes cyclic deps.
 	Start: (self: T) -> (),
 
 	-- public API

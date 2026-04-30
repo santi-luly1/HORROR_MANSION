@@ -15,11 +15,11 @@ local Promise = require(ReplicatedStorage.Packages.promise)
 local Types = script.Parent.Types
 
 export type ServiceRegistry = {
-	VotingService: typeof(require(Types.VotingControllerTypes)),
-	RoundService: typeof(require(Types.RoundControllerTypes)),
-	KillerService: typeof(require(Types.KillerControllerTypes)),
-	ItemService: typeof(require(Types.ItemControllerTypes)),
-	PlayerDataService: typeof(require(Types.PlayerDataHandlerTypes)),
+	VotingService: typeof(require(Types.VotingServiceTypes)),
+	RoundService: typeof(require(Types.RoundServiceTypes)),
+	KillerService: typeof(require(Types.KillerServiceTypes)),
+	ItemService: typeof(require(Types.ItemServiceTypes)),
+	PlayerDataService: typeof(require(Types.PlayerDataServiceTypes)),
 	PlayerDeathHandler: typeof(require(Types.PlayerDeathHandlerTypes)),
 }
 

@@ -77,7 +77,7 @@ end
 --------------------------------------------------------------------
 --- Private Methods
 --------------------------------------------------------------------
-function RoundService:_startRound(preferredKiller: string): Types.TypedPromise<{ Model }>
+function RoundService:_startRound(preferredKiller: string): Types.TypedPromise<{ KillerServiceTypes.Killer }>
 	return Promise.new(function(resolve, reject, onCancel)
 		if self._inProgress then
 			return reject("Round already in progress")
@@ -113,7 +113,7 @@ function RoundService:_startRound(preferredKiller: string): Types.TypedPromise<{
 			killersToSpawn = { preferredKiller }
 		end
 
-		local spawnPromise: Types.TypedPromise<{ Model }> = killersToSpawn
+		local spawnPromise: Types.TypedPromise<{ KillerServiceTypes.Killer }> = killersToSpawn
 				and KillerService:SpawnKillers(killersToSpawn, -1)
 			or KillerService:SpawnAll(-1)
 
@@ -128,42 +128,22 @@ function RoundService:_startRound(preferredKiller: string): Types.TypedPromise<{
 					return reject("No killers spawned")
 				end
 
-				local processedKillers = {} :: { [Model]: boolean } -- killers that already have been setup
-
-				local function setupKillerDeathDetection(killer: Model) -- cleanup and stuff
-					if processedKillers[killer] then
+				maid:GiveTask(KillerService.KillerCleared:Connect(function(killer)
+					if self._isEnding or not self._inProgress then
 						return
 					end
-					processedKillers[killer] = true
 
-					killer.Destroying:Once(function()
-						if self._isEnding or not self._inProgress then
-							return
+					task.defer(function()
+						local remaining = KillerService:GetCurrentKillers()
+						if #remaining < 1 and not self._isEnding then -- it was the last killer, so time for cleanup.
+							self:Stop():catch(warn)
+						else
+							local announcement = Instance.new("Message") -- just announce
+							announcement.Parent = workspace
+							announcement.Text = `{killer} has been killed.`
+							Debris:AddItem(announcement, ANNOUNCEMENT_LIFETIME)
 						end
-
-						task.defer(function()
-							local remaining = KillerService:GetCurrentKillers()
-							if #remaining == 0 and not self._isEnding then -- it was the last killer, so time for cleanup.
-								self:Stop():catch(warn)
-							else
-								local announcement = Instance.new("Message") -- just announce
-								announcement.Parent = workspace
-								announcement.Text = `{killer.Name} has been killed.`
-								Debris:AddItem(announcement, ANNOUNCEMENT_LIFETIME)
-							end
-						end)
 					end)
-				end
-
-				for _, killer in ipairs(initialKillers) do -- setup initial killers
-					setupKillerDeathDetection(killer)
-				end
-
-				maid:GiveTask(KillerService.KillerSpawned:Connect(function(newKiller) -- get new killers mid-round
-					if not self._inProgress or self._isEnding then
-						return
-					end
-					setupKillerDeathDetection(newKiller)
 				end))
 
 				maid:GiveTask(task.spawn(function()
@@ -180,7 +160,7 @@ function RoundService:_startRound(preferredKiller: string): Types.TypedPromise<{
 							cachedCount = killerCount
 							table.clear(cachedNames)
 							for _, k in ipairs(currentKillers) do
-								table.insert(cachedNames, k.Name)
+								table.insert(cachedNames, k.name)
 							end
 						end
 					end
@@ -306,7 +286,7 @@ end
 --------------------------------------------------------------------
 --- Public API
 --------------------------------------------------------------------
-function RoundService:Begin(preferredKiller: string): Types.TypedPromise<{ Model }>
+function RoundService:Begin(preferredKiller: string): Types.TypedPromise<{ KillerServiceTypes.Killer }>
 	if self._isEnding then
 		return Promise.reject("Round is ending")
 	end

@@ -5,80 +5,56 @@ local Registry = require(script.Parent)
 local simplepath = require(ReplicatedStorage.Packages.simplepath)
 local Hacker = {} :: Registry.BehaviorModule
 
-function Hacker:Init(model: Model, maid)
-	self._model = model
-	self._maid = maid
+function Hacker:Init(killer)
+	self._killer = killer
 
-	local hrp = model:FindFirstChild("HumanoidRootPart") :: BasePart
-	local humanoid = model:FindFirstChildOfClass("Humanoid") :: Humanoid
-
-	humanoid.WalkSpeed = 24
-	humanoid.JumpPower = 0
+	killer.humanoid.WalkSpeed = 24
+	killer.humanoid.JumpPower = 0
 
 	-- Noclip
-	maid:GiveTask(RunService.Stepped:Connect(function()
-		for _, part in ipairs(model:GetDescendants()) do
+	killer.maid:GiveTask(RunService.Stepped:Connect(function()
+		for _, part in ipairs(killer.model:GetDescendants()) do
 			if part:IsA("BasePart") then
 				part.CanCollide = false
 			end
 		end
 	end))
 
-	local ambience = Instance.new("Sound")
-	ambience.Name = "Ambience"
-	ambience.SoundId = "rbxassetid://123437024423007"
-	ambience.Looped = true
-	ambience.Volume = 0.5
-	ambience.Parent = hrp
-	ambience:Play()
-
-	maid:GiveTask(ambience)
+	killer:PlaySound(123437024423007, { Looped = true, Volume = 0.5 }) -- ambience
 end
 
-function Hacker:InitAI(model: Model)
-	local hrp = model:FindFirstChild("HumanoidRootPart") :: Part
-	local humanoid = model:FindFirstChild("Humanoid") :: Humanoid
+function Hacker:InitAI()
 	return task.spawn(function()
-		while model.Parent do
+		while self._killer:IsAlive() do
 			RunService.Heartbeat:Wait() -- sooo smooth
-			local target = simplepath.GetNearestCharacter(hrp.Position)
+			local target = simplepath.GetNearestCharacter(self._killer.humanoidRootPart.Position)
 			if not target then
 				task.wait(0.5) -- we wait so Roblox does not explode
 				return
 			end
 
-			humanoid:MoveTo(target:GetPivot().Position) -- this is a little bit of a bottleneck, if the player moves, the model wouldn't nice until it reaches the end.
-			humanoid.MoveToFinished:Wait()
+			self._killer.humanoid:MoveTo(target:GetPivot().Position) -- this is a little bit of a bottleneck, if the player moves, the model wouldn't nice until it reaches the end.
+			self._killer.humanoid.MoveToFinished:Wait()
 		end
-	end)
-end
 
-function Hacker:OnKilledPlayer(model: Model, victim: Model)
-	return Registry._default.OnKilledPlayer(self, model, victim)
+		print(`{self._killer.name}'s AI ended.`)
+	end)
 end
 
 function Hacker:Damage(model, humanoid)
 	humanoid:TakeDamage(20)
 
 	if humanoid.Health <= 0 then
-		self:OnKilledPlayer(model, humanoid.Parent :: Model)
+		self:OnPlayerKilled(model, humanoid.Parent :: Model)
 	end
 end
 
-function Hacker:OnDamaged(health)
-	return Registry._default:OnDamaged(health)
+function Hacker:GetBonkSound(): number
+	return 99928861785298
 end
 
-function Hacker:GetBonkSound(): string
-	return `rbxassetid://99928861785298`
-end
-
-function Hacker:GetKillSound(): string
-	return `rbxassetid://4697392376`
-end
-
-function Hacker:GetBonkDelay()
-	return Registry._default:GetBonkDelay()
+function Hacker:GetKillSound(): number
+	return 4697392376
 end
 
 return Hacker

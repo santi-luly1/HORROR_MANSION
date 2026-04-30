@@ -2,9 +2,10 @@
 local ServerScriptService = game:GetService("ServerScriptService")
 local Services = ServerScriptService.Server
 
+local Types = require(Services.Types.PlayerDataServiceTypes)
 local PlayerDataService = require(Services.PlayerDataService)
 
-return function(context, player: Player, stat: PlayerDataService.ValidStats, ammount: number)
+return function(context, player: Player, stat: Types.ValidStats, ammount: number)
 	PlayerDataService:SetPlayerStat(player, stat, ammount)
 		:andThen(function() -- we're assuming that we do not need the ok status
 			context:Reply(`Updated {player.Name}'s stat '{stat}' to {ammount}.`, Color3.fromRGB(0, 255, 0))

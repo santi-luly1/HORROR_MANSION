@@ -16,9 +16,9 @@ return function(Target: Instance)
 
 	local isLight = scope:Value(false)
 
-	UI:Init()
+	UI:Init({})
 
-	local uiInstance = UI:Start()
+	local uiInstance = (UI:Start() :: any) :: GuiBase -- this should be illegal.
 	uiInstance.Parent = Target
 
 	scope:IconSwap {

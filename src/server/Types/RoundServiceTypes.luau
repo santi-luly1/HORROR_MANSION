@@ -3,6 +3,7 @@
 --------------------------------------------------------------------
 local Packages = game:GetService("ReplicatedStorage").Packages
 
+local KillerServiceTypes = require(script.Parent.KillerServiceTypes)
 local Maid = require(Packages.maid)
 local Promise = require(Packages:WaitForChild("promise"))
 local Signal = require(Packages:WaitForChild("signal"))
@@ -15,7 +16,7 @@ export type TypedPromise<T...> = Promise.TypedPromise<T...>
 
 export type RoundService = _SERVICE.SERVICE<RoundService> & {
 	-- public API
-	Begin: (self: RoundService, preferredKiller: string, skipped: boolean?) -> TypedPromise<{ Model }>,
+	Begin: (self: RoundService, preferredKiller: string, skipped: boolean?) -> TypedPromise<{ KillerServiceTypes.Killer }>,
 	Stop: (self: RoundService, preferredKiller: string?, skipped: boolean?) -> TypedPromise<()>,
 	OnIntermission: (self: RoundService) -> boolean,
 	GetIntermissionTimeout: (self: RoundService) -> number,
@@ -31,7 +32,7 @@ export type RoundService = _SERVICE.SERVICE<RoundService> & {
 	_maid: Maid.Maid?,
 
 	-- private methods
-	_startRound: (self: RoundService, preferredKiller: string) -> TypedPromise<{ Model }>,
+	_startRound: (self: RoundService, preferredKiller: string) -> TypedPromise<{ KillerServiceTypes.Killer }>,
 	_endRound: (self: RoundService, preferredKiller: string, skipped: boolean) -> TypedPromise<()>,
 	_cleanupRound: (self: RoundService, maid: Maid.Maid) -> (),
 	_intermissionCountdown: (self: RoundService, skipped: boolean) -> TypedPromise<()>,

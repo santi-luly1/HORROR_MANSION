@@ -3,6 +3,7 @@
 	@class KillerService
     @author santi-luly1
     @description Main API for killer(s) management
+	@note as I added OOP killers, I also removed the second arguments from promises (spawnIndex), so I need to implement them into the Killer's class
 
     CHANGELOG: [
 		01/10/26 --> Adapted from original source.
@@ -12,8 +13,9 @@
 		02/15/26 --> Added SpecialKillerBehavior support and removed sounds index.
 		02/21/26 --> Fixed SpawnAll, it was failing for the slightest rejection.
 		03/13/26 --> Added spawn lock to prevent concurrent duplicate killer spawns (AI).
-		04/11/26 --> Re-organized the public API to make it more "human-readable" (was hurting my eyes and brain)
-		04/17/26 --> Added GetKillerInRound API
+		04/11/26 --> Re-organized the public API to make it more "human-readable" (was hurting my eyes and brain).
+		04/17/26 --> Added GetKillerInRound API.
+		04/25/26 --> Added a delay before deleting the killer's model, and made the module to be OOP instead (..too much?).
 	]
 ]=]
 
@@ -48,6 +50,7 @@ local KillerService = {
 --------------------------------------------------------------------
 --- Variables
 --------------------------------------------------------------------
+local KillerClass = require(script.KillerClass)
 local KillersFolder = ServerStorage:WaitForChild("Killers", 5)
 local KillerTemplates = KillersFolder:GetChildren() :: { Model }
 
@@ -89,15 +92,15 @@ end
 --------------------------------------------------------------------
 --- Helpers
 --------------------------------------------------------------------
-local function getSpawnCFrame(index: number): (number, CFrame)
+local function getSpawnCFrame(index: number): CFrame
 	local spawns = workspace.Map.spawns:GetChildren() :: { SpawnLocation }
-	return index, spawns[index].CFrame * CFrame.new(0, 10, 0)
+	return spawns[index].CFrame * CFrame.new(0, 10, 0)
 end
 
 --------------------------------------------------------------------
 --- Private Methods
 --------------------------------------------------------------------
-function KillerService:_spawn(name: string, spawnIndex: number): Types.TypedPromise<Model, number>
+function KillerService:_spawn(name: string, spawnIndex: number): Types.TypedPromise<Types.Killer>
 	return Promise.new(function(resolve, reject, onCancel)
 		if not spawnCheck(name, spawnIndex) then
 			return reject(`[{script.Name}] bad argument(s)`)
@@ -133,39 +136,37 @@ function KillerService:_spawn(name: string, spawnIndex: number): Types.TypedProm
 			return reject("Killer not found")
 		end
 
-		local behaviour = SpecialKillerBehavior:Get(name)
-		local Compute = require(script:WaitForChild("Compute"))
 		local clone = template:Clone()
-
-		local hrp = clone:FindFirstChild("HumanoidRootPart") :: Part
-		local hitbox = clone:FindFirstChild("hitbox") :: Part
-		local humanoid = clone:FindFirstChild("Humanoid") :: Humanoid
-		local index, cf = getSpawnCFrame(spawnIndex)
 		clone.Parent = workspace
-		hrp.CFrame = cf
 		clone:SetAttribute("killer", true)
 
-		maid:GiveTask(clone)
-		maid:LinkToInstance(clone) -- would this be an issue with the line above?
+		-- for _, existing in pairs(self._killers) do -- FIXME: Temporary patch, will be removed later on.
+		-- 	if existing.model ~= clone and existing.name == name and existing.model.Parent then
+		-- 		clone:Destroy()
+		-- 		releaseSpawnLock()
+		-- 		return reject(`Killer '{name}' already spawned`) --maybe shoudl I allow this?
+		-- 	end
+		-- end
 
-		for _, existing in ipairs(self._killers) do
-			if existing ~= clone and existing.Name == name and existing.Parent then
-				clone:Destroy()
-				releaseSpawnLock()
-				return reject(`Killer '{name}' already spawned`) --maybe shoudl I allow this?
-			end
-		end
-		table.insert(self._killers, clone)
+		local behavior = SpecialKillerBehavior:Get(name)
+		local killer = KillerClass.new(clone, maid)
+		killer.id = #self._killers + 1 -- should be handled by the class instead?
+		killer.behavior = behavior:new(killer)
 
-		behaviour:Init(clone, maid)
+		table.insert(self._killers, killer)
 
-		hitbox.Transparency = 0.9
+		killer:TeleportTo(getSpawnCFrame(spawnIndex))
+
+		killer.behavior:Init(killer)
+
+		killer.hitbox.Transparency = 0.9
 		local canHit = true -- typical debounce
-		maid:GiveTask(hitbox.Touched:Connect(function(hit)
-			local char = hit.Parent :: Model
+		maid:GiveTask(killer.hitbox.Touched:Connect(function(hit)
+			local char = hit.Parent
 			local hum = char and char:FindFirstChildOfClass("Humanoid")
 			if
 				canHit
+				and char
 				and hum
 				and hum.Health > 0
 				and not char:FindFirstChildOfClass("ForceField")
@@ -173,43 +174,42 @@ function KillerService:_spawn(name: string, spawnIndex: number): Types.TypedProm
 			then
 				canHit = false
 
-				local track = Instance.new("Sound")
-				track.Parent = hrp
-				track.Volume = 0.5
-				track.Ended:Once(function()
-					track:Destroy()
-				end)
-				track.SoundId = behaviour:GetBonkSound()
-				track:Play()
+				killer:PlaySound(killer.behavior:GetBonkSound(), { Volume = 0.5 })
 
-				behaviour:Damage(clone, hum)
-				task.delay(behaviour:GetBonkDelay(), function()
+				killer.behavior:Damage(clone, hum)
+
+				task.delay(killer.behavior:GetBonkDelay(), function()
 					canHit = true
 				end)
 			end
 		end))
 
-		humanoid.Died:Once(function()
-			maid:Destroy()
+		killer.humanoid.Died:Once(function()
+			--maid:Destroy()
+			killer:Kill()
 		end)
-		maid:GiveTask(humanoid.HealthChanged:Connect(function(health) -- killer is not really intended to heal anyways.
-			behaviour:OnDamaged(health)
-		end))
+		maid:GiveTask(
+			killer.humanoid.HealthChanged:Connect(function(health) -- killer is not really intended to heal anyways.
+				killer.health = health
+				killer.behavior:OnDamaged(health)
+			end)
+		)
 
-		maid:GiveTask(behaviour:InitAI(clone, maid, Compute))
+		maid:GiveTask(killer.behavior:InitAI())
 
 		maid:GiveTask(function()
-			local idx = table.find(self._killers, clone)
+			local idx = table.find(self._killers, killer)
 			if idx then
 				table.remove(self._killers, idx)
-				self.KillerCleared:Fire(clone.Name)
+				killer.humanoid.Health = 0
+				self.KillerCleared:Fire(killer.name)
 			end
 		end)
 
 		self._maid:GiveTask(maid)
-		self.KillerSpawned:Fire(clone, index)
+		self.KillerSpawned:Fire(killer)
 		releaseSpawnLock()
-		return resolve(clone, index)
+		return resolve(killer)
 	end)
 end
 
@@ -225,15 +225,17 @@ function KillerService:GetKillersName(): { string }
 	return NAMES
 end
 
-function KillerService:GetKillerInRound(name: string): Model?
-	local killer
+function KillerService:GetKillerInRound(
+	name: string
+): { Types.Killer }? -- FIXME: a little missleading that name not being in prural.
+	local killers = {}
 	for _, k in ipairs(self._killers) do
-		if k.Name == name then
-			killer = k
+		if k.name == name then
+			table.insert(killers, k)
 		end
 	end
 
-	return killer
+	return killers
 end
 
 function KillerService:IsValidName(name: string, includeSpecial: boolean?): boolean
@@ -244,7 +246,7 @@ function KillerService:IsValidName(name: string, includeSpecial: boolean?): bool
 	return table.find(NAMES, name) ~= nil and name ~= "*" and name ~= "**"
 end
 
-function KillerService:GetCurrentKillers(): { Model }
+function KillerService:GetCurrentKillers(): { Types.Killer }
 	return self._killers
 end
 
@@ -253,7 +255,7 @@ function KillerService:Clear()
 	table.clear(self._killers)
 end
 
-function KillerService:SpawnKiller(name: string, spawnIndex: number): Types.TypedPromise<Model, number>
+function KillerService:SpawnKiller(name: string, spawnIndex: number): Types.TypedPromise<Types.Killer>
 	if name == "*" then
 		error("Bulk spawn not allowed from this API.")
 	elseif name == "**" then
@@ -264,7 +266,7 @@ function KillerService:SpawnKiller(name: string, spawnIndex: number): Types.Type
 	end
 end
 
-function KillerService:SpawnKillers(names: { string }, spawnIndex: number): Types.TypedPromise<{ Model }>
+function KillerService:SpawnKillers(names: { string }, spawnIndex: number): Types.TypedPromise<{ Types.Killer }>
 	local promises = {} -- valid killers to spawn
 
 	for _, name in ipairs(names) do
@@ -307,7 +309,7 @@ function KillerService:SpawnKillers(names: { string }, spawnIndex: number): Type
 	end)
 end
 
-function KillerService:SpawnAll(spawnIndex: number): Types.TypedPromise<{ Model }>
+function KillerService:SpawnAll(spawnIndex: number): Types.TypedPromise<{ Types.Killer }>
 	local validNames = {}
 
 	for _, name in ipairs(self:GetKillersName()) do

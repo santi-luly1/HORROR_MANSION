@@ -16,8 +16,11 @@ return function(
 		return false
 	end
 
-	local target = simplepath.GetNearestCharacter(hrp.Position)
-	if not target then
+	local ok, target = pcall(function() -- This can fail (ej. we don't have an HRP, so it's nil, making this fail)
+		return simplepath.GetNearestCharacter(hrp.Position)
+	end)
+
+	if not ok or not target then
 		return false
 	end
 
@@ -51,5 +54,9 @@ return function(
 		})
 	end
 
-	return data.path:Run(target:GetPivot().Position) :: boolean
+	local k, result = pcall(function()
+		return data.path:Run(target:GetPivot().Position) :: boolean
+	end)
+
+	return k and result or false
 end

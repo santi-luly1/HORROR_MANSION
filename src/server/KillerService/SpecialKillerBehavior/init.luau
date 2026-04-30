@@ -1,4 +1,6 @@
 --!strict
+local ServerScriptService = game:GetService("ServerScriptService")
+local KillerServiceTypes = require(ServerScriptService.Server.Types.KillerServiceTypes)
 local default = require(script.Default)
 
 local SpecialKillerBehavior = {
@@ -14,7 +16,7 @@ type SpecialKillerBehavior = {
 	_default: BehaviorModule,
 }
 
-export type BehaviorModule = default.BehaviorModule
+export type BehaviorModule = KillerServiceTypes.BehaviorModule
 
 function SpecialKillerBehavior:Init()
 	for _, module in ipairs(script:GetChildren()) do
@@ -22,7 +24,11 @@ function SpecialKillerBehavior:Init()
 			continue
 		end
 
-		self._behaviours[module.Name] = require(module) :: BehaviorModule -- silence LLS
+		local m = require(module) :: BehaviorModule
+		m.__index = m
+		setmetatable(m, { __index = self._default })
+
+		self._behaviours[module.Name] = (m :: any) :: BehaviorModule -- silence LLS
 	end
 end
 
