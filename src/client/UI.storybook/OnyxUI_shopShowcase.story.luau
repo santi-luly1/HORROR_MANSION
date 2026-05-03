@@ -1,9 +1,7 @@
 -- UI.story.luau
 return function(Target)
-	local Packages = game:GetService("ReplicatedStorage"):WaitForChild("Packages")
-
-	local Fusion = require(Packages:WaitForChild("fusion"))
-	local OnyxUI = require(Packages:WaitForChild("onyx-ui"))
+	local Fusion = require("@packages/fusion")
+	local OnyxUI = require("@packages/onyx-ui")
 
 	-- Get components
 	local Components = OnyxUI.Components

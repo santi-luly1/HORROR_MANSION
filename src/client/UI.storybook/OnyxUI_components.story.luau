@@ -1,8 +1,6 @@
 -- OnyxUI_ComponentsDemo.story
-local ReplicatedStorage = game:GetService("ReplicatedStorage").Packages
-
-local Fusion = require(ReplicatedStorage:WaitForChild("fusion"))
-local OnyxUI = require(ReplicatedStorage:WaitForChild("onyx-ui"))
+local Fusion = require("@packages/fusion")
+local OnyxUI = require("@packages/onyx-ui")
 
 local Components = OnyxUI.Components
 local Themer = OnyxUI.Themer

@@ -1,7 +1,7 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local _CONTROLLER = require(script.Parent._CONTROLLER)
+local _CONTROLLER = require("@clientTypes/_CONTROLLER")
 
 --------------------------------------------------------------------
 --- Types

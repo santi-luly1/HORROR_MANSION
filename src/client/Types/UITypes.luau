@@ -1,14 +1,11 @@
-local StarterPlayer = game:GetService("StarterPlayer")
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local Packages = game:GetService("ReplicatedStorage"):WaitForChild("Packages")
-
-local Fusion = require(Packages:WaitForChild("fusion"))
-local Maid = require(Packages:WaitForChild("maid"))
-local OnyxUI = require(Packages:WaitForChild("onyx-ui"))
-local Themes = require(StarterPlayer.StarterPlayerScripts.Client.UI.Themes)
-local _CONTROLLER = require(script.Parent._CONTROLLER)
+local Fusion = require("@packages/fusion")
+local Maid = require("@packages/maid")
+local OnyxUI = require("@packages/onyx-ui")
+local Themes = require("@client/UI/Themes")
+local _CONTROLLER = require("@clientTypes/_CONTROLLER")
 
 --------------------------------------------------------------------
 --- Types

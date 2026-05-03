@@ -14,23 +14,28 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
+-- Roblox services
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ServerStorage = game:GetService("ServerStorage")
 
-local Packages = ReplicatedStorage:WaitForChild("Packages")
-local Networking = ReplicatedStorage:WaitForChild("Network")
+-- Packages
+local Maid = require("@packages/maid")
+local Promise = require("@packages/promise")
+local Signal = require("@packages/signal")
+local t = require("@packages/t")
 
-local Maid = require(Packages:WaitForChild("maid"))
-local PlayerDataServiceTypes = require(script.Parent.Types.PlayerDataServiceTypes)
-local Promise = require(Packages:WaitForChild("promise"))
-local Signal = require(Packages:WaitForChild("signal"))
-local Types = require(script.Parent.Types.ItemServiceTypes)
-local t = require(Packages:WaitForChild("t"))
+-- Types
+local PlayerDataServiceTypes = require("@serverTypes/PlayerDataServiceTypes")
+local Types = require("@serverTypes/ItemServiceTypes")
 
-local ItemControllerNet = require(Networking:WaitForChild("ItemServiceNetwork"))
-local SpecialItemBehavior = require(script:WaitForChild("SpecialItemBehavior"))
+-- Networking
+local Netwoking = require("@network/ItemServiceNetwork")
+
+-- Local utilities
+local SpecialItemBehavior = require("@server/ItemService/SpecialItemBehavior")
+
+-- Services
 local PlayerDataService: PlayerDataServiceTypes.PlayerDataService
 
 --------------------------------------------------------------------
@@ -93,7 +98,7 @@ function ItemService:Init(registry)
 		end
 	end)
 
-	ItemControllerNet.PurchaseItem.OnServerInvoke = function(player: Player, itemName: string)
+	Netwoking.PurchaseItem.OnServerInvoke = function(player: Player, itemName: string)
 		if not RunService:IsRunning() then -- we're on a story (maybe?).
 			return `Successfully purchased {itemName}`
 		end
@@ -111,11 +116,11 @@ function ItemService:Init(registry)
 		return status
 	end
 
-	ItemControllerNet.GetAvailableItems.OnServerInvoke = function()
+	Netwoking.GetAvailableItems.OnServerInvoke = function()
 		return self:GetAvailableItems()
 	end
 
-	ItemControllerNet.GetItemData.OnServerInvoke = function(_, itemName: string)
+	Netwoking.GetItemData.OnServerInvoke = function(_, itemName: string)
 		local data = self:GetItemData(itemName)
 		return data or nil
 	end
@@ -186,7 +191,7 @@ function ItemService:_setupTool(tool: Tool, player: Player)
 		end
 	end))
 
-	ItemControllerNet.ItemGranted:FireClient(player, tool) -- re-fire, since the client has already cleared its connections, so it need to remake them.
+	Netwoking.ItemGranted:FireClient(player, tool) -- re-fire, since the client has already cleared its connections, so it need to remake them.
 	self.ItemEquipped:Fire(player, tool.Name)
 end
 
@@ -244,7 +249,7 @@ function ItemService:PurchaseItem(player: Player, itemName: string): Types.Typed
 
 				--self:_setupTool(backpackTool, player) -- nope, this should be automatically handled by ChildAdded event inside Init
 
-				ItemControllerNet.ItemGranted:FireClient(player, backpackTool)
+				Netwoking.ItemGranted:FireClient(player, backpackTool)
 
 				return resolve(`Successfully purchased {itemName}`)
 			end)

@@ -12,15 +12,10 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Maid = require("@packages/maid")
+local Types = require("@clientTypes/ItemControllerTypes")
 
-local Packages = ReplicatedStorage:WaitForChild("Packages")
-local Networking = ReplicatedStorage:WaitForChild("Network")
-
-local Maid = require(Packages:WaitForChild("maid"))
-local Types = require(script.Parent.Types.ItemControllerTypes)
-
-local ItemControllerNet = require(Networking:WaitForChild("ItemServiceNetwork"))
+local ItemNetworking = require("@network/ItemServiceNetwork")
 
 --------------------------------------------------------------------
 --- Module
@@ -51,7 +46,7 @@ function ItemController:Init()
 		self._listeners[module.Name] = require(module) :: Types.ItemListener
 	end
 
-	ItemControllerNet.ItemGranted.OnClientEvent:Connect(function(tool: Tool)
+	ItemNetworking.ItemGranted.OnClientEvent:Connect(function(tool: Tool)
 		local listenerClass: Types.ItemListener = self._listeners[tool.Name]
 
 		if not listenerClass then -- we don't really want a "default" for the client.

@@ -18,18 +18,25 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
+-- Roblox services
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
-local Packages = game:GetService("ReplicatedStorage").Packages
 
-local Maid = require(Packages.maid)
-local Promise = require(Packages:WaitForChild("promise"))
-local Signal = require(Packages:WaitForChild("signal"))
+-- Packages
+local Maid = require("@packages/maid")
+local Promise = require("@packages/promise")
+local Signal = require("@packages/signal")
 
-local KillerServiceTypes = require(script.Parent.Types.KillerServiceTypes)
-local PlayerDataServiceTypes = require(script.Parent.Types.PlayerDataServiceTypes)
-local Types = require(script.Parent.Types.RoundServiceTypes)
+-- Types
+local KillerServiceTypes = require("@serverTypes/KillerServiceTypes")
+local PlayerDataServiceTypes = require("@serverTypes/PlayerDataServiceTypes")
+local Types = require("@serverTypes/RoundServiceTypes")
 
+-- Networking
+
+-- Local utilities
+
+-- Services
 local KillerService: KillerServiceTypes.KillerService
 local PlayerDataService: PlayerDataServiceTypes.PlayerDataService
 
@@ -41,12 +48,11 @@ local RoundService = {
 	_start = false,
 	_inProgress = false,
 } :: Types.RoundService
+RoundService.Dependencies = { "KillerService", "PlayerDataService" }
 
 --------------------------------------------------------------------
 --- Variables
 --------------------------------------------------------------------
-RoundService.Dependencies = { "KillerService", "PlayerDataService" }
-
 local countdownHint = Instance.new("Hint")
 countdownHint.Parent = workspace
 local TOTAL_ROUND_DURATION = 120

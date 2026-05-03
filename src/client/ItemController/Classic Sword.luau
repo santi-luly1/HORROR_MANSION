@@ -1,8 +1,7 @@
 --!strict
 --<<CLIENT>>--
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Maid = require(ReplicatedStorage.Packages.maid)
+local Maid = require("@packages/maid")
 
 local player = Players.LocalPlayer
 local Mouse_Icon = "rbxasset://textures/GunCursor.png"

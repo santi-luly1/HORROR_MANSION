@@ -1,6 +1,5 @@
 ---!strict
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local CmdrConfig = require(ReplicatedStorage.Shared.CmdrConfig)
+local CmdrConfig = require("@src/shared/CmdrConfig")
 
 local group = script.Name
 

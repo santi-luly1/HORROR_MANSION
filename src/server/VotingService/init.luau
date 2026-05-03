@@ -13,22 +13,27 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
+-- Roblox services
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
-local Packages = ReplicatedStorage:WaitForChild("Packages")
-local Networking = ReplicatedStorage:WaitForChild("Network")
-local Maid = require(Packages:WaitForChild("maid"))
-local Promise = require(Packages:WaitForChild("promise"))
+-- Packages
+local Maid = require("@packages/maid")
+local Promise = require("@packages/promise")
+local Signal = require("@packages/signal")
+local t = require("@packages/t")
 
-local RoundServiceTypes = require(script.Parent.Types.RoundServiceTypes)
-local Signal = require(Packages:WaitForChild("signal"))
-local Types = require(script.Parent.Types.VotingServiceTypes)
-local VotingControllerNet = require(Networking:WaitForChild("VotingServiceNetwork"))
-local t = require(Packages:WaitForChild("t"))
+-- Types
+local RoundServiceTypes = require("@serverTypes/RoundServiceTypes")
+local Types = require("@serverTypes/VotingServiceTypes")
 
-local SpecialMapBehavior = require(script:WaitForChild("SpecialMapBehavior"))
+-- Networking
+local VotingControllerNet = require("@network/VotingServiceNetwork")
+
+-- Local utilities
+local SpecialMapBehavior = require("@self/SpecialMapBehavior")
+
+-- Services
 local RoundService: RoundServiceTypes.RoundService
 
 --------------------------------------------------------------------
@@ -48,7 +53,7 @@ VotingService.Dependencies = { "RoundService" }
 --- Variables
 --------------------------------------------------------------------
 local MapsFolder = ServerStorage:WaitForChild("Maps")
-local VOTING_DURATION = 10
+local VOTING_DURATION: number
 
 local voteCheck = t.tuple(t.instanceOf("Player"), t.string)
 
@@ -93,6 +98,7 @@ function VotingService:Init(registry)
 	self._init = true
 
 	RoundService = registry.RoundService
+	VOTING_DURATION = RoundService:GetIntermissionTimeout()
 
 	self._maid = Maid.new()
 	self.VotingStarted = Signal.new()

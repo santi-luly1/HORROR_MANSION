@@ -10,17 +10,15 @@
 	]
 ]=]
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Promise = require(ReplicatedStorage.Packages.promise)
-local Types = script.Parent.Types
+local Promise = require("@packages/promise")
 
 export type ServiceRegistry = {
-	VotingService: typeof(require(Types.VotingServiceTypes)),
-	RoundService: typeof(require(Types.RoundServiceTypes)),
-	KillerService: typeof(require(Types.KillerServiceTypes)),
-	ItemService: typeof(require(Types.ItemServiceTypes)),
-	PlayerDataService: typeof(require(Types.PlayerDataServiceTypes)),
-	PlayerDeathHandler: typeof(require(Types.PlayerDeathHandlerTypes)),
+	VotingService: typeof(require("@serverTypes/VotingServiceTypes")),
+	RoundService: typeof(require("@serverTypes/RoundServiceTypes")),
+	KillerService: typeof(require("@serverTypes/KillerServiceTypes")),
+	ItemService: typeof(require("@serverTypes/ItemServiceTypes")),
+	PlayerDataService: typeof(require("@serverTypes/PlayerDataServiceTypes")),
+	PlayerDeathHandler: typeof(require("@serverTypes/PlayerDeathHandlerTypes")),
 }
 
 local Services = {}

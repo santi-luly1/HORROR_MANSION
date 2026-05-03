@@ -1,10 +1,8 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local Packages = game:GetService("ReplicatedStorage").Packages
-
-local Promise = require(Packages:WaitForChild("promise"))
-local _SERVICE = require(script.Parent._SERVICE)
+local Promise = require("@packages/promise")
+local _SERVICE = require("@serverTypes/_SERVICE")
 
 --------------------------------------------------------------------
 --- Types

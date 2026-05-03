@@ -1,8 +1,7 @@
 --!strict
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local Registry = require(script.Parent)
-local simplepath = require(ReplicatedStorage.Packages.simplepath)
+local Registry = require("../SpecialKillerBehavior")
+local simplepath = require("@packages/simplepath")
 local Hacker = {} :: Registry.BehaviorModule
 
 function Hacker:Init(killer)

@@ -1,17 +1,12 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ServerStorage = game:GetService("ServerStorage")
+local Maid = require("@packages/maid")
+local Promise = require("@packages/promise")
+local Signal = require("@packages/signal")
+local _SERVICE = require("@serverTypes/_SERVICE")
 
-local Packages = ReplicatedStorage:WaitForChild("Packages")
-local Maid = require(Packages:WaitForChild("maid"))
-local Promise = require(Packages:WaitForChild("promise"))
-local Signal = require(Packages:WaitForChild("signal"))
-local _SERVICE = require(script.Parent._SERVICE)
-
-local ServerPackages = ServerStorage:WaitForChild("ServerPackages")
-local ProfileStore = require(ServerPackages:WaitForChild("profilestore"))
+local ProfileStore = require("@serverPackages/profilestore")
 
 --------------------------------------------------------------------
 --- Types
@@ -33,8 +28,8 @@ export type PlayerDataService = _SERVICE.SERVICE<PlayerDataService> & {
 	GetPlayerData: (self: PlayerDataService, Player) -> TypedPromise<PlayerData>,
 	SetPlayerStat: (self: PlayerDataService, Player, ValidStats, number) -> TypedPromise<boolean>,
 	UpdatePlayerStat: (self: PlayerDataService, Player, ValidStats, number) -> TypedPromise<number>,
-	ObserveSurvivals: (self: PlayerDataService, Player, (number) -> ()) -> TypedPromise<Signal.Connection>,
-	ObservePoints: (self: PlayerDataService, Player, (number) -> ()) -> TypedPromise<Signal.Connection>,
+	ObserveSurvivals: (self: PlayerDataService, Player, (newValue: number) -> ()) -> TypedPromise<Signal.Connection>,
+	ObservePoints: (self: PlayerDataService, Player, (newValue: number) -> ()) -> TypedPromise<Signal.Connection>,
 	ClearPlayerData: (self: PlayerDataService, Player) -> TypedPromise<boolean>,
 
 	-- events

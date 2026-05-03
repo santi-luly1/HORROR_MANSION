@@ -22,20 +22,25 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+-- Roblox services
 local ServerStorage = game:GetService("ServerStorage")
 
-local Packages = ReplicatedStorage:WaitForChild("Packages")
-local Networking = ReplicatedStorage:WaitForChild("Network")
+-- Packages
+local Maid = require("@packages/maid")
+local Promise = require("@packages/promise")
+local Signal = require("@packages/signal")
+local t = require("@packages/t")
 
-local Maid = require(Packages:WaitForChild("maid"))
-local Promise = require(Packages:WaitForChild("promise"))
-local Signal = require(Packages:WaitForChild("signal"))
-local SpecialKillerBehavior = require(script:WaitForChild("SpecialKillerBehavior"))
-local Types = require(script.Parent.Types.KillerServiceTypes)
-local t = require(Packages:WaitForChild("t"))
+-- Types
+local Types = require("@serverTypes/KillerServiceTypes")
 
-local KillerControllerNet = require(Networking:WaitForChild("KillerServiceNetwork"))
+-- Networking
+local Networking = require("@network/KillerServiceNetwork")
+
+-- Local utilities
+local SpecialKillerBehavior = require("@self/SpecialKillerBehavior")
+
+-- Services
 
 --------------------------------------------------------------------
 --- Module
@@ -50,7 +55,7 @@ local KillerService = {
 --------------------------------------------------------------------
 --- Variables
 --------------------------------------------------------------------
-local KillerClass = require(script.KillerClass)
+local KillerClass = require("@self/KillerClass")
 local KillersFolder = ServerStorage:WaitForChild("Killers", 5)
 local KillerTemplates = KillersFolder:GetChildren() :: { Model }
 
@@ -77,7 +82,7 @@ function KillerService:Init()
 	SpecialKillerBehavior:Init()
 
 	-- handle client requests
-	KillerControllerNet.GetKillersName.OnServerInvoke = function()
+	Networking.GetKillersName.OnServerInvoke = function()
 		return self:GetKillersName()
 	end
 end

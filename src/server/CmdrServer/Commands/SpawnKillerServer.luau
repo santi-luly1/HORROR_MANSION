@@ -1,9 +1,6 @@
 --!strict
-local killersCount = #game:GetService("ServerStorage").Killers:GetChildren()
-local Services = game:GetService("ServerScriptService").Server
-
-local KillerService = require(Services.KillerService)
-local RoundService = require(Services.RoundService)
+local KillerService = require("@server/KillerService")
+local RoundService = require("@server/RoundService")
 
 return function(context, name: string, spawnIndex: number)
 	if RoundService:OnIntermission() then
@@ -18,7 +15,10 @@ return function(context, name: string, spawnIndex: number)
 	if name == "*" then
 		KillerService:SpawnAll(spawnIndex)
 			:andThen(function(killers)
-				context:Reply(`Spawned {#killers} killers out of {killersCount}`, Color3.fromRGB(0, 255, 0))
+				context:Reply(
+					`Spawned {#killers} killers out of {#KillerService:GetKillersName() - 2}`, -- decrease 2 bc of "*" and "**", maybe I should remove them from the table itself, since they're "special"
+					Color3.fromRGB(0, 255, 0)
+				)
 			end)
 			:catch(function(e)
 				warn(`[Command]: {e}`)

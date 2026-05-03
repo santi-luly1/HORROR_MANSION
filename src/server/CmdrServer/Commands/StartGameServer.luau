@@ -1,6 +1,5 @@
 --!strict
-local Services = game:GetService("ServerScriptService").Server
-local RoundService = require(Services.RoundService)
+local RoundService = require("@server/RoundService")
 
 return function(context, name: string)
 	if RoundService:IsEnding() then
@@ -13,7 +12,7 @@ return function(context, name: string)
 	RoundService:Begin(name, true)
 		:andThen(function(killers)
 			for _, killer in ipairs(killers) do
-				context:Reply(`Round started with '{killer.Name}'.`, Color3.fromRGB(0, 255, 0))
+				context:Reply(`Round started with '{killer.name}'.`, Color3.fromRGB(0, 255, 0))
 			end
 		end)
 		:catch(function(e)

@@ -12,9 +12,7 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local Packages = game:GetService("ReplicatedStorage").Packages
-
-local Net = require(Packages.net)
+local Net = require("@packages/net")
 
 return {
 	PurchaseItem = Net:RemoteFunction("PurchaseItem"),

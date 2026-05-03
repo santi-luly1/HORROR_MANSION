@@ -9,14 +9,12 @@
 	]
 ]=]
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Promise = require(ReplicatedStorage.Packages.promise)
-local Types = script.Parent.Types
+local Promise = require("@packages/promise")
 
 export type ControllerRegistry = {
-	CmdrClient: typeof(require(Types.CmdrClientTypes)),
-	ItemController: typeof(require(Types.ItemControllerTypes)),
-	UI: typeof(require(Types.UITypes)),
+	CmdrClient: typeof(require("@clientTypes/CmdrClientTypes")),
+	ItemController: typeof(require("@clientTypes/ItemControllerTypes")),
+	UI: typeof(require("@clientTypes/UITypes")),
 }
 
 local Controllers = {}

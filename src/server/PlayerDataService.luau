@@ -20,23 +20,26 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
+-- Roblox services
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local ServerStorage = game:GetService("ServerStorage")
 
-local Packages = ReplicatedStorage:WaitForChild("Packages")
-local ServerPackages = ServerStorage:WaitForChild("ServerPackages")
-local Networking = ReplicatedStorage:WaitForChild("Network")
+-- Packages
+local Maid = require("@packages/maid")
+local ProfileStore = require("@serverPackages/profilestore")
+local Promise = require("@packages/promise")
+local Signal = require("@packages/signal")
+local t = require("@packages/t")
 
-local Maid = require(Packages:WaitForChild("maid"))
-local ProfileStore = require(ServerPackages:WaitForChild("profilestore"))
-local Promise = require(Packages:WaitForChild("promise"))
-local Signal = require(Packages:WaitForChild("signal"))
-local Types = require(script.Parent.Types.PlayerDataServiceTypes)
-local t = require(Packages:WaitForChild("t"))
+-- Types
+local Types = require("@serverTypes/PlayerDataServiceTypes")
 
-local PlayerDataNet = require(Networking:WaitForChild("PlayerDataNetwork"))
+-- Networking
+local Networking = require("@network/PlayerDataNetwork")
+
+-- Local utilities
+
+-- Services
 
 --------------------------------------------------------------------
 --- Module
@@ -188,7 +191,7 @@ function PlayerDataService:_load(player: Player): Types.TypedPromise<Types.Playe
 
 		self:ObserveSurvivals(player, function(new)
 			survVal.Value = new
-			PlayerDataNet.SurvivalsChanged:FireClient(player, new)
+			Networking.SurvivalsChanged:FireClient(player, new)
 		end)
 			:andThen(function(connection)
 				maid:GiveTask(connection)
@@ -199,7 +202,7 @@ function PlayerDataService:_load(player: Player): Types.TypedPromise<Types.Playe
 
 		self:ObservePoints(player, function(new)
 			pointVal.Value = new
-			PlayerDataNet.PointsChanged:FireClient(player, new)
+			Networking.PointsChanged:FireClient(player, new)
 		end)
 			:andThen(function(connection)
 				maid:GiveTask(connection)
@@ -344,7 +347,7 @@ end
 
 function PlayerDataService:ObserveSurvivals(
 	player: Player,
-	callback: (number) -> ()
+	callback: (newValue: number) -> ()
 ): Types.TypedPromise<Signal.Connection>
 	return Promise.new(function(resolve, reject)
 		local ok, err = playerCheck(player)
@@ -363,7 +366,7 @@ end
 
 function PlayerDataService:ObservePoints(
 	player: Player,
-	callback: (number) -> ()
+	callback: (newValue: number) -> ()
 ): Types.TypedPromise<Signal.Connection>
 	return Promise.new(function(resolve, reject)
 		local ok, err = playerCheck(player)

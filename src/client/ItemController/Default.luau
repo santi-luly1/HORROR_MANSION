@@ -1,7 +1,6 @@
 --!strict
 --<<CLIENT>>--
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Maid = require(ReplicatedStorage.Packages.maid)
+local Maid = require("@packages/maid")
 
 export type ItemListener = (tool: Tool, maid: Maid.Maid) -> ()
 

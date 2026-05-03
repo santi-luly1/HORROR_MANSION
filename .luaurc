@@ -1,0 +1,13 @@
+{
+  "aliases": {
+    "src": "./src",
+    "client": "@src/client",
+    "server": "@src/server",
+    "shared": "@src/shared",
+    "network": "@src/network",
+    "packages": "./Packages",
+    "serverPackages": "./ServerPackages",
+    "serverTypes": "@server/Types",
+    "clientTypes": "@client/Types"
+  }
+}

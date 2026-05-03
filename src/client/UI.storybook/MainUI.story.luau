@@ -1,12 +1,8 @@
 --!strict
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local StarterPlayer = game:GetService("StarterPlayer")
-local Packages = ReplicatedStorage:WaitForChild("Packages")
-
-local Fusion = require(Packages:WaitForChild("fusion"))
-local OnyxUI = require(Packages:WaitForChild("onyx-ui"))
-local Themes = require(StarterPlayer.StarterPlayerScripts.Client.UI.Themes)
-local UI = require(script.Parent.Parent.UI)
+local Fusion = require("@packages/fusion")
+local OnyxUI = require("@packages/onyx-ui")
+local Themes = require("@client/UI/Themes")
+local UI = require("@client/UI")
 
 local scoped = Fusion.scoped
 local Components = OnyxUI.Components

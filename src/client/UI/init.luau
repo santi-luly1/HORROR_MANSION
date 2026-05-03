@@ -16,32 +16,25 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
+-- Roblox services
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Packages = ReplicatedStorage:WaitForChild("Packages")
-local Networking = ReplicatedStorage:WaitForChild("Network")
+-- Packages
+local Fusion = require("@packages/fusion")
+local Maid = require("@packages/maid")
+local OnyxUI = require("@packages/onyx-ui")
 
-local Fusion = require(Packages:WaitForChild("fusion"))
-local Maid = require(Packages:WaitForChild("maid"))
-local OnyxUI = require(Packages:WaitForChild("onyx-ui"))
-local Types = require(script.Parent.Types.UITypes)
+-- Types
+local Types = require("@clientTypes/UITypes")
 
-local Components = OnyxUI.Components
-local scoped = Fusion.scoped
-local peek = Fusion.peek
-local Children = Fusion.Children
+-- Networking
+local ItemServiceNet = require("@network/ItemServiceNetwork")
+local PlayerDataNet = require("@network/PlayerDataNetwork")
+local VotingServiceNet = require("@network/VotingServiceNetwork")
 
-local ItemServiceNet = require(Networking:WaitForChild("ItemServiceNetwork"))
-local PlayerDataNet = require(Networking:WaitForChild("PlayerDataNetwork"))
-local UIThemes = require(script:WaitForChild("Themes"))
-local VotingServiceNet = require(Networking:WaitForChild("VotingServiceNetwork"))
+-- Local utilities
 
-local MapVotingFrame = require(script.Components.MapVotingFrame)
-local ShopContainer = require(script.Components.ShopContainer)
-local ShopFrame = require(script.Components.ShopFrame)
-local ShopToggleButton = require(script.Components.ShopToggleButton)
-local Themes = require(script.Themes)
+-- Controllers
 
 --------------------------------------------------------------------
 --- Module
@@ -54,6 +47,17 @@ local UI = {
 --------------------------------------------------------------------
 --- Variables
 --------------------------------------------------------------------
+local Components = OnyxUI.Components
+local scoped = Fusion.scoped
+local peek = Fusion.peek
+local Children = Fusion.Children
+
+local MapVotingFrame = require("@client/UI/Components/MapVotingFrame")
+local ShopContainer = require("@client/UI/Components/ShopContainer")
+local ShopFrame = require("@client/UI/Components/ShopFrame")
+local ShopToggleButton = require("@client/UI/Components/ShopToggleButton")
+local Themes = require("@client/UI/Themes")
+
 local player = Players.LocalPlayer
 
 --------------------------------------------------------------------
@@ -245,7 +249,7 @@ function UI:SetTheme(theme: Types.FusionTheme)
 end
 
 function UI:SetThemeByName(themeName: string): boolean
-	local theme = UIThemes[themeName]
+	local theme = Themes[themeName]
 	if not theme then
 		return false
 	end

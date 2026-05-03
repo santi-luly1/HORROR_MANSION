@@ -12,11 +12,20 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local Packages = game:GetService("ReplicatedStorage").Packages
+-- Roblox services
 
-local Promise = require(Packages:WaitForChild("promise"))
-local Types = require(script.Parent.Types._BOILERPLATE_ControllerTypes)
-local t = require(Packages:WaitForChild("t"))
+-- Packages
+local Promise = require("@packages/promise")
+local t = require("@packages/t")
+
+-- Types
+local Types = require("@clientTypes/_BOILERPLATE_ControllerTypes")
+
+-- Networking
+
+-- Local utilities
+
+-- Controllers
 
 --------------------------------------------------------------------
 --- Module

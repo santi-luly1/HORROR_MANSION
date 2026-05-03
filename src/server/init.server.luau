@@ -12,11 +12,9 @@
 ]=]
 
 local Lighting = game:GetService("Lighting")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Packages = ReplicatedStorage.Packages
 
-local Loader = require(Packages:WaitForChild("loader"))
-local Services = require(script:WaitForChild("Services"))
+local Loader = require("@packages/loader")
+local Services = require("@server/Services")
 
 -- initial set-up
 Lighting.Ambient = Color3.fromRGB(0, 0, 0)

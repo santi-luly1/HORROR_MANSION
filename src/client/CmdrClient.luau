@@ -12,13 +12,22 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
+-- Roblox services
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local player = Players.LocalPlayer
 
+-- Packages
 local Cmdr = require(ReplicatedStorage:WaitForChild("CmdrClient") :: ModuleScript)
-local CmdrConfig = require(ReplicatedStorage.Shared.CmdrConfig)
-local Types = require(script.Parent.Types.CmdrClientTypes)
+local CmdrConfig = require("@src/shared/CmdrConfig")
+
+-- Types
+local Types = require("@clientTypes/CmdrClientTypes")
+
+-- Networking
+
+-- Local utilities
+
+-- Controllers
 
 --------------------------------------------------------------------
 --- Module
@@ -31,6 +40,7 @@ local CmdrClient = {
 --------------------------------------------------------------------
 --- Variables
 --------------------------------------------------------------------
+local player = Players.LocalPlayer
 
 --------------------------------------------------------------------
 --- Init / Start

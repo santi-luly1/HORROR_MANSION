@@ -221,8 +221,8 @@ export type ThemeSpec = {
 }
 
 return {
-	CrimsonFog = require(script.CrimsonFog),
-	ColdDawn = require(script.ColdDawn),
+	CrimsonFog = require("@self/CrimsonFog"),
+	ColdDawn = require("@self/ColdDawn"),
 } :: {
 	[string]: ThemeSpec,
 }

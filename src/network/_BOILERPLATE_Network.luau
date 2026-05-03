@@ -11,9 +11,7 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local Packages = game:GetService("ReplicatedStorage").Packages
-
-local Net = require(Packages.net)
+local Net = require("@packages/net")
 
 return {
 	RE = Net:RemoteEvent("RE"),

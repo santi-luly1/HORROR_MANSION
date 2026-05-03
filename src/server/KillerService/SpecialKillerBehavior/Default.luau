@@ -1,7 +1,6 @@
 --!strict
 local RunService = game:GetService("RunService")
-local ServerScriptService = game:GetService("ServerScriptService")
-local KillerServiceTypes = require(ServerScriptService.Server.Types.KillerServiceTypes)
+local KillerServiceTypes = require("@serverTypes/KillerServiceTypes")
 local Default = {} :: KillerServiceTypes.BehaviorModule
 Default.__index = Default
 
@@ -19,7 +18,7 @@ end
 
 function Default:InitAI()
 	return task.spawn(function() -- this can act as an fallback.
-		local compute = require(script.Parent.Parent.Compute) -- make it not so hardcoded
+		local compute = require("../Compute") -- make it not so hardcoded
 		while self._killer:IsAlive() do
 			local ok = compute(self._killer.model, self._killer.maid)
 			if ok then

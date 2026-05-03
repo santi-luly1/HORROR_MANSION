@@ -1,8 +1,7 @@
 --!strict
 --<<SERVER>>--
 local Debris = game:GetService("Debris")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Maid = require(ReplicatedStorage.Packages.maid)
+local Maid = require("@packages/maid")
 
 local Speed = 100
 local Duration = 9999999

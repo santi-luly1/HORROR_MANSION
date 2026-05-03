@@ -12,11 +12,20 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local Packages = game:GetService("ReplicatedStorage").Packages
+-- Roblox services
 
-local Promise = require(Packages:WaitForChild("promise"))
-local Types = require(script.Parent.Types._BOILERPLATE_ServerTypes)
-local t = require(Packages:WaitForChild("t"))
+-- Packages
+local Promise = require("@packages/promise")
+local t = require("@packages/t")
+
+-- Types
+local Types = require("@serverTypes/_BOILERPLATE_ServerTypes")
+
+-- Networking
+
+-- Local utilities
+
+-- Services
 
 --------------------------------------------------------------------
 --- Module
@@ -25,6 +34,7 @@ local _BOILERPLATE_Server = {
 	_init = false,
 	_start = false,
 } :: Types._BOILERPLATE_Server
+_BOILERPLATE_Server.Dependencies = {}
 
 --------------------------------------------------------------------
 --- Variables

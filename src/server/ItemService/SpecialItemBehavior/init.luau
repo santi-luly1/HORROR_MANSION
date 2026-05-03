@@ -1,6 +1,7 @@
 --!strict
 ------------------------------------------------------------------------------ Please nerf all gears inside this game, as for now, all of them can basically one-shot the killers.
-local default = require(script.Default)
+
+local default = require("@self/Default")
 
 local SpecialItemBehavior = {
 	_behaviours = {},

@@ -1,5 +1,5 @@
 --!strict
-local Default = require(script.Default)
+local Default = require("@self/Default")
 
 local SpecialMapBehavior = {
 	_behaviours = {},

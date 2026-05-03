@@ -10,8 +10,7 @@
 	]
 ]=]
 
-local ServerScriptService = game:GetService("ServerScriptService")
-local Types = require(ServerScriptService.Server.Types.KillerServiceTypes)
+local Types = require("@serverTypes/KillerServiceTypes")
 
 local Killer = {} :: Types.Killer
 Killer.__index = Killer

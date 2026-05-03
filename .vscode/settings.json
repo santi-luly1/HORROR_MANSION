@@ -1,6 +1,6 @@
 {
   "editor.fontFamily": "Fira Code, JetBrains Mono, monospace",
-  "luau-lsp.plugin.enabled": true,
+  "luau-lsp.studioPlugin.enabled": true,
   "luau-lsp.sourcemap.rojoPath": "/home/santiago/.aftman/bin/rojo",
   "[lua]": {
     "editor.defaultFormatter": "JohnnyMorganz.stylua",

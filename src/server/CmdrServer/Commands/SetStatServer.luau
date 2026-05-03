@@ -1,9 +1,6 @@
 --!strict
-local ServerScriptService = game:GetService("ServerScriptService")
-local Services = ServerScriptService.Server
-
-local Types = require(Services.Types.PlayerDataServiceTypes)
-local PlayerDataService = require(Services.PlayerDataService)
+local PlayerDataService = require("@server/PlayerDataService")
+local Types = require("@serverTypes/PlayerDataServiceTypes")
 
 return function(context, player: Player, stat: Types.ValidStats, ammount: number)
 	PlayerDataService:SetPlayerStat(player, stat, ammount)

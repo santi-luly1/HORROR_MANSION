@@ -1,9 +1,6 @@
 --!strict
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Packages = ReplicatedStorage:WaitForChild("Packages")
-
-local OnyxUI = require(Packages:WaitForChild("onyx-ui"))
-local Fusion = require(Packages:WaitForChild("fusion"))
+local Fusion = require("@packages/fusion")
+local OnyxUI = require("@packages/onyx-ui")
 
 local Themer = OnyxUI.Themer
 local Util = OnyxUI.Util

@@ -1,9 +1,9 @@
 --!strict
 --[=[
-	Maybe I could give this module some use, like being the one handling the player's death instead of just "Humanoid.Health = 0" on modules.
 	@class PlayerDeathHandler
     @author santi-luly1
     @description Server death manager for players
+	@note Maybe I could give this module some use, like being the one handling the player's death instead of just "Humanoid.Health = 0" on modules.
 
     CHANGELOG: [
 		12/31/25 --> Adapted from original source.
@@ -14,8 +14,19 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
+-- Roblox services
 local Players = game:GetService("Players")
-local Types = require(script.Parent.Types.PlayerDeathHandlerTypes)
+
+-- Packages
+
+-- Types
+local Types = require("@serverTypes/PlayerDeathHandlerTypes")
+
+-- Networking
+
+-- Local utilities
+
+-- Services
 
 --------------------------------------------------------------------
 --- Module
@@ -28,7 +39,7 @@ local PlayerDeathHandler = {
 --------------------------------------------------------------------
 --- Variables
 --------------------------------------------------------------------
-local SoundsIndex = require(script.Sounds)
+local SoundsIndex = require("@self/Sounds")
 
 --------------------------------------------------------------------
 --- Init / Start

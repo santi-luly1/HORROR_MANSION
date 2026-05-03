@@ -1,7 +1,6 @@
 --!strict
-local ServerScriptService = game:GetService("ServerScriptService")
-local KillerServiceTypes = require(ServerScriptService.Server.Types.KillerServiceTypes)
-local default = require(script.Default)
+local KillerServiceTypes = require("@serverTypes/KillerServiceTypes")
+local default = require("@self/Default")
 
 local SpecialKillerBehavior = {
 	_behaviours = {},

@@ -1,7 +1,6 @@
 --!strict
 --<<SERVER>>--
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Maid = require(ReplicatedStorage.Packages.maid)
+local Maid = require("@packages/maid")
 
 export type BehaviorModule = (tool: Tool, player: Player, maid: Maid.Maid) -> ()
 

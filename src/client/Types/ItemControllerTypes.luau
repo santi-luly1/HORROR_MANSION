@@ -1,10 +1,8 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local Packages = game:GetService("ReplicatedStorage"):WaitForChild("Packages")
-
-local Maid = require(Packages:WaitForChild("maid"))
-local _CONTROLLER = require(script.Parent._CONTROLLER)
+local Maid = require("@packages/maid")
+local _CONTROLLER = require("@clientTypes/_CONTROLLER")
 
 --------------------------------------------------------------------
 --- Types

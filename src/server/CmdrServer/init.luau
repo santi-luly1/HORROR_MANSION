@@ -12,10 +12,19 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local ServerStorage = game:GetService("ServerStorage")
-local ServerPackages = ServerStorage:WaitForChild("ServerPackages")
-local Cmdr = require(ServerPackages:WaitForChild("cmdr"))
-local Types = require(script.Parent.Types.CmdrServerTypes)
+-- Roblox services
+
+-- Packages
+local Cmdr = require("@serverPackages/cmdr")
+
+-- Types
+local Types = require("@serverTypes/CmdrServerTypes")
+
+-- Networking
+
+-- Local utilities
+
+-- Services
 
 --------------------------------------------------------------------
 --- Module
