@@ -1,16 +1,20 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local Maid = require("@packages/maid")
-local Promise = require("@packages/promise")
-local Signal = require("@packages/signal")
-local _SERVICE = require("@serverTypes/_SERVICE")
+local Maid = require("@game/ReplicatedStorage/Packages/maid")
+local Promise = require("@game/ReplicatedStorage/Packages/promise")
+local Signal = require("@game/ReplicatedStorage/Packages/signal")
+local _SERVICE = require("@game/ServerScriptService/Server/Types/_SERVICE")
 
 --------------------------------------------------------------------
 --- Types
 --------------------------------------------------------------------
 export type TypedPromise<T...> = Promise.TypedPromise<T...>
 
+type soundProps = {
+	Volume: number?,
+	Looped: boolean?,
+}
 export type Killer = {
 	__index: Killer,
 
@@ -35,24 +39,25 @@ export type Killer = {
 	Kill: (self: Killer) -> (),
 	IsAlive: (self: Killer) -> boolean,
 	TeleportTo: (self: Killer, cframe: CFrame) -> (),
-	PlaySound: (self: Killer, soundId: number, props: { [string]: string | boolean | number }?) -> Sound,
+	PlaySound: (self: Killer, soundId: number, props: soundProps?) -> Sound,
 	PlayAnimation: (self: Killer, id: number) -> AnimationTrack?,
 	SetState: (self: Killer, state: string) -> (),
 	Destroy: (self: Killer) -> (), -- alias for Kill.
+
+	_setupStandardBehavior: (self: Killer) -> (),
 }
 
 export type BehaviorModule = {
 	new: (self: BehaviorModule, killer: Killer) -> BehaviorModule,
-	Init: (self: BehaviorModule, killer: Killer) -> (),
-	InitAI: (self: BehaviorModule) -> thread,
-	OnPlayerKilled: (self: BehaviorModule, model: Model, victim: Model) -> (),
-	Damage: (self: BehaviorModule, model: Model, humanoid: Humanoid) -> (),
-	OnDamaged: (self: BehaviorModule, health: number) -> (),
+	Setup: (self: BehaviorModule) -> (),
+	OnPlayerKill: (self: BehaviorModule, victim: Model) -> (),
+	DamageVictim: (self: BehaviorModule, humanoid: Humanoid) -> (),
+	OnHarm: (self: BehaviorModule) -> (),
 
 	GetKillSound: (self: BehaviorModule) -> number,
 	GetBonkSound: (self: BehaviorModule) -> number,
-	GetBonkDelay: (self: BehaviorModule) -> number,
 	GetPerishSound: (self: BehaviorModule) -> number,
+	GetBonkDelay: (self: BehaviorModule) -> number,
 
 	__index: BehaviorModule,
 	_killer: Killer,

@@ -9,12 +9,12 @@
 	]
 ]=]
 
-local Promise = require("@packages/promise")
+local Promise = require("@game/ReplicatedStorage/Packages/promise")
 
 export type ControllerRegistry = {
-	CmdrClient: typeof(require("@clientTypes/CmdrClientTypes")),
-	ItemController: typeof(require("@clientTypes/ItemControllerTypes")),
-	UI: typeof(require("@clientTypes/UITypes")),
+	CmdrClient: typeof(require("@game/StarterPlayer/StarterPlayerScripts/Client/Types/CmdrClientTypes")),
+	ItemController: typeof(require("@game/StarterPlayer/StarterPlayerScripts/Client/Types/ItemControllerTypes")),
+	UI: typeof(require("@game/StarterPlayer/StarterPlayerScripts/Client/Types/UITypes")),
 }
 
 local Controllers = {}

@@ -15,11 +15,11 @@
 -- Roblox services
 
 -- Packages
-local Promise = require("@packages/promise")
-local t = require("@packages/t")
+local Promise = require("@game/ReplicatedStorage/Packages/promise")
+local t = require("@game/ReplicatedStorage/Packages/t")
 
 -- Types
-local Types = require("@serverTypes/_BOILERPLATE_ServerTypes")
+local Types = require("@game/ServerScriptService/Server/Types/_BOILERPLATE_ServerTypes")
 
 -- Networking
 
@@ -55,6 +55,7 @@ function _BOILERPLATE_Server:Init()
 end
 
 function _BOILERPLATE_Server:Start()
+	assert(self._init, `[{script.Name}] - Module not initialized.`)
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
 end

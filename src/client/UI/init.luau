@@ -20,17 +20,17 @@
 local Players = game:GetService("Players")
 
 -- Packages
-local Fusion = require("@packages/fusion")
-local Maid = require("@packages/maid")
-local OnyxUI = require("@packages/onyx-ui")
+local Fusion = require("@game/ReplicatedStorage/Packages/fusion")
+local Maid = require("@game/ReplicatedStorage/Packages/maid")
+local OnyxUI = require("@game/ReplicatedStorage/Packages/onyx-ui")
 
 -- Types
-local Types = require("@clientTypes/UITypes")
+local Types = require("@game/StarterPlayer/StarterPlayerScripts/Client/Types/UITypes")
 
 -- Networking
-local ItemServiceNet = require("@network/ItemServiceNetwork")
-local PlayerDataNet = require("@network/PlayerDataNetwork")
-local VotingServiceNet = require("@network/VotingServiceNetwork")
+local ItemServiceNet = require("@game/ReplicatedStorage/Network/ItemServiceNetwork")
+local PlayerDataNet = require("@game/ReplicatedStorage/Network/PlayerDataNetwork")
+local VotingServiceNet = require("@game/ReplicatedStorage/Network/VotingServiceNetwork")
 
 -- Local utilities
 
@@ -52,11 +52,11 @@ local scoped = Fusion.scoped
 local peek = Fusion.peek
 local Children = Fusion.Children
 
-local MapVotingFrame = require("@client/UI/Components/MapVotingFrame")
-local ShopContainer = require("@client/UI/Components/ShopContainer")
-local ShopFrame = require("@client/UI/Components/ShopFrame")
-local ShopToggleButton = require("@client/UI/Components/ShopToggleButton")
-local Themes = require("@client/UI/Themes")
+local MapVotingFrame = require("@game/StarterPlayer/StarterPlayerScripts/Client/UI/Components/MapVotingFrame")
+local ShopContainer = require("@game/StarterPlayer/StarterPlayerScripts/Client/UI/Components/ShopContainer")
+local ShopFrame = require("@game/StarterPlayer/StarterPlayerScripts/Client/UI/Components/ShopFrame")
+local ShopToggleButton = require("@game/StarterPlayer/StarterPlayerScripts/Client/UI/Components/ShopToggleButton")
+local Themes = require("@game/StarterPlayer/StarterPlayerScripts/Client/UI/Themes")
 
 local player = Players.LocalPlayer
 
@@ -125,6 +125,7 @@ function UI:Init()
 end
 
 function UI:Start(): GuiBase
+	assert(self._init, `[{script.Name}] - Module not initialized.`)
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
 

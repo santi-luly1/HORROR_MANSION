@@ -1,7 +1,7 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local _SERVICE = require("@serverTypes/_SERVICE")
+local _SERVICE = require("@game/ServerScriptService/Server/Types/_SERVICE")
 
 --------------------------------------------------------------------
 --- Types

@@ -25,17 +25,17 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 -- Packages
-local Maid = require("@packages/maid")
-local ProfileStore = require("@serverPackages/profilestore")
-local Promise = require("@packages/promise")
-local Signal = require("@packages/signal")
-local t = require("@packages/t")
+local Maid = require("@game/ReplicatedStorage/Packages/maid")
+local ProfileStore = require("@game/ServerStorage/ServerPackages/profilestore")
+local Promise = require("@game/ReplicatedStorage/Packages/promise")
+local Signal = require("@game/ReplicatedStorage/Packages/signal")
+local t = require("@game/ReplicatedStorage/Packages/t")
 
 -- Types
-local Types = require("@serverTypes/PlayerDataServiceTypes")
+local Types = require("@game/ServerScriptService/Server/Types/PlayerDataServiceTypes")
 
 -- Networking
-local Networking = require("@network/PlayerDataNetwork")
+local Networking = require("@game/ReplicatedStorage/Network/PlayerDataNetwork")
 
 -- Local utilities
 
@@ -91,7 +91,8 @@ function PlayerDataService:Init()
 end
 
 function PlayerDataService:Start()
-	assert(not self._start, `[{script.Name}] already started`)
+	assert(self._init, `[{script.Name}] - Module not initialized.`)
+	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
 
 	Players.PlayerRemoving:Connect(function(player: Player)
@@ -157,7 +158,7 @@ function PlayerDataService:_load(player: Player): Types.TypedPromise<Types.Playe
 
 		if profile.Data.Version ~= PROFILE_VERSION then
 			-- simple migration..............
-			-- TODO: actual migration
+			-- probably there will not be many major changes for this proyect's data template, so this is a bit useless.
 			profile.Data.Version = PROFILE_VERSION
 		end
 

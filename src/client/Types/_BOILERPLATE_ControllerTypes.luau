@@ -1,8 +1,8 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local Promise = require("@packages/promise")
-local _CONTROLLER = require("@clientTypes/_CONTROLLER")
+local Promise = require("@game/ReplicatedStorage/Packages/promise")
+local _CONTROLLER = require("@game/StarterPlayer/StarterPlayerScripts/Client/Types/_CONTROLLER")
 
 --------------------------------------------------------------------
 --- Types

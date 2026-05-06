@@ -20,7 +20,7 @@ local Players = game:GetService("Players")
 -- Packages
 
 -- Types
-local Types = require("@serverTypes/PlayerDeathHandlerTypes")
+local Types = require("@game/ServerScriptService/Server/Types/PlayerDeathHandlerTypes")
 
 -- Networking
 
@@ -50,6 +50,7 @@ function PlayerDeathHandler:Init()
 end
 
 function PlayerDeathHandler:Start()
+	assert(self._init, `[{script.Name}] - Module not initialized.`)
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
 

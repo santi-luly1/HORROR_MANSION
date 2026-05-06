@@ -1,7 +1,7 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local _CONTROLLER = require("@clientTypes/_CONTROLLER")
+local _CONTROLLER = require("@game/StarterPlayer/StarterPlayerScripts/Client/Types/_CONTROLLER")
 
 --------------------------------------------------------------------
 --- Types

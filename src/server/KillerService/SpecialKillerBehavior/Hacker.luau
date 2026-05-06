@@ -1,14 +1,12 @@
 --!strict
 local RunService = game:GetService("RunService")
 local Registry = require("../SpecialKillerBehavior")
-local simplepath = require("@packages/simplepath")
+local simplepath = require("@game/ReplicatedStorage/Packages/simplepath")
 local Hacker = {} :: Registry.BehaviorModule
 
-function Hacker:Init(killer)
-	self._killer = killer
-
+function Hacker:Setup()
+	local killer = self._killer
 	killer.humanoid.WalkSpeed = 24
-	killer.humanoid.JumpPower = 0
 
 	-- Noclip
 	killer.maid:GiveTask(RunService.Stepped:Connect(function()
@@ -20,10 +18,9 @@ function Hacker:Init(killer)
 	end))
 
 	killer:PlaySound(123437024423007, { Looped = true, Volume = 0.5 }) -- ambience
-end
 
-function Hacker:InitAI()
-	return task.spawn(function()
+	--AI
+	killer.maid:GiveTask(task.spawn(function()
 		while self._killer:IsAlive() do
 			RunService.Heartbeat:Wait() -- sooo smooth
 			local target = simplepath.GetNearestCharacter(self._killer.humanoidRootPart.Position)
@@ -35,16 +32,14 @@ function Hacker:InitAI()
 			self._killer.humanoid:MoveTo(target:GetPivot().Position) -- this is a little bit of a bottleneck, if the player moves, the model wouldn't nice until it reaches the end.
 			self._killer.humanoid.MoveToFinished:Wait()
 		end
-
-		print(`{self._killer.name}'s AI ended.`)
-	end)
+	end))
 end
 
-function Hacker:Damage(model, humanoid)
+function Hacker:DamageVictim(humanoid)
 	humanoid:TakeDamage(20)
 
 	if humanoid.Health <= 0 then
-		self:OnPlayerKilled(model, humanoid.Parent :: Model)
+		self:OnPlayerKill(humanoid.Parent :: Model)
 	end
 end
 

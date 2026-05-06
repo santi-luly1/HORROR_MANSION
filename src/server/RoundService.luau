@@ -23,14 +23,14 @@ local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 
 -- Packages
-local Maid = require("@packages/maid")
-local Promise = require("@packages/promise")
-local Signal = require("@packages/signal")
+local Maid = require("@game/ReplicatedStorage/Packages/maid")
+local Promise = require("@game/ReplicatedStorage/Packages/promise")
+local Signal = require("@game/ReplicatedStorage/Packages/signal")
 
 -- Types
-local KillerServiceTypes = require("@serverTypes/KillerServiceTypes")
-local PlayerDataServiceTypes = require("@serverTypes/PlayerDataServiceTypes")
-local Types = require("@serverTypes/RoundServiceTypes")
+local KillerServiceTypes = require("@game/ServerScriptService/Server/Types/KillerServiceTypes")
+local PlayerDataServiceTypes = require("@game/ServerScriptService/Server/Types/PlayerDataServiceTypes")
+local Types = require("@game/ServerScriptService/Server/Types/RoundServiceTypes")
 
 -- Networking
 
@@ -74,6 +74,7 @@ function RoundService:Init(registry)
 end
 
 function RoundService:Start()
+	assert(self._init, `[{script.Name}] - Module not initialized.`)
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
 
@@ -284,8 +285,7 @@ function RoundService:_endRound(preferredKiller: string, skipped: boolean): Type
 				self._isEnding = false
 				return self:Begin(preferredKiller) -- TODO: probably add duos or just multiple killers to survive?
 			end)
-			:andThen(resolve)
-			:catch(reject)
+			:andThen(resolve, reject)
 	end)
 end
 

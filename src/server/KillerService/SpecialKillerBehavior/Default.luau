@@ -1,6 +1,6 @@
 --!strict
 local RunService = game:GetService("RunService")
-local KillerServiceTypes = require("@serverTypes/KillerServiceTypes")
+local KillerServiceTypes = require("@game/ServerScriptService/Server/Types/KillerServiceTypes")
 local Default = {} :: KillerServiceTypes.BehaviorModule
 Default.__index = Default
 
@@ -10,14 +10,9 @@ function Default.new(self, killer)
 	return obj
 end
 
-function Default:Init(killer)
-	self._killer = killer
-
-	killer.humanoid.WalkSpeed = 16
-end
-
-function Default:InitAI()
-	return task.spawn(function() -- this can act as an fallback.
+function Default:Setup()
+	-- AI
+	self._killer.maid:GiveTask(task.spawn(function() -- this can act as an fallback.
 		local compute = require("../Compute") -- make it not so hardcoded
 		while self._killer:IsAlive() do
 			local ok = compute(self._killer.model, self._killer.maid)
@@ -27,24 +22,24 @@ function Default:InitAI()
 				task.wait(0.5)
 			end
 		end
-	end)
+	end))
 end
 
-function Default:OnPlayerKilled(model: Model, victim: Model) -- maybe this should be private?
+function Default:OnPlayerKill(victim: Model)
 	self._killer:PlaySound(self:GetKillSound())
 
-	warn(`{model.Name} says L to {victim.Name}`)
+	warn(`{self._killer.model.Name} says L to {victim.Name}`)
 end
 
-function Default:Damage(model, humanoid)
+function Default:DamageVictim(humanoid)
 	humanoid:TakeDamage(20)
 
 	if humanoid.Health <= 0 then
-		self:OnPlayerKilled(model, humanoid.Parent :: Model)
+		self:OnPlayerKill(humanoid.Parent :: Model)
 	end
 end
 
-function Default:OnDamaged(_health)
+function Default:OnHarm()
 	--print("ouch!")
 end
 
@@ -56,12 +51,12 @@ function Default:GetKillSound(): number
 	return 139771888058836
 end
 
-function Default:GetBonkDelay()
-	return 1.5
+function Default:GetPerishSound(): number
+	return 135674621249840
 end
 
-function Default:GetPerishSound(): number
-	return 0
+function Default:GetBonkDelay()
+	return 1.5
 end
 
 return Default

@@ -18,10 +18,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Packages
 local Cmdr = require(ReplicatedStorage:WaitForChild("CmdrClient") :: ModuleScript)
-local CmdrConfig = require("@src/shared/CmdrConfig")
+local CmdrConfig = require("@game/ReplicatedStorage/Shared/CmdrConfig")
 
 -- Types
-local Types = require("@clientTypes/CmdrClientTypes")
+local Types = require("@game/StarterPlayer/StarterPlayerScripts/Client/Types/CmdrClientTypes")
 
 -- Networking
 
@@ -51,6 +51,7 @@ function CmdrClient:Init()
 end
 
 function CmdrClient:Start()
+	assert(self._init, `[{script.Name}] - Module not initialized.`)
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
 

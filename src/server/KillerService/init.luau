@@ -16,6 +16,7 @@
 		04/11/26 --> Re-organized the public API to make it more "human-readable" (was hurting my eyes and brain).
 		04/17/26 --> Added GetKillerInRound API.
 		04/25/26 --> Added a delay before deleting the killer's model, and made the module to be OOP instead (..too much?).
+		05/06/26 --> Moved humanoid-related stuff into KillerClass to handle.
 	]
 ]=]
 
@@ -26,16 +27,16 @@
 local ServerStorage = game:GetService("ServerStorage")
 
 -- Packages
-local Maid = require("@packages/maid")
-local Promise = require("@packages/promise")
-local Signal = require("@packages/signal")
-local t = require("@packages/t")
+local Maid = require("@game/ReplicatedStorage/Packages/maid")
+local Promise = require("@game/ReplicatedStorage/Packages/promise")
+local Signal = require("@game/ReplicatedStorage/Packages/signal")
+local t = require("@game/ReplicatedStorage/Packages/t")
 
 -- Types
-local Types = require("@serverTypes/KillerServiceTypes")
+local Types = require("@game/ServerScriptService/Server/Types/KillerServiceTypes")
 
 -- Networking
-local Networking = require("@network/KillerServiceNetwork")
+local Networking = require("@game/ReplicatedStorage/Network/KillerServiceNetwork")
 
 -- Local utilities
 local SpecialKillerBehavior = require("@self/SpecialKillerBehavior")
@@ -88,6 +89,7 @@ function KillerService:Init()
 end
 
 function KillerService:Start()
+	assert(self._init, `[{script.Name}] - Module not initialized.`)
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
 
@@ -135,7 +137,7 @@ function KillerService:_spawn(name: string, spawnIndex: number): Types.TypedProm
 			return
 		end
 
-		local template = KillersFolder:FindFirstChild(name) :: Model?
+		local template = KillersFolder:FindFirstChild(name)
 		if not template then
 			releaseSpawnLock()
 			return reject("Killer not found")
@@ -143,15 +145,6 @@ function KillerService:_spawn(name: string, spawnIndex: number): Types.TypedProm
 
 		local clone = template:Clone()
 		clone.Parent = workspace
-		clone:SetAttribute("killer", true)
-
-		-- for _, existing in pairs(self._killers) do -- FIXME: Temporary patch, will be removed later on.
-		-- 	if existing.model ~= clone and existing.name == name and existing.model.Parent then
-		-- 		clone:Destroy()
-		-- 		releaseSpawnLock()
-		-- 		return reject(`Killer '{name}' already spawned`) --maybe shoudl I allow this?
-		-- 	end
-		-- end
 
 		local behavior = SpecialKillerBehavior:Get(name)
 		local killer = KillerClass.new(clone, maid)
@@ -162,51 +155,12 @@ function KillerService:_spawn(name: string, spawnIndex: number): Types.TypedProm
 
 		killer:TeleportTo(getSpawnCFrame(spawnIndex))
 
-		killer.behavior:Init(killer)
-
-		killer.hitbox.Transparency = 0.9
-		local canHit = true -- typical debounce
-		maid:GiveTask(killer.hitbox.Touched:Connect(function(hit)
-			local char = hit.Parent
-			local hum = char and char:FindFirstChildOfClass("Humanoid")
-			if
-				canHit
-				and char
-				and hum
-				and hum.Health > 0
-				and not char:FindFirstChildOfClass("ForceField")
-				and not char:GetAttribute("killer")
-			then
-				canHit = false
-
-				killer:PlaySound(killer.behavior:GetBonkSound(), { Volume = 0.5 })
-
-				killer.behavior:Damage(clone, hum)
-
-				task.delay(killer.behavior:GetBonkDelay(), function()
-					canHit = true
-				end)
-			end
-		end))
-
-		killer.humanoid.Died:Once(function()
-			--maid:Destroy()
-			killer:Kill()
-		end)
-		maid:GiveTask(
-			killer.humanoid.HealthChanged:Connect(function(health) -- killer is not really intended to heal anyways.
-				killer.health = health
-				killer.behavior:OnDamaged(health)
-			end)
-		)
-
-		maid:GiveTask(killer.behavior:InitAI())
+		killer.behavior:Setup()
 
 		maid:GiveTask(function()
 			local idx = table.find(self._killers, killer)
 			if idx then
 				table.remove(self._killers, idx)
-				killer.humanoid.Health = 0
 				self.KillerCleared:Fire(killer.name)
 			end
 		end)

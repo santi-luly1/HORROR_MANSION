@@ -1,11 +1,11 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local Fusion = require("@packages/fusion")
-local Maid = require("@packages/maid")
-local OnyxUI = require("@packages/onyx-ui")
-local Themes = require("@client/UI/Themes")
-local _CONTROLLER = require("@clientTypes/_CONTROLLER")
+local Fusion = require("@game/ReplicatedStorage/Packages/fusion")
+local Maid = require("@game/ReplicatedStorage/Packages/maid")
+local OnyxUI = require("@game/ReplicatedStorage/Packages/onyx-ui")
+local Themes = require("@game/StarterPlayer/StarterPlayerScripts/Client/UI/Themes")
+local _CONTROLLER = require("@game/StarterPlayer/StarterPlayerScripts/Client/Types/_CONTROLLER")
 
 --------------------------------------------------------------------
 --- Types

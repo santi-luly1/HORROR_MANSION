@@ -1,6 +1,6 @@
 --!strict
 --<<SERVER>>--
-local Maid = require("@packages/maid")
+local Maid = require("@game/ReplicatedStorage/Packages/maid")
 
 local BaseUrl = "rbxassetid://"
 

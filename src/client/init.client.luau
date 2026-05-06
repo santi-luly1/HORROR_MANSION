@@ -10,11 +10,8 @@
 	]
 ]=]
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Packages = ReplicatedStorage.Packages
-
-local Loader = require(Packages:WaitForChild("loader"))
-local Controllers = require(script:WaitForChild("Controllers"))
+local Controllers = require("@self/Controllers")
+local Loader = require("@game/ReplicatedStorage/Packages/loader")
 
 local modules = Loader.LoadChildren(script)
 Controllers:initModules(modules):await()

@@ -8,16 +8,16 @@
         "$path": "Packages"
       },
       "Network": {
-        "$path": "build_src/network"
+        "$path": "src/network"
       },
       "Shared": {
-        "$path": "build_src/shared"
+        "$path": "src/shared"
       }
     },
 
     "ServerScriptService": {
       "Server": {
-        "$path": "build_src/server"
+        "$path": "src/server"
       }
     },
 
@@ -30,7 +30,7 @@
     "StarterPlayer": {
       "StarterPlayerScripts": {
         "Client": {
-          "$path": "build_src/client"
+          "$path": "src/client"
         }
       }
     }

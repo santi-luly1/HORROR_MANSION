@@ -1,5 +1,5 @@
 --!strict
-local RoundService = require("@server/RoundService")
+local RoundService = require("@game/ServerScriptService/Server/RoundService")
 
 return function(context, name: string)
 	if RoundService:IsEnding() then

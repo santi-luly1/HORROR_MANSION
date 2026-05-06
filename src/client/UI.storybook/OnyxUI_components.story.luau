@@ -1,6 +1,6 @@
 -- OnyxUI_ComponentsDemo.story
-local Fusion = require("@packages/fusion")
-local OnyxUI = require("@packages/onyx-ui")
+local Fusion = require("@game/ReplicatedStorage/Packages/fusion")
+local OnyxUI = require("@game/ReplicatedStorage/Packages/onyx-ui")
 
 local Components = OnyxUI.Components
 local Themer = OnyxUI.Themer

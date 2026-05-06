@@ -1,7 +1,7 @@
 --// Initialization
 
-local PlayerService = game:GetService("Players")
 local CollectionService = game:GetService("CollectionService")
+local PlayerService = game:GetService("Players")
 
 --[=[
 	@class Maid
@@ -23,7 +23,7 @@ Maid.__index = Maid
 	`MaidTask` describes all types of tasks a `Maid` instance can handle.
 ]=]
 export type MaidTask = () -> () | Instance | RBXScriptConnection | Maid | thread
-export type Maid = typeof(setmetatable({_Tasks = {}:: {MaidTask}}, Maid))
+export type Maid = typeof(setmetatable({ _Tasks = {} :: { MaidTask } }, Maid))
 
 --// Variables
 
@@ -39,7 +39,7 @@ local TRACKING_TAG = "MaidLinkToInstance"
 	:::
 ]=]
 function Maid.new(): Maid
-	return setmetatable({_Tasks = {}}, Maid)
+	return setmetatable({ _Tasks = {} }, Maid)
 end
 
 --[=[
@@ -66,13 +66,13 @@ function Maid:LinkToInstance(Object: Instance)
 		end))
 	else
 		Object:AddTag(TRACKING_TAG)
-		
+
 		self:GiveTask(CollectionService:GetInstanceRemovedSignal(TRACKING_TAG):Connect(function(RemovedInstance)
 			if RemovedInstance == Object then
 				self:DoCleaning()
 			end
 		end))
-		
+
 		self:GiveTask(Object.Destroying:Connect(function()
 			self:DoCleaning()
 			Object:RemoveTag(TRACKING_TAG)
@@ -109,17 +109,17 @@ end
 function Maid:DoCleaning()
 	local Tasks = self._Tasks
 	self._Tasks = {}
-	
+
 	for _, Task in next, Tasks do
 		local TaskType = typeof(Task)
 		local IsTable = (TaskType == "table")
-		
+
 		if TaskType == "RBXScriptConnection" or (IsTable and Task.Disconnect) then
 			Task:Disconnect()
 		elseif TaskType == "thread" then
 			xpcall(task.cancel, function(e)
-				local callerName = debug.info(4,"n")
-				warn(debug.traceback(`Maid could not cancel thread for "{callerName or "Unknown Function"}": {e}`)) 
+				local callerName = debug.info(4, "n")
+				warn(debug.traceback(`Maid could not cancel thread for "{callerName or "Unknown Function"}": {e}`))
 			end, Task)
 		elseif TaskType == "Instance" or (IsTable and Task.Destroy) then
 			Task:Destroy()
@@ -127,7 +127,7 @@ function Maid:DoCleaning()
 			Task()
 		end
 	end
-	
+
 	table.clear(Tasks)
 end
 

@@ -18,17 +18,17 @@ local Players = game:GetService("Players")
 local ServerStorage = game:GetService("ServerStorage")
 
 -- Packages
-local Maid = require("@packages/maid")
-local Promise = require("@packages/promise")
-local Signal = require("@packages/signal")
-local t = require("@packages/t")
+local Maid = require("@game/ReplicatedStorage/Packages/maid")
+local Promise = require("@game/ReplicatedStorage/Packages/promise")
+local Signal = require("@game/ReplicatedStorage/Packages/signal")
+local t = require("@game/ReplicatedStorage/Packages/t")
 
 -- Types
-local RoundServiceTypes = require("@serverTypes/RoundServiceTypes")
-local Types = require("@serverTypes/VotingServiceTypes")
+local RoundServiceTypes = require("@game/ServerScriptService/Server/Types/RoundServiceTypes")
+local Types = require("@game/ServerScriptService/Server/Types/VotingServiceTypes")
 
 -- Networking
-local VotingControllerNet = require("@network/VotingServiceNetwork")
+local VotingControllerNet = require("@game/ReplicatedStorage/Network/VotingServiceNetwork")
 
 -- Local utilities
 local SpecialMapBehavior = require("@self/SpecialMapBehavior")
@@ -121,6 +121,7 @@ function VotingService:Init(registry)
 end
 
 function VotingService:Start()
+	assert(self._init, `[{script.Name}] - Module not initialized.`)
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
 

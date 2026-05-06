@@ -30,7 +30,7 @@ local Types = require("@game/StarterPlayer/StarterPlayerScripts/Client/Types/_BO
 --------------------------------------------------------------------
 --- Module
 --------------------------------------------------------------------
-local _BOILERPLATE_Controller = {
+local NotificationsController = {
 	_init = false,
 	_start = false,
 } :: Types._BOILERPLATE_Controller
@@ -38,28 +38,37 @@ local _BOILERPLATE_Controller = {
 --------------------------------------------------------------------
 --- Variables
 --------------------------------------------------------------------
-local _
+local createNotification = require("@self/Notification").create
 
 local TYPE = t.optional(t.string)
 
 --------------------------------------------------------------------
 --- Init / Start
 --------------------------------------------------------------------
-function _BOILERPLATE_Controller:Init()
+function NotificationsController:Init()
 	assert(not self._init, `[{script.Name}] - Module already initialized.`)
 	self._init = true
 end
 
-function _BOILERPLATE_Controller:Start()
+function NotificationsController:Start()
 	assert(self._init, `[{script.Name}] - Module not initialized.`)
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
+
+	print("a")
+	task.delay(15, function()
+		print("b")
+		createNotification {
+			Content = "test",
+			Duration = 10,
+		}
+	end)
 end
 
 --------------------------------------------------------------------
 --- Private Methods
 --------------------------------------------------------------------
-function _BOILERPLATE_Controller:doSomething(a: Types.TYPE): Types.TypedPromise<()>
+function NotificationsController:doSomething(a: Types.TYPE): Types.TypedPromise<()>
 	return Promise.new(function(resolve, reject, onCancel)
 		if not TYPE(a) then
 			return reject(`[{script.Name}] bad argument #1 (string expected)`)
@@ -81,4 +90,4 @@ end
 --- Public API
 --------------------------------------------------------------------
 
-return _BOILERPLATE_Controller
+return NotificationsController

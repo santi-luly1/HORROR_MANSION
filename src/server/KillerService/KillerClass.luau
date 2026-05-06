@@ -7,18 +7,79 @@
 
     CHANGELOG: [
 		04/25/26 --> Added this module.
+		05/06/26 --> Added _setupDefaultBehavior to setup basic properties and signals for each killer.
 	]
 ]=]
 
-local Types = require("@serverTypes/KillerServiceTypes")
+local Types = require("@game/ServerScriptService/Server/Types/KillerServiceTypes")
 
 local Killer = {} :: Types.Killer
 Killer.__index = Killer
 
+function Killer:_setupStandardBehavior()
+	local hum = self.humanoid
+
+	-- humanoid
+	hum.WalkSpeed = 16
+	hum.UseJumpPower = true
+	hum.AutoJumpEnabled = true
+	hum.JumpPower = 50
+
+	-- model setup
+	self.model:SetAttribute("killer", true)
+
+	-- subscribers
+	hum.Died:Once(function()
+		self:Kill()
+	end)
+	self.maid:GiveTask(hum.HealthChanged:Connect(function(health) -- killer is not really intended to heal anyways.
+		self.health = health
+		self.behavior:OnHarm()
+	end))
+	self.maid:GiveTask(hum:GetPropertyChangedSignal("Sit"):Connect(function()
+		if not hum.Sit then
+			return
+		end
+
+		task.delay(5, function()
+			self.humanoid.Jump = true
+		end)
+	end))
+
+	local canHit = true -- debounce
+	self.maid:GiveTask(self.hitbox.Touched:Connect(function(hit)
+		local char = hit.Parent
+		local targetHum = char and char:FindFirstChildOfClass("Humanoid")
+		if
+			canHit
+			and char
+			and targetHum
+			and targetHum.Health > 0
+			and not char:FindFirstChildOfClass("ForceField")
+			and not char:GetAttribute("killer")
+		then
+			canHit = false
+
+			self:PlaySound(self.behavior:GetBonkSound(), { Volume = 0.5 })
+
+			self.behavior:DamageVictim(targetHum)
+
+			task.delay(self.behavior:GetBonkDelay(), function()
+				canHit = true
+			end)
+		end
+	end))
+	self.maid:GiveTask(function()
+		self:Kill()
+	end)
+
+	self.hitbox.Transparency = 0.95
+end
+
 function Killer.new(model: Model, maid): Types.Killer
 	local self = (setmetatable({}, Killer) :: any) :: Types.Killer -- ugly
 
-	self.id = 0 -- KillerService.luau handles this.
+	--self.id = 0 -- KillerService.luau handles this.
 	self.name = model.Name
 	self.model = model
 	self.humanoid = model:FindFirstChildOfClass("Humanoid") :: Humanoid
@@ -28,7 +89,7 @@ function Killer.new(model: Model, maid): Types.Killer
 	self.maxHealth = self.humanoid.MaxHealth
 	self.health = self.maxHealth
 	self.lastDamageTime = 0
-	self.behavior = nil :: any -- KillerService.luau handles this.
+	--self.behavior = nil -- KillerService.luau handles this.
 	self.maid = maid
 
 	self._anims = {}
@@ -36,6 +97,7 @@ function Killer.new(model: Model, maid): Types.Killer
 	self._animator.Parent = self.humanoid
 
 	self.maid:LinkToInstance(model)
+	self:_setupStandardBehavior()
 
 	return self
 end
@@ -52,7 +114,6 @@ function Killer:Damage(amount: number)
 	self.lastDamageTime = os.clock()
 	self.health = math.clamp(self.health - amount, 0, self.maxHealth)
 	self.humanoid.Health = self.health
-	self.behavior:OnDamaged(self.health)
 
 	self:PlaySound(self.behavior:GetBonkSound(), { Volume = 0.5 })
 
@@ -68,6 +129,8 @@ function Killer:Kill()
 		return
 	end
 	self.alive = false
+
+	self.humanoid.Health = 0 -- just making sure
 
 	self:PlaySound(self.behavior:GetPerishSound(), { Volume = 1.0 })
 
@@ -88,16 +151,16 @@ function Killer:PlaySound(soundId: number, props)
 	local track = Instance.new("Sound")
 	track.Parent = self.humanoidRootPart
 	track.SoundId = `rbxassetid://{soundId}`
+
 	if props then
-		for prop, value in props do
-			track[prop] = value -- FIXME: TypeError: Attempting a dynamic property access on type 'Sound' is unsafe and may cause exceptions at runtime
-		end
+		track.Volume = props.Volume or 1
+		track.Looped = props.Looped or false
 	end
+
 	track.Ended:Once(function()
 		track:Destroy()
 	end)
 	track:Play()
-	self.maid:GiveTask(track) -- would this really be necessary?
 	return track
 end
 

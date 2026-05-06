@@ -1,6 +1,6 @@
 --!strict
-local Maid = require("@packages/maid")
-local simplepath = require("@packages/simplepath")
+local Maid = require("@game/ReplicatedStorage/Packages/maid")
+local simplepath = require("@game/ReplicatedStorage/Packages/simplepath")
 
 -- each killer gets its own entry via the model as key
 local pathRegistry = setmetatable({} :: { [Model]: { target: Model?, path: any } }, { __mode = "k" })

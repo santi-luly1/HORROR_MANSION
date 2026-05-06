@@ -1,8 +1,8 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local Promise = require("@packages/promise")
-local _SERVICE = require("@serverTypes/_SERVICE")
+local Promise = require("@game/ReplicatedStorage/Packages/promise")
+local _SERVICE = require("@game/ServerScriptService/Server/Types/_SERVICE")
 
 --------------------------------------------------------------------
 --- Types

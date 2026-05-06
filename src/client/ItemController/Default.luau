@@ -1,6 +1,6 @@
 --!strict
 --<<CLIENT>>--
-local Maid = require("@packages/maid")
+local Maid = require("@game/ReplicatedStorage/Packages/maid")
 
 export type ItemListener = (tool: Tool, maid: Maid.Maid) -> ()
 

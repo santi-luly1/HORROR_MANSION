@@ -26,5 +26,7 @@ For more help, check out [the Rojo documentation](https://rojo.space/docs).
 
 ```bash
 wally-package-types -s sourcemap.json Packages ServerPackages #reexports types (should be run once per "wally install")
+```
+```bash
 lua scripts/require_by_string.lua #"compiles" so Roblox doesn't have issues with aliases.
 ```

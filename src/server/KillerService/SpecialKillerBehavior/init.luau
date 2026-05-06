@@ -1,5 +1,5 @@
 --!strict
-local KillerServiceTypes = require("@serverTypes/KillerServiceTypes")
+local KillerServiceTypes = require("@game/ServerScriptService/Server/Types/KillerServiceTypes")
 local default = require("@self/Default")
 
 local SpecialKillerBehavior = {

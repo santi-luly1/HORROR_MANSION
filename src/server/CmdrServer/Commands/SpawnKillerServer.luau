@@ -1,6 +1,6 @@
 --!strict
-local KillerService = require("@server/KillerService")
-local RoundService = require("@server/RoundService")
+local KillerService = require("@game/ServerScriptService/Server/KillerService")
+local RoundService = require("@game/ServerScriptService/Server/RoundService")
 
 return function(context, name: string, spawnIndex: number)
 	if RoundService:OnIntermission() then

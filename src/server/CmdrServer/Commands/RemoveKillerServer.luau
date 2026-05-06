@@ -1,5 +1,5 @@
 --!strict
-local KillerService = require("@server/KillerService")
+local KillerService = require("@game/ServerScriptService/Server/KillerService")
 
 return function(context, name: string) -- FIXME: this does not verify if it is the last killer, if it is, this roound will not be skipped.
 	local currentKillers = KillerService:GetCurrentKillers()

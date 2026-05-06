@@ -1,8 +1,8 @@
 --!strict
-local Fusion = require("@packages/fusion")
-local OnyxUI = require("@packages/onyx-ui")
-local Themes = require("@client/UI/Themes")
-local UI = require("@client/UI")
+local Fusion = require("@game/ReplicatedStorage/Packages/fusion")
+local OnyxUI = require("@game/ReplicatedStorage/Packages/onyx-ui")
+local Themes = require("@game/StarterPlayer/StarterPlayerScripts/Client/UI/Themes")
+local UI = require("@game/StarterPlayer/StarterPlayerScripts/Client/UI")
 
 local scoped = Fusion.scoped
 local Components = OnyxUI.Components

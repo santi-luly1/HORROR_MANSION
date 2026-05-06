@@ -1,8 +1,8 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local Maid = require("@packages/maid")
-local _CONTROLLER = require("@clientTypes/_CONTROLLER")
+local Maid = require("@game/ReplicatedStorage/Packages/maid")
+local _CONTROLLER = require("@game/StarterPlayer/StarterPlayerScripts/Client/Types/_CONTROLLER")
 
 --------------------------------------------------------------------
 --- Types

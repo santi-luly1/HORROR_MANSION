@@ -20,20 +20,20 @@ local RunService = game:GetService("RunService")
 local ServerStorage = game:GetService("ServerStorage")
 
 -- Packages
-local Maid = require("@packages/maid")
-local Promise = require("@packages/promise")
-local Signal = require("@packages/signal")
-local t = require("@packages/t")
+local Maid = require("@game/ReplicatedStorage/Packages/maid")
+local Promise = require("@game/ReplicatedStorage/Packages/promise")
+local Signal = require("@game/ReplicatedStorage/Packages/signal")
+local t = require("@game/ReplicatedStorage/Packages/t")
 
 -- Types
-local PlayerDataServiceTypes = require("@serverTypes/PlayerDataServiceTypes")
-local Types = require("@serverTypes/ItemServiceTypes")
+local PlayerDataServiceTypes = require("@game/ServerScriptService/Server/Types/PlayerDataServiceTypes")
+local Types = require("@game/ServerScriptService/Server/Types/ItemServiceTypes")
 
 -- Networking
-local Netwoking = require("@network/ItemServiceNetwork")
+local Netwoking = require("@game/ReplicatedStorage/Network/ItemServiceNetwork")
 
 -- Local utilities
-local SpecialItemBehavior = require("@server/ItemService/SpecialItemBehavior")
+local SpecialItemBehavior = require("@game/ServerScriptService/Server/ItemService/SpecialItemBehavior")
 
 -- Services
 local PlayerDataService: PlayerDataServiceTypes.PlayerDataService
@@ -135,6 +135,7 @@ function ItemService:Init(registry)
 end
 
 function ItemService:Start()
+	assert(self._init, `[{script.Name}] - Module not initialized.`)
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
 
@@ -239,21 +240,19 @@ function ItemService:PurchaseItem(player: Player, itemName: string): Types.Typed
 			return reject("Insufficient points")
 		end
 
-		PlayerDataService:UpdatePlayerStat(player, "Points", -itemData.Price)
-			:andThen(function()
-				local tool: Tool = ItemsFolder[itemData.Name]:Clone()
-				tool.Parent = player.StarterGear
+		PlayerDataService:UpdatePlayerStat(player, "Points", -itemData.Price):andThen(function()
+			local tool: Tool = ItemsFolder[itemData.Name]:Clone()
+			tool.Parent = player.StarterGear
 
-				local backpackTool = tool:Clone()
-				backpackTool.Parent = player.Backpack -- so the player gets the item instantely instead of having to reset.
+			local backpackTool = tool:Clone()
+			backpackTool.Parent = player.Backpack -- so the player gets the item instantely instead of having to reset.
 
-				--self:_setupTool(backpackTool, player) -- nope, this should be automatically handled by ChildAdded event inside Init
+			--self:_setupTool(backpackTool, player) -- nope, this should be automatically handled by ChildAdded event inside Init
 
-				Netwoking.ItemGranted:FireClient(player, backpackTool)
+			Netwoking.ItemGranted:FireClient(player, backpackTool)
 
-				return resolve(`Successfully purchased {itemName}`)
-			end)
-			:catch(reject)
+			return resolve(`Successfully purchased {itemName}`)
+		end, reject)
 	end)
 end
 

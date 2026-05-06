@@ -10,15 +10,15 @@
 	]
 ]=]
 
-local Promise = require("@packages/promise")
+local Promise = require("@game/ReplicatedStorage/Packages/promise")
 
 export type ServiceRegistry = {
-	VotingService: typeof(require("@serverTypes/VotingServiceTypes")),
-	RoundService: typeof(require("@serverTypes/RoundServiceTypes")),
-	KillerService: typeof(require("@serverTypes/KillerServiceTypes")),
-	ItemService: typeof(require("@serverTypes/ItemServiceTypes")),
-	PlayerDataService: typeof(require("@serverTypes/PlayerDataServiceTypes")),
-	PlayerDeathHandler: typeof(require("@serverTypes/PlayerDeathHandlerTypes")),
+	VotingService: typeof(require("@game/ServerScriptService/Server/Types/VotingServiceTypes")),
+	RoundService: typeof(require("@game/ServerScriptService/Server/Types/RoundServiceTypes")),
+	KillerService: typeof(require("@game/ServerScriptService/Server/Types/KillerServiceTypes")),
+	ItemService: typeof(require("@game/ServerScriptService/Server/Types/ItemServiceTypes")),
+	PlayerDataService: typeof(require("@game/ServerScriptService/Server/Types/PlayerDataServiceTypes")),
+	PlayerDeathHandler: typeof(require("@game/ServerScriptService/Server/Types/PlayerDeathHandlerTypes")),
 }
 
 local Services = {}

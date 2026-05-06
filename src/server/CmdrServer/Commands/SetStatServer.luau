@@ -1,6 +1,6 @@
 --!strict
-local PlayerDataService = require("@server/PlayerDataService")
-local Types = require("@serverTypes/PlayerDataServiceTypes")
+local PlayerDataService = require("@game/ServerScriptService/Server/PlayerDataService")
+local Types = require("@game/ServerScriptService/Server/Types/PlayerDataServiceTypes")
 
 return function(context, player: Player, stat: Types.ValidStats, ammount: number)
 	PlayerDataService:SetPlayerStat(player, stat, ammount)

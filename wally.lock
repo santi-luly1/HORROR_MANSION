@@ -3,19 +3,24 @@
 registry = "test"
 
 [[package]]
-name = "1foreverhd/topbarplus"
-version = "3.4.0"
+name = "csqrl/colour-utils"
+version = "1.4.1"
 dependencies = []
 
 [[package]]
-name = "csqrl/colour-utils"
-version = "1.4.1"
+name = "csqrl/sift"
+version = "0.0.11"
 dependencies = []
 
 [[package]]
 name = "devsparkle/maid"
 version = "2.1.0"
 dependencies = []
+
+[[package]]
+name = "dubit/notifications"
+version = "0.1.0"
+dependencies = [["Signal", "sleitnick/signal@2.0.3"]]
 
 [[package]]
 name = "elttob/fusion"
@@ -50,7 +55,7 @@ dependencies = []
 [[package]]
 name = "santiago/horror-mansion"
 version = "0.1.0"
-dependencies = [["fusion", "elttob/fusion@0.3.0"], ["loader", "sleitnick/loader@2.0.0"], ["maid", "devsparkle/maid@2.1.0"], ["net", "sleitnick/net@0.2.0"], ["onyx-ui", "imavafe/onyx-ui@1.0.4"], ["promise", "evaera/promise@4.0.0"], ["signal", "sleitnick/signal@2.0.3"], ["simplepath", "jessekroeske/simplepath@2.2.2"], ["t", "osyrisrblx/t@3.1.1"], ["topbarplus", "1foreverhd/topbarplus@3.4.0"], ["cmdr", "evaera/cmdr@1.12.0"], ["profilestore", "vyon/profilestore@1.0.3"]]
+dependencies = [["fusion", "elttob/fusion@0.3.0"], ["loader", "sleitnick/loader@2.0.0"], ["maid", "devsparkle/maid@2.1.0"], ["net", "sleitnick/net@0.2.0"], ["notifications", "dubit/notifications@0.1.0"], ["onyx-ui", "imavafe/onyx-ui@1.0.4"], ["promise", "evaera/promise@4.0.0"], ["sift", "csqrl/sift@0.0.11"], ["signal", "sleitnick/signal@2.0.3"], ["simplepath", "jessekroeske/simplepath@2.2.2"], ["t", "osyrisrblx/t@3.1.1"], ["cmdr", "evaera/cmdr@1.12.0"], ["profilestore", "vyon/profilestore@1.0.3"]]
 
 [[package]]
 name = "sleitnick/loader"

@@ -15,10 +15,10 @@
 -- Roblox services
 
 -- Packages
-local Cmdr = require("@serverPackages/cmdr")
+local Cmdr = require("@game/ServerStorage/ServerPackages/cmdr")
 
 -- Types
-local Types = require("@serverTypes/CmdrServerTypes")
+local Types = require("@game/ServerScriptService/Server/Types/CmdrServerTypes")
 
 -- Networking
 
@@ -47,6 +47,7 @@ function CmdrServer:Init()
 end
 
 function CmdrServer:Start()
+	assert(self._init, `[{script.Name}] - Module not initialized.`)
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
 

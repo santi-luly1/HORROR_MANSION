@@ -1,6 +1,6 @@
 --!strict
 --<<SERVER>>--
-local Maid = require("@packages/maid")
+local Maid = require("@game/ReplicatedStorage/Packages/maid")
 
 local GravityAccelerationConstant = 9.81 * 20 -- For every 20 studs is one meter on ROBLOX. 9.81 is the common accepted acceleration of gravity per a kg on earth, and is used on ROBLOX
 local PercentGravity = 0.25 -- Percentage of countered acceleration due to gravity by the coil.

@@ -1,7 +1,7 @@
 --!strict
 --<<SERVER>>--
 local Debris = game:GetService("Debris")
-local Maid = require("@packages/maid")
+local Maid = require("@game/ReplicatedStorage/Packages/maid")
 
 return function(tool: Tool, player: Player, maid: Maid.Maid)
 	-- [Programmed by abrah_m]

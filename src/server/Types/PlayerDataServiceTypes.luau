@@ -1,12 +1,12 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local Maid = require("@packages/maid")
-local Promise = require("@packages/promise")
-local Signal = require("@packages/signal")
-local _SERVICE = require("@serverTypes/_SERVICE")
+local Maid = require("@game/ReplicatedStorage/Packages/maid")
+local Promise = require("@game/ReplicatedStorage/Packages/promise")
+local Signal = require("@game/ReplicatedStorage/Packages/signal")
+local _SERVICE = require("@game/ServerScriptService/Server/Types/_SERVICE")
 
-local ProfileStore = require("@serverPackages/profilestore")
+local ProfileStore = require("@game/ServerStorage/ServerPackages/profilestore")
 
 --------------------------------------------------------------------
 --- Types

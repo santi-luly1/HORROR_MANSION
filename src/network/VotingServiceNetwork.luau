@@ -11,7 +11,7 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local Net = require("@packages/net")
+local Net = require("@game/ReplicatedStorage/Packages/net")
 
 return {
 	CastVote = Net:RemoteFunction("CastVote"),

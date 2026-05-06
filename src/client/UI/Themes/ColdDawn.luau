@@ -1,6 +1,6 @@
 --!strict
-local Fusion = require("@packages/fusion")
-local OnyxUI = require("@packages/onyx-ui")
+local Fusion = require("@game/ReplicatedStorage/Packages/fusion")
+local OnyxUI = require("@game/ReplicatedStorage/Packages/onyx-ui")
 
 local Themer = OnyxUI.Themer
 local Util = OnyxUI.Util

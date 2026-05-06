@@ -1,5 +1,5 @@
 ---!strict
-local CmdrConfig = require("@src/shared/CmdrConfig")
+local CmdrConfig = require("@game/ReplicatedStorage/Shared/CmdrConfig")
 
 local group = script.Name
 

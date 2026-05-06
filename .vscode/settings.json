@@ -31,7 +31,7 @@
   "luau-lsp.completion.autocompleteEnd": true,
   "chat.disableAIFeatures": true,
   "luau-lsp.completion.imports.enabled": true,
-  "luau-lsp.inlayHints.variableTypes": true,
+  "luau-lsp.inlayHints.variableTypes": false,
   "files.autoSaveDelay": 2500,
   "stylua.targetReleaseVersion": "latest"
 }

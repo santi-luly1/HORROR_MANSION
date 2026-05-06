@@ -12,10 +12,10 @@
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local Maid = require("@packages/maid")
-local Types = require("@clientTypes/ItemControllerTypes")
+local Maid = require("@game/ReplicatedStorage/Packages/maid")
+local Types = require("@game/StarterPlayer/StarterPlayerScripts/Client/Types/ItemControllerTypes")
 
-local ItemNetworking = require("@network/ItemServiceNetwork")
+local ItemNetworking = require("@game/ReplicatedStorage/Network/ItemServiceNetwork")
 
 --------------------------------------------------------------------
 --- Module
@@ -65,6 +65,7 @@ function ItemController:Init()
 end
 
 function ItemController:Start()
+	assert(self._init, `[{script.Name}] - Module not initialized.`)
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
 end
