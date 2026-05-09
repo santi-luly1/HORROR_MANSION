@@ -6,3 +6,9 @@
 /*.rbxl.lock
 
 sourcemap.json
+
+/node_modules
+/out
+/include
+*.tsbuildinfo
+flamework.build
