@@ -3,6 +3,8 @@
 	@class Server
     @author santi-luly1
     @description Server bootstrapper
+    @note Project probably will be migrated to robloxts, just have to do some research first,
+        while also updating into a new project structure.
 
     CHANGELOG: [
 		12/26/25 --> New server bootstrapper

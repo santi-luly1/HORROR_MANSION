@@ -160,6 +160,9 @@ function Killer:PlaySound(soundId: number, props)
 	track.Ended:Once(function()
 		track:Destroy()
 	end)
+	repeat
+		task.wait()
+	until track.IsLoaded
 	track:Play()
 	return track
 end

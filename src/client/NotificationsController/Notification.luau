@@ -42,9 +42,9 @@ type props = { -- string: type, -- defaultValue
 type validPositionPresets = "BottomCenter" | "BottomRight" | "BottomLeft" | "TopCenter" | "TopRight" | "TopLeft"
 type posPresets = { [validPositionPresets]: { anchor: Vector2, position: UDim2, listAlign: Enum.VerticalAlignment } }
 type signals = {
-	OnDismissed: Signal.Signal<>,
-	OnOption1: Signal.Signal<>,
-	OnOption2: Signal.Signal<>,
+	OnDismissed: Signal.Signal<()>,
+	OnOption1: Signal.Signal<()>,
+	OnOption2: Signal.Signal<()>,
 }
 
 local PositionPresets: posPresets = {

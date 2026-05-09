@@ -55,9 +55,7 @@ function NotificationsController:Start()
 	assert(not self._start, `[{script.Name}] - Module already started.`)
 	self._start = true
 
-	print("a")
 	task.delay(15, function()
-		print("b")
 		createNotification {
 			Content = "test",
 			Duration = 10,
