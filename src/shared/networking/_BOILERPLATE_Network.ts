@@ -1,18 +1,22 @@
---[=[
+/*
+[=[
     Boilerplate for networking stuff
 	@class _BOILERPLATE_Network
-    @author: santi-luly1
+    @author: author
 
     CHANGELOG: [
 		MM/DD/YY --> change
 	]
 ]=]
+*/
 
+/*
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local Net = require("@game/ReplicatedStorage/Packages/net")
+*/
+import Net, { Definitions } from "@rbxts/net";
 
-return {
-	RE = Net:RemoteEvent("RE"),
-}
+export = Net.CreateDefinitions({
+	Template: Definitions.ServerToClientEvent<[]>(),
+});

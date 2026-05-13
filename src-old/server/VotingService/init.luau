@@ -114,10 +114,6 @@ function VotingService:Init(registry)
 	VotingControllerNet.GetMapOptions.OnServerInvoke = function()
 		return self._mapOptions
 	end
-
-	VotingControllerNet.GetVotes.OnServerInvoke = function()
-		return self:GetVotes()
-	end
 end
 
 function VotingService:Start()

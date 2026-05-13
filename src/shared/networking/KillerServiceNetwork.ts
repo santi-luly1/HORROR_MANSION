@@ -1,18 +1,23 @@
---[=[
+/*
+[=[
     Networking for the KillerService module.
 	@class KillerServiceNetwork
     @author: santi-luly1
 
     CHANGELOG: [
 		01/11/26 --> Added GetKillersName item.
+		05/11/26 --> Parsed into roblox-ts.
 	]
 ]=]
+*/
 
+/*
 --------------------------------------------------------------------
 --- Dependencies
 --------------------------------------------------------------------
-local Net = require("@game/ReplicatedStorage/Packages/net")
+*/
+import Net, { Definitions } from "@rbxts/net";
 
-return {
-	GetKillersName = Net:RemoteFunction("GetKillersName"),
-}
+export = Net.CreateDefinitions({
+	GetKillersName: Definitions.ServerAsyncFunction<() => [string]>(),
+});
