@@ -1,12 +1,12 @@
 /*
 [=[
-    Networking for the VotingService module.
 	@class VotingServiceNetwork
-    @author: santi-luly1
+    @author santi-luly1
+    @description Networking for the VotingService module.
 
     CHANGELOG: [
-		03/01/26 --> Initial networking for map voting.
-		05/11/26 --> Parsed into roblox-ts.
+		26/03/01 --> Initial networking for map voting.
+		26/05/11 --> Parsed into roblox-ts.
 	]
 ]=]
 */
@@ -21,7 +21,7 @@ import Net, { Definitions } from "@rbxts/net";
 export = Net.CreateDefinitions({
 	CastVote: Definitions.ClientToServerEvent<[mapName: string]>(),
 	GetMapOptions: Definitions.ServerAsyncFunction(),
-	VotingStarted: Definitions.ServerToClientEvent<[mapOptions: unknown, duration: number]>(),
-	VotingEnded: Definitions.ServerToClientEvent<[mapOptions: string]>(),
-	VoteUpdated: Definitions.ServerToClientEvent<[mapName: string, currentVotes: { [mapName: string]: number }]>(),
+	VotingStarted: Definitions.ServerToClientEvent<[mapOptions: unknown, duration: number]>(), // "mapOptions" should be MapData[], but dunno how to bring it here rn.
+	VotingEnded: Definitions.ServerToClientEvent<[mapOptions: unknown]>(),
+	VoteUpdated: Definitions.ServerToClientEvent<[mapName: string, currentVotes: Map<string, number>]>(),
 });

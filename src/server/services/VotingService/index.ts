@@ -37,7 +37,6 @@ import VotingServiceNetwork from "shared/networking/VotingServiceNetwork";
 import SpecialMapBehavior from "./SpecialMapBehavior";
 
 // Services
-let RoundService: RoundServiceTypes;
 
 /*
 --------------------------------------------------------------------
@@ -48,24 +47,25 @@ class VotingServiceClass implements Types.VotingServiceTypes {
 	/*
 		state
 	*/
-	public _init = false;
-	public _start = false;
-	private _isVoting = false;
-	private _votes: Record<number, string> = {};
-	private _mapOptions: Types.MapData[] = [];
-	private _winningMap = "N/A";
+	private init = false;
+	private start = false;
+	private isVoting = false;
+	private votes = new Map<number, string>();
+	private mapOptions: Types.MapData[] = [];
+	private winningMap = "N/A";
 
 	/*
 		runtime fields
 	*/
 	private _trove: Trove = new Trove();
-	public VotingStarted: Signal = new Signal();
-	public VotingEnded: Signal = new Signal();
-	public VoteCast: Signal = new Signal();
-	private _voteResolve: (winner: string) => void = (winner) => {};
-	private _countdownThread?: thread;
+	public VotingStarted = new Signal<(mapOptions: Types.MapData[]) => void>();
+	public VotingEnded = new Signal<(winner: string, voteCount: Map<string, number>) => void>();
+	public VoteCast = new Signal<(player: Player, mapName: string, previousVote: string) => void>();
+	private _voteResolve!: (winner: string) => void;
+	private _countdownThread!: thread;
 
 	// dependencies
+	private RoundService!: RoundServiceTypes;
 	public static Dependencies = ["RoundService"];
 
 	/*
@@ -74,7 +74,7 @@ class VotingServiceClass implements Types.VotingServiceTypes {
 	--------------------------------------------------------------------
 	*/
 	private MapsFolder = ServerStorage.WaitForChild("Maps");
-	private VOTING_DURATION = 0;
+	private readonly VOTING_DURATION = 10; // should be the round's intermission time, but if it'll be readonly, then it will have to be hardcodded.
 
 	private voteCheck = t.strictArray(t.instanceOf("Player"), t.string);
 
@@ -122,17 +122,14 @@ class VotingServiceClass implements Types.VotingServiceTypes {
 	--- Init / Start
 	--------------------------------------------------------------------
 	*/
-	public Init(registry: { RoundService: RoundServiceTypes }) {
+	public Init(registry: Map<string, unknown>) {
 		//TODO: definetly this is not the whole registry.
-		assert(!this._init, `[${script.Name}] - Module already initialized.`);
-		this._init = true;
+		assert(!this.init, `[${script.Name}] - Module already initialized.`);
+		this.init = true;
 
-		RoundService = registry.RoundService;
-		this.VOTING_DURATION = RoundService.GetIntermissionTimeout();
+		this.RoundService = registry.get("RoundService") as RoundServiceTypes;
 
-		this.VotingStarted = new Signal();
-		this.VotingEnded = new Signal();
-		this.VoteCast = new Signal();
+		//this.VOTING_DURATION = this.RoundService.GetIntermissionTimeout();
 
 		SpecialMapBehavior.Init();
 
@@ -144,14 +141,14 @@ class VotingServiceClass implements Types.VotingServiceTypes {
 	}
 
 	public Start() {
-		assert(this._init, `[${script.Name}] - Module not initialized.`);
-		assert(!this._start, `[${script.Name}] - Module already started.`);
-		this._start = true;
+		assert(this.init, `[${script.Name}] - Module not initialized.`);
+		assert(!this.start, `[${script.Name}] - Module already started.`);
+		this.start = true;
 
 		math.randomseed(os.clock());
 
 		this._trove.add(
-			RoundService.RoundEnded.Connect((skipped: boolean) => {
+			this.RoundService.RoundEnded.Connect((skipped: boolean) => {
 				if (skipped) {
 					return;
 				}
@@ -164,7 +161,7 @@ class VotingServiceClass implements Types.VotingServiceTypes {
 
 						const mapTemplate = this.MapsFolder.FindFirstChild(winningMap);
 						if (!mapTemplate || !mapTemplate.IsA("Model")) {
-							warn(`[VotingService] Winning map "${winningMap}" not found or not a Model.`);
+							warn(`[${script.Name}] Winning map "${winningMap}" not found or not a Model.`);
 							return;
 						}
 
@@ -183,7 +180,7 @@ class VotingServiceClass implements Types.VotingServiceTypes {
 
 						// TODO: add an intermission time between map changes, maybe 15s?
 
-						RoundService.Stop("**", true).catch(warn);
+						this.RoundService.Stop("**", true).catch(warn);
 					})
 					.catch(warn);
 			}),
@@ -191,17 +188,17 @@ class VotingServiceClass implements Types.VotingServiceTypes {
 	}
 
 	/*
---------------------------------------------------------------------
---- Public API
---------------------------------------------------------------------
-*/
+	--------------------------------------------------------------------
+	--- Public API
+	--------------------------------------------------------------------
+	*/
 	public StartVoting(mapNames?: string[]): Promise<string> {
 		return new Promise((resolve, reject, onCancel) => {
-			if (this._isVoting) {
+			if (this.isVoting) {
 				return reject("Voting already in progress");
 			}
 
-			this._isVoting = true;
+			this.isVoting = true;
 			let resolved = false;
 			const finalize = (winner: string) => {
 				if (resolved) {
@@ -212,43 +209,43 @@ class VotingServiceClass implements Types.VotingServiceTypes {
 				return resolve(winner);
 			};
 			this._voteResolve = finalize;
-			this._votes = {};
-			this._winningMap = "N/A";
+			this.votes.clear();
+			this.winningMap = "N/A";
 
 			const options = mapNames ?? this.getRandomMaps(3);
-			this._mapOptions = [];
+			this.mapOptions = [];
 
 			for (const name of options) {
 				const data = this.getMapData(name);
 				if (data) {
-					this._mapOptions.push(data);
+					this.mapOptions.push(data);
 				}
 			}
 
-			if (this._mapOptions.size() === 0) {
+			if (this.mapOptions.size() === 0) {
 				// just in case.
-				this._isVoting = false;
+				this.isVoting = false;
 				//this._voteResolve = undefined;
 				return reject("No valid maps to vote on");
 			}
 
-			VotingServiceNetwork.Server.Get("VotingStarted").SendToAllPlayers(this._mapOptions, this.VOTING_DURATION);
-			this.VotingStarted.Fire(this._mapOptions);
+			VotingServiceNetwork.Server.Get("VotingStarted").SendToAllPlayers(this.mapOptions, this.VOTING_DURATION);
+			this.VotingStarted.Fire(this.mapOptions);
 
 			const startTime = tick();
 			this._countdownThread = task.spawn(() => {
-				while (this._isVoting && tick() - startTime < this.VOTING_DURATION) {
+				while (this.isVoting && tick() - startTime < this.VOTING_DURATION) {
 					task.wait(0.1);
 				}
 
-				if (this._isVoting) {
+				if (this.isVoting) {
 					const winner = this.EndVoting();
 					return finalize(winner);
 				}
 			});
 
 			onCancel(() => {
-				this._isVoting = false;
+				this.isVoting = false;
 				if (this._countdownThread) {
 					task.cancel(this._countdownThread);
 				}
@@ -259,20 +256,20 @@ class VotingServiceClass implements Types.VotingServiceTypes {
 	}
 
 	public EndVoting(): string {
-		if (!this._isVoting) {
-			return this._winningMap;
+		if (!this.isVoting) {
+			return this.winningMap;
 		}
 
-		this._isVoting = false;
+		this.isVoting = false;
 
-		const voteCounts: Record<string, number> = {};
-		for (const [, mapName] of pairs(this._votes)) {
+		const voteCounts = new Map<string, number>();
+		for (const [, mapName] of pairs(this.votes)) {
 			if (mapName === undefined) continue;
-			voteCounts[mapName] = (voteCounts[mapName] ?? 0) + 1;
+			voteCounts.set(mapName, (voteCounts.get(mapName) ?? 0) + 1);
 		}
 
 		let maxVotes = 0;
-		let winner = this._mapOptions[0] ? this._mapOptions[0].Name : "N/A";
+		let winner = this.mapOptions[0] ? this.mapOptions[0].Name : "N/A";
 		const ties: string[] = [];
 
 		for (const [mapName, votes] of pairs(voteCounts)) {
@@ -291,27 +288,25 @@ class VotingServiceClass implements Types.VotingServiceTypes {
 			winner = ties[idx];
 		}
 
-		this._winningMap = winner;
+		this.winningMap = winner;
 
 		VotingServiceNetwork.Server.Get("VotingEnded").SendToAllPlayers(winner);
-		this.VotingEnded!.Fire(winner, voteCounts);
+		this.VotingEnded.Fire(winner, voteCounts);
 
-		if (this._voteResolve) {
-			this._voteResolve(winner);
-		}
+		this._voteResolve(winner);
 
 		return winner;
 	}
 
 	public CastVote(player: Player, mapName: string): boolean {
-		if (!this._isVoting) {
+		if (!this.isVoting) {
 			return false;
 		}
 
-		this.voteCheck([player, mapName]);
+		assert(this.voteCheck([player, mapName]));
 
 		let validOption = false;
-		for (const option of this._mapOptions) {
+		for (const option of this.mapOptions) {
 			if (option.Name === mapName) {
 				validOption = true;
 				break;
@@ -322,8 +317,8 @@ class VotingServiceClass implements Types.VotingServiceTypes {
 			return false;
 		}
 
-		const previousVote = this._votes[player.UserId];
-		this._votes[player.UserId] = mapName;
+		const previousVote = this.votes.get(player.UserId) as string;
+		this.votes.set(player.UserId, mapName);
 
 		VotingServiceNetwork.Server.Get("VoteUpdated").SendToPlayer(player, mapName, this.GetVotes());
 		this.VoteCast.Fire(player, mapName, previousVote);
@@ -332,22 +327,22 @@ class VotingServiceClass implements Types.VotingServiceTypes {
 	}
 
 	public GetMapOptions(): Types.MapData[] {
-		return this._mapOptions;
+		return this.mapOptions;
 	}
 
 	public GetWinningMap(): string {
-		return this._winningMap;
+		return this.winningMap;
 	}
 
 	public IsVoting(): boolean {
-		return this._isVoting;
+		return this.isVoting;
 	}
 
-	public GetVotes(): Record<string, number> {
-		const counts: Record<string, number> = {};
-		for (const [, mapName] of pairs(this._votes)) {
+	public GetVotes(): Map<string, number> {
+		const counts = new Map<string, number>();
+		for (const [, mapName] of pairs(this.votes)) {
 			if (mapName === undefined) continue;
-			counts[mapName] = (counts[mapName] ?? 0) + 1;
+			counts.set(mapName, (counts.get(mapName) ?? 0) + 1);
 		}
 		return counts;
 	}

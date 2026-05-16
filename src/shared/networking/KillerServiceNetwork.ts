@@ -1,12 +1,12 @@
 /*
 [=[
-    Networking for the KillerService module.
 	@class KillerServiceNetwork
-    @author: santi-luly1
+    @author santi-luly1
+    @description Networking for the KillerService module.
 
     CHANGELOG: [
-		01/11/26 --> Added GetKillersName item.
-		05/11/26 --> Parsed into roblox-ts.
+		26/01/11 --> Added GetKillersName item.
+		26/05/11 --> Parsed into roblox-ts.
 	]
 ]=]
 */
@@ -19,5 +19,5 @@
 import Net, { Definitions } from "@rbxts/net";
 
 export = Net.CreateDefinitions({
-	GetKillersName: Definitions.ServerAsyncFunction<() => [string]>(),
+	GetKillersName: Definitions.ServerAsyncFunction<() => [names: string[]]>(),
 });

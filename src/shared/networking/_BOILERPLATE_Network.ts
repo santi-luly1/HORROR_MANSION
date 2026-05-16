@@ -1,11 +1,11 @@
 /*
 [=[
-    Boilerplate for networking stuff
 	@class _BOILERPLATE_Network
-    @author: author
+    @author author
+    @description Boilerplate for networking stuff
 
     CHANGELOG: [
-		MM/DD/YY --> change
+		yy/mm/dd --> change
 	]
 ]=]
 */

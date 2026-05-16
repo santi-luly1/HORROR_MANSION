@@ -3,8 +3,7 @@
 --- Dependencies
 --------------------------------------------------------------------
 */
-import * as KillerServiceTypes from "./KillerServiceTypes";
-import Maid from "@rbxts/maid";
+import { Killer } from "./KillerServiceTypes";
 import Signal from "@rbxts/signal";
 import _SERVICE from "./_SERVICE";
 
@@ -14,31 +13,16 @@ import _SERVICE from "./_SERVICE";
 --------------------------------------------------------------------
 */
 export interface RoundServiceMembers {
+	// signals
+	RoundStarted: Signal<(preferredKiller: string) => void>;
+	RoundEnded: Signal<(skipped: boolean) => void>;
+
 	// public API
-	Begin: (
-		this: RoundServiceMembers,
-		preferredKiller: string,
-		skipped?: boolean,
-	) => Promise<KillerServiceTypes.Killer[]>;
+	Begin: (this: RoundServiceMembers, preferredKiller: string, skipped?: boolean) => Promise<Killer[] | unknown>; // replace "unknown" with something else.
 	Stop: (this: RoundServiceMembers, preferredKiller?: string, skipped?: boolean) => Promise<void>;
 	OnIntermission: (this: RoundServiceMembers) => boolean;
 	GetIntermissionTimeout: (this: RoundServiceMembers) => number;
 	IsEnding: (this: RoundServiceMembers) => boolean;
-
-	// signals
-	RoundStarted: Signal;
-	RoundEnded: Signal;
-
-	// private
-	_inProgress: boolean;
-	_isEnding: boolean;
-	_maid: Maid;
-
-	// private methods
-	_startRound: (this: RoundServiceMembers, preferredKiller: string) => Promise<KillerServiceTypes.Killer[]>;
-	_endRound: (this: RoundServiceMembers, preferredKiller: string, skipped: boolean) => Promise<void>;
-	_cleanupRound: (this: RoundServiceMembers, maid: Maid) => void;
-	_intermissionCountdown: (this: RoundServiceMembers, skipped: boolean) => Promise<void>;
 }
 
 export type RoundServiceTypes = _SERVICE.Service<RoundServiceMembers>;

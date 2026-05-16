@@ -17,7 +17,7 @@ export interface BoilerplateMembers {
 	doSomething(this: BoilerplateMembers, a: TYPE): Promise<void>;
 }
 
-export type _BOILERPLATE_Server = _SERVICE.Service<BoilerplateMembers>;
+export type _BOILERPLATE_Service = _SERVICE.Service<BoilerplateMembers>;
 
-declare const _default: _BOILERPLATE_Server;
+declare const _default: _BOILERPLATE_Service;
 export default _default;

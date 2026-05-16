@@ -1,12 +1,12 @@
 /*
 [=[
-    Networking for the PlayerDataService module.
 	@class PlayerDataNetwork
-    @author: santi-luly1
+    @author santi-luly1
+    @description Networking for the PlayerDataService module.
 
     CHANGELOG: [
-		12/31/25 --> Added SurvivalsChanged and PointsChanged items.
-		05/11/26 --> Parsed into roblox-ts.
+		25/12/31 --> Added SurvivalsChanged and PointsChanged items.
+		26/05/11 --> Parsed into roblox-ts.
 	]
 ]=]
 */

@@ -1,13 +1,13 @@
 /*
 [=[
-    Networking for the ItemService module
 	@class ItemServiceNetwork
-    @author: santi-luly1
+    @author santi-luly1
+    @description Networking for the ItemService module
 
     CHANGELOG: [
-		02/14/26 --> Added initial remote functions.
-		02/24/26 --> Added ItemGranted item (for SpecialItemBehavior support).
-		05/11/26 --> Parsed into roblox-ts.
+		26/02/14 --> Added initial remote functions.
+		26/02/24 --> Added ItemGranted item (for SpecialItemBehavior support).
+		26/05/11 --> Parsed into roblox-ts.
 	]
 ]=]
 */
@@ -21,7 +21,7 @@ import Net, { Definitions } from "@rbxts/net";
 
 export = Net.CreateDefinitions({
 	PurchaseItem: Definitions.ClientToServerEvent<[itemName: string]>(),
-	GetAvailableItems: Definitions.ServerAsyncFunction<() => [string]>(),
+	GetAvailableItems: Definitions.ServerAsyncFunction<() => [items: string[]]>(),
 	GetItemData: Definitions.ServerAsyncFunction<(item: string) => []>(), // TODO: types
 	ItemGranted: Definitions.ServerToClientEvent<[item: Tool]>(),
 });

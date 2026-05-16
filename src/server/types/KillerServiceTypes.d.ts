@@ -3,7 +3,7 @@
 --- Dependencies
 --------------------------------------------------------------------
 */
-import Maid from "@rbxts/maid";
+import { Trove } from "@rbxts/trove";
 import Signal from "@rbxts/signal";
 import _SERVICE from "./_SERVICE";
 
@@ -32,11 +32,9 @@ export interface Killer {
 	state: string;
 	lastDamageTime: number;
 	behavior: BehaviorModule;
-	maid: Maid;
-	_anims: Animation[];
-	_animator: Animator;
+	trove: Trove;
 
-	new: (model: Model, maid: Maid) => Killer;
+	new: (model: Model, trove: Trove) => Killer;
 	Damage: (this: Killer, amount: number) => boolean;
 	Kill: (this: Killer) => void;
 	IsAlive: (this: Killer) => boolean;
@@ -45,8 +43,6 @@ export interface Killer {
 	PlayAnimation: (this: Killer, id: number) => AnimationTrack | undefined;
 	SetState: (this: Killer, state: string) => void;
 	Destroy: (this: Killer) => void; // alias for Kill.
-
-	_setupStandardBehavior: (this: Killer) => void;
 }
 
 export interface BehaviorModule {
@@ -62,10 +58,15 @@ export interface BehaviorModule {
 	GetBonkDelay: (this: BehaviorModule) => number;
 
 	__index: BehaviorModule;
-	_killer: Killer;
 }
 
 export interface KillerServiceMembers {
+	// signals
+	KillerSpawned: Signal<(killer: Killer) => void>;
+	KillerCleared: Signal<(name: string, id?: string) => void>;
+	KillerDamaged: Signal<(id: string, ammount: number, source?: Instance) => void>;
+	KillerDied: Signal<(id: string, ammount: number, source?: Instance) => void>;
+
 	// public API
 	SpawnKiller: (this: KillerServiceMembers, name: string, spawnIndex: number) => Promise<Killer>;
 	SpawnKillers: (this: KillerServiceMembers, names: string[], spawnIndex: number) => Promise<Killer[]>;
@@ -76,18 +77,6 @@ export interface KillerServiceMembers {
 	GetKillersName: (this: KillerServiceMembers) => string[];
 	GetKillerInRound: (this: KillerServiceMembers, name: string) => Killer[] | undefined;
 	GetRandomSpawnIndex: (this: KillerServiceMembers) => number;
-
-	// signals
-	KillerSpawned: Signal;
-	KillerCleared: Signal;
-	KillerDamaged: Signal;
-	KillerDied: Signal;
-
-	// private
-	_spawn: (this: KillerServiceMembers, name: string, spawnIndex: number) => Promise<Killer>;
-	_maid: Maid;
-	_killers: Record<number, Killer>;
-	_spawningNames: Record<number, string>;
 }
 
 export type KillerServiceTypes = _SERVICE.Service<KillerServiceMembers>;
