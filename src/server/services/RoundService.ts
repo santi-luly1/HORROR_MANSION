@@ -65,8 +65,8 @@ class RoundServiceClass implements Types.RoundServiceTypes {
 	/*
 		dependencies
 	*/
-	private KillerService!: KillerServiceTypes;
-	private PlayerDataService!: PlayerDataServiceTypes;
+	private declare KillerService: KillerServiceTypes;
+	private declare PlayerDataService: PlayerDataServiceTypes;
 	public static Dependencies = ["KillerService", "PlayerDataService"];
 
 	/*
@@ -74,8 +74,7 @@ class RoundServiceClass implements Types.RoundServiceTypes {
 	--- Variables
 	--------------------------------------------------------------------
 	*/
-	// @ts-expect-error: "Hint" is not a valid member, probably bc it is deprecated.
-	private countdownHint = new Instance("Hint");
+	// private countdownHint = new Instance("Hint"); // TODO: Since this is deprecated, I'll have to make them into a gui notification
 	private readonly TOTAL_ROUND_DURATION = 120;
 	private readonly ANNOUNCEMENT_LIFETIME = 3;
 	private readonly INTERMISSION_TIMEOUT = 10;
@@ -92,7 +91,7 @@ class RoundServiceClass implements Types.RoundServiceTypes {
 		this.KillerService = registry.get("KillerService") as KillerServiceTypes;
 		this.PlayerDataService = registry.get("PlayerDataService") as PlayerDataServiceTypes;
 
-		this.countdownHint.Parent = Workspace;
+		// this.countdownHint.Parent = Workspace;
 	}
 
 	public Start() {
@@ -161,13 +160,15 @@ class RoundServiceClass implements Types.RoundServiceTypes {
 							task.defer(() => {
 								const remaining = this.KillerService.GetCurrentKillers();
 								if (remaining.size() < 1 && !this.isEnding) {
+									// it was the last killer, so time for cleanup.
 									this.Stop().catch(warn);
 								} else {
-									// @ts-expect-error: "Message" is not a valid member, probably bc it is deprecated.
-									const announcement = new Instance("Message");
-									announcement.Parent = Workspace;
-									announcement.Text = `${killer} has been killed.`;
-									Debris.AddItem(announcement, this.ANNOUNCEMENT_LIFETIME);
+									// TODO: Since this is deprecated, I'll have to make them into a gui notification
+									print(`${killer} has been killed.`);
+									// const announcement = new Instance("Message") as TextLabel;
+									// announcement.Parent = Workspace;
+									// announcement.Text = `${killer} has been killed.`;
+									// Debris.AddItem(announcement, this.ANNOUNCEMENT_LIFETIME);
 								}
 							});
 						}),
@@ -191,25 +192,27 @@ class RoundServiceClass implements Types.RoundServiceTypes {
 								}
 							};
 
+							// invalidate cache when new killers spawn
 							trove.add(this.KillerService.KillerSpawned.Connect(() => (cachedCount = -1)));
 
 							while (countdown >= 0 && this.inProgress && !this.isEnding) {
 								updateCache();
 
 								if (killerCount === 0) {
-									this.countdownHint.Text = "No killers.";
+									print("No killers.");
+									// this.countdownHint.Text = "No killers.";
 									task.wait(3);
 									break;
 								} else if (killerCount === 1) {
-									this.countdownHint.Text = `${cachedNames[0]} leaves in ${countdown}s`;
+									print(`${cachedNames[0]} leaves in ${countdown}s`);
+									// this.countdownHint.Text = `${cachedNames[0]} leaves in ${countdown}s`;
 								} else {
 									if (killerCount > 5) {
-										this.countdownHint.Text = `${killerCount} killers will leave in ${countdown}s`;
+										print(`${killerCount} killers will leave in ${countdown}s`);
+										// this.countdownHint.Text = `${killerCount} killers will leave in ${countdown}s`;
 									} else {
-										const lastIdx = cachedNames.size();
-										this.countdownHint.Text = `${cachedNames
-											.slice(0, lastIdx - 1)
-											.join(", ")} and ${cachedNames[lastIdx]} will leave in ${countdown}s.`;
+										print(`${cachedNames.join(", ")} will leave in ${countdown}s.`);
+										// this.countdownHint.Text = `${cachedNames.join(", ")} will leave in ${countdown}s.`;
 									}
 								}
 
@@ -244,18 +247,18 @@ class RoundServiceClass implements Types.RoundServiceTypes {
 		return new Promise((resolve) => {
 			task.spawn(() => {
 				for (let i = this.INTERMISSION_TIMEOUT; i >= 0; i--) {
-					this.countdownHint.Text = `Round ${
-						skipped ? "skipped" : "ended"
-					} - Starting next round in ${i}s...`;
+					print(`Round ${skipped ? "skipped" : "ended"} - Starting next round in ${i}s...`);
+					// this.countdownHint.Text = `Round ${skipped ? "skipped" : "ended"} - Starting next round in ${i}s...`;
 					task.wait(1);
 				}
-				resolve();
+				return resolve();
 			});
 		});
 	}
 
-	private endRound(preferredKiller: string, skipped: boolean): Promise<void> {
+	private endRound(preferredKiller: string, skipped: boolean): Promise<unknown> {
 		return new Promise((resolve, reject) => {
+			//  start command for example would skip the round, so it doesn't really count as a survival
 			if (!skipped) {
 				const survivors: string[] = [];
 				const survivorPlayers: Player[] = [];
@@ -265,38 +268,44 @@ class RoundServiceClass implements Types.RoundServiceTypes {
 						survivorPlayers.push(player);
 						this.PlayerDataService.UpdatePlayerStat(player, "Survivals", 1);
 					} else {
+						// just reset back the attribute
 						player.SetAttribute("Dead", false);
 					}
 				}
 
-				// @ts-expect-error: "Message" is not a valid member, probably bc it is deprecated.
-				const announcement = new Instance("Message");
-				announcement.Parent = Workspace;
+				// TODO: Since this is deprecated, I'll have to make them into a gui notification
+				// const announcement = new Instance("Message") as TextLabel;
+				// announcement.Parent = Workspace;
 
-				if (survivors.size() === 0) announcement.Text = "No survivors.";
-				else if (survivors.size() === 1) announcement.Text = `Survivor: ${survivors[0]}.`;
+				if (survivors.size() === 0) print("No survivors.");
+				//announcement.Text = "No survivors.";
+				else if (survivors.size() === 1) print(`Survivor: ${survivors[0]}`);
+				//announcement.Text = `Survivor: ${survivors[0]}.`;
+				else if (survivors.size() === Players.GetPlayers().size()) print("Everyone survived");
+				//announcement.Text = "Everyone survived.";
 				else {
 					survivors.sort();
-					const lastIdx = survivors.size();
-					announcement.Text = `Survivors: ${survivors.slice(0, lastIdx - 1).join(", ")} and ${
-						survivors[lastIdx]
-					}.`;
+					print(`Survivors: ${survivors.join(", ")}.`);
+					// announcement.Text = `Survivors: ${survivors.join(", ")}.`;
 				}
 
-				Debris.AddItem(announcement, this.ANNOUNCEMENT_LIFETIME);
+				// Debris.AddItem(announcement, this.ANNOUNCEMENT_LIFETIME);
 
 				for (const survivorPlayer of survivorPlayers) {
-					this.PlayerDataService.UpdatePlayerStat(survivorPlayer, "Points", 25).catch(warn);
+					this.PlayerDataService.UpdatePlayerStat(survivorPlayer, "Points", 25).catch(warn); // TODO: Maybe instead of giving a fixed ammount, give points based off the survival duration?
 				}
 
+				// little gap between the survivors and the actual intermission
 				task.wait(this.ANNOUNCEMENT_LIFETIME);
 			}
 
+			// maybe its name would be better if it was smth like "OnIntermission"
 			this.RoundEnded.Fire(skipped || false);
 
 			this.initIntermissionCountdown(skipped)
 				.andThen(() => {
 					this.isEnding = false;
+					// TODO: probably add duos or just multiple killers to survive?
 					return this.Begin(preferredKiller);
 				})
 				.andThen(resolve, reject);
@@ -308,9 +317,9 @@ class RoundServiceClass implements Types.RoundServiceTypes {
 	--- Public API
 	--------------------------------------------------------------------
 	*/
-	public Begin(preferredKiller: string): Promise<Killer[] | unknown> {
-		if (this.isEnding) return Promise.reject("Round is ending");
-		if (this.OnIntermission()) return Promise.reject("Cannot start round during intermission");
+	public Begin(preferredKiller: string): Promise<Killer[]> {
+		assert(!this.isEnding, "Round is ending");
+		assert(!this.OnIntermission(), "Cannot start round during intermission");
 
 		if (this.inProgress) {
 			return this.Stop(preferredKiller, true).andThen(() => this.startRound(preferredKiller));
@@ -324,12 +333,12 @@ class RoundServiceClass implements Types.RoundServiceTypes {
 	}
 
 	public Stop(preferredKiller?: string, skipped?: boolean): Promise<void> {
-		if (this.isEnding) return Promise.reject("Round already ending");
+		assert(!this.isEnding, "Round already ending");
 		this.isEnding = true;
 
 		if (this.trove) this.cleanupRound(this.trove);
 
-		return this.endRound(preferredKiller ?? "**", skipped || false);
+		return this.endRound(preferredKiller ?? "**", skipped || false) as Promise<void>;
 	}
 
 	public GetIntermissionTimeout(): number {

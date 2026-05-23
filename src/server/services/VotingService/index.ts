@@ -65,7 +65,7 @@ class VotingServiceClass implements Types.VotingServiceTypes {
 	private _countdownThread!: thread;
 
 	// dependencies
-	private RoundService!: RoundServiceTypes;
+	private declare RoundService: RoundServiceTypes;
 	public static Dependencies = ["RoundService"];
 
 	/*
@@ -148,10 +148,9 @@ class VotingServiceClass implements Types.VotingServiceTypes {
 		math.randomseed(os.clock());
 
 		this._trove.add(
-			this.RoundService.RoundEnded.Connect((skipped: boolean) => {
-				if (skipped) {
-					return;
-				}
+			// eslint-disable-next-line roblox-ts/no-any
+			this.RoundService.RoundEnded.Connect((skipped) => {
+				if (skipped) return;
 
 				this.StartVoting()
 					.andThen((winningMap) => {
@@ -180,6 +179,7 @@ class VotingServiceClass implements Types.VotingServiceTypes {
 
 						// TODO: add an intermission time between map changes, maybe 15s?
 
+						// eslint-disable-next-line roblox-ts/no-any
 						this.RoundService.Stop("**", true).catch(warn);
 					})
 					.catch(warn);

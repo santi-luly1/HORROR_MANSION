@@ -27,7 +27,7 @@
 import { Players, RunService } from "@rbxts/services";
 
 // Packages
-import {Trove} from "@rbxts/trove";
+import { Trove } from "@rbxts/trove";
 import ProfileStore from "@rbxts/profile-store";
 import Promise from "@rbxts-js/roblox-lua-promise";
 import Signal from "@rbxts/signal";
@@ -83,13 +83,13 @@ class PlayerDataService implements Types.PlayerDataServiceTypes {
 		Version: this.PROFILE_VERSION,
 	};
 
-	public ProfileLoaded!: Types.ProfileStateChangedSignal;
-	public ProfileReleased!: Types.ProfileStateChangedSignal;
+	public ProfileLoaded: Types.ProfileStateChangedSignal = new Signal();
+	public ProfileReleased: Types.ProfileStateChangedSignal = new Signal();
 
 	private playerCheck = t.instanceOf("Player");
 	private updateCheck = t.strictArray(t.instanceOf("Player"), t.literal("Survivals", "Points"), t.number);
 
-	private store!: ProfileStore.Store<Types.PlayerData>;
+	private declare store: ProfileStore.Store<Types.PlayerData>;
 
 	/*
 	--------------------------------------------------------------------
@@ -101,9 +101,6 @@ class PlayerDataService implements Types.PlayerDataServiceTypes {
 		this.init = true;
 
 		this.store = ProfileStore.New(this.DATASTORE_KEY, this.TEMPLATE);
-
-		this.ProfileLoaded = new Signal() as Types.ProfileStateChangedSignal;
-		this.ProfileReleased = new Signal() as Types.ProfileStateChangedSignal;
 	}
 
 	public Start() {
@@ -139,8 +136,7 @@ class PlayerDataService implements Types.PlayerDataServiceTypes {
 		}
 
 		const promise = new Promise<Types.PlayerProfile>((resolve, reject) => {
-
-			assert( this.playerCheck(player));
+			assert(this.playerCheck(player));
 
 			let profile: Types.PlayerProfile | undefined;
 			for (let attempt = 1; attempt <= this.MAX_RETRIES; attempt++) {
@@ -151,8 +147,11 @@ class PlayerDataService implements Types.PlayerDataServiceTypes {
 				task.wait(this.YIELD_PER_RETRY * 2 ** (attempt - 1));
 			}
 
-			if (!profile) return reject(`[${script.Name}] could not load profile for ${player.Name} after ${this.MAX_RETRIES} tries`);
-			if (!profile.Data || typeof profile.Data !== "object") {
+			if (!profile)
+				return reject(
+					`[${script.Name}] could not load profile for ${player.Name} after ${this.MAX_RETRIES} tries`,
+				);
+			if (!profile.Data || !typeIs(profile.Data, "table")) {
 				profile.EndSession();
 				return reject(`[${script.Name}] invalid profile data for ${player.Name}`);
 			}
@@ -161,7 +160,7 @@ class PlayerDataService implements Types.PlayerDataServiceTypes {
 			profile.Reconcile();
 
 			if (profile.Data.Version !== this.PROFILE_VERSION) {
-                // we don't have proper migration, whatever.
+				// we don't have proper migration, whatever.
 				profile.Data.Version = this.PROFILE_VERSION;
 			}
 
@@ -170,10 +169,13 @@ class PlayerDataService implements Types.PlayerDataServiceTypes {
 			const trove = new Trove();
 			this.troves.set(player, trove);
 
-			this.signals.set(player, {
+			const plrSignals = {
 				SurvivalsChanged: new Signal<(newValue: number) => void>(),
 				PointsChanged: new Signal<(newValue: number) => void>(),
-			});
+			};
+			this.signals.set(player, plrSignals);
+			trove.add(plrSignals.PointsChanged);
+			trove.add(plrSignals.PointsChanged);
 
 			// leaderstats
 			const ls = new Instance("Folder");
@@ -198,14 +200,18 @@ class PlayerDataService implements Types.PlayerDataServiceTypes {
 				Networking.Server.Get("SurvivalsChanged").SendToPlayer(player, newVal);
 			})
 				.andThen((conn) => trove.add(conn))
-				.catch((e) => warn(`[${script.Name}] Failed to observe ${player.Name}'s survivals, expect visual bugs: ${e}`));
+				.catch((e) =>
+					warn(`[${script.Name}] Failed to observe ${player.Name}'s survivals, expect visual bugs: ${e}`),
+				);
 
 			this.ObservePoints(player, (newVal) => {
 				pointVal.Value = newVal;
 				Networking.Server.Get("PointsChanged").SendToPlayer(player, newVal);
 			})
 				.andThen((conn) => trove.add(conn))
-				.catch((e) => warn(`[${script.Name}] Failed to observe ${player.Name}'s points, expect visual bugs: ${e}`));
+				.catch((e) =>
+					warn(`[${script.Name}] Failed to observe ${player.Name}'s points, expect visual bugs: ${e}`),
+				);
 
 			this.ProfileLoaded.Fire(player, profile);
 			resolve(profile);
@@ -219,7 +225,7 @@ class PlayerDataService implements Types.PlayerDataServiceTypes {
 
 	private release(player: Player): Promise<void> {
 		return new Promise((resolve) => {
-			assert( this.playerCheck(player));
+			assert(this.playerCheck(player));
 
 			const loading = this.loadingPromises.get(player);
 			if (loading) loading.await();
@@ -227,10 +233,6 @@ class PlayerDataService implements Types.PlayerDataServiceTypes {
 			const trove = this.troves.get(player);
 			const sig = this.signals.get(player);
 			if (trove) trove.destroy();
-			if (sig) {
-				sig.SurvivalsChanged.Destroy();
-				sig.PointsChanged.Destroy();
-			}
 			this.troves.delete(player);
 			this.signals.delete(player);
 
@@ -268,7 +270,7 @@ class PlayerDataService implements Types.PlayerDataServiceTypes {
 			const profile = this.profiles.get(player);
 			const sig = this.signals.get(player);
 			if (!profile) return reject(`[${script.Name}] profile not loaded for ${player.Name}`);
-			if (!sig) return reject(`[${script.Name}] signals not initialized for ${player.Name}`);
+			if (!typeIs(sig, "table")) return reject(`[${script.Name}] signals not initialized for ${player.Name}`);
 
 			if (profile.Data[statName] === value) return resolve(true);
 
@@ -286,7 +288,7 @@ class PlayerDataService implements Types.PlayerDataServiceTypes {
 			const profile = this.profiles.get(player);
 			const sig = this.signals.get(player);
 			if (!profile) return reject(`[${script.Name}] profile not loaded for ${player.Name}`);
-			if (!sig) return reject(`[${script.Name}] signals not initialized for ${player.Name}`);
+			if (!typeIs(sig, "table")) return reject(`[${script.Name}] signals not initialized for ${player.Name}`);
 
 			const newValue = profile.Data[statName] + delta;
 			if (profile.Data[statName] === newValue) return resolve(newValue);
@@ -303,7 +305,7 @@ class PlayerDataService implements Types.PlayerDataServiceTypes {
 			assert(this.playerCheck(player));
 
 			const sig = this.signals.get(player);
-			if (!sig) return reject(`[${script.Name}] signals not initialized for ${player.Name}`);
+			if (!typeIs(sig, "table")) return reject(`[${script.Name}] signals not initialized for ${player.Name}`);
 
 			resolve(sig.SurvivalsChanged.Connect(callback));
 		});
@@ -314,7 +316,7 @@ class PlayerDataService implements Types.PlayerDataServiceTypes {
 			assert(this.playerCheck(player));
 
 			const sig = this.signals.get(player);
-			if (!sig) return reject(`[${script.Name}] signals not initialized for ${player.Name}`);
+			if (!typeIs(sig, "table")) return reject(`[${script.Name}] signals not initialized for ${player.Name}`);
 
 			resolve(sig.PointsChanged.Connect(callback));
 		});
