@@ -1,7 +1,7 @@
 /*
 [=[
     @class VotingService
-    @author santi-luly1
+    @author a
     @description Server-side map voting manager
 
     CHANGELOG: [
@@ -21,13 +21,14 @@
 import { Players, ServerStorage, Workspace } from "@rbxts/services";
 
 // Packages
+import { Service, OnInit, OnStart } from "@flamework/core";
 import { Trove } from "@rbxts/trove";
 import Promise from "@rbxts-js/roblox-lua-promise";
 import Signal from "@rbxts/signal";
 import { t } from "@rbxts/t";
 
 // Types
-import { RoundServiceTypes } from "server/types/RoundServiceTypes";
+import RoundServiceTypes from "server/types/RoundServiceTypes";
 import * as Types from "server/types/VotingService";
 
 // Networking
@@ -43,12 +44,12 @@ import SpecialMapBehavior from "./SpecialMapBehavior";
 --- Module
 --------------------------------------------------------------------
 */
-class VotingServiceClass implements Types.VotingServiceTypes {
+
+@Service()
+export default class VotingServiceClass implements Types.default, OnInit, OnStart {
 	/*
 		state
 	*/
-	private init = false;
-	private start = false;
 	private isVoting = false;
 	private votes = new Map<number, string>();
 	private mapOptions: Types.MapData[] = [];
@@ -64,9 +65,12 @@ class VotingServiceClass implements Types.VotingServiceTypes {
 	private _voteResolve!: (winner: string) => void;
 	private _countdownThread!: thread;
 
-	// dependencies
-	private declare RoundService: RoundServiceTypes;
-	public static Dependencies = ["RoundService"];
+	/*
+	--------------------------------------------------------------------
+	--- Constructor
+	--------------------------------------------------------------------
+	*/
+	constructor(private readonly RoundService: RoundServiceTypes) {}
 
 	/*
 	--------------------------------------------------------------------
@@ -122,14 +126,9 @@ class VotingServiceClass implements Types.VotingServiceTypes {
 	--- Init / Start
 	--------------------------------------------------------------------
 	*/
-	public Init(registry: Map<string, unknown>) {
-		//TODO: definetly this is not the whole registry.
-		assert(!this.init, `[${script.Name}] - Module already initialized.`);
-		this.init = true;
 
-		this.RoundService = registry.get("RoundService") as RoundServiceTypes;
-
-		//this.VOTING_DURATION = this.RoundService.GetIntermissionTimeout();
+	public onInit() {
+		// this.VOTING_DURATION = this.RoundService.GetIntermissionTimeout();
 
 		SpecialMapBehavior.Init();
 
@@ -140,11 +139,7 @@ class VotingServiceClass implements Types.VotingServiceTypes {
 		VotingServiceNetwork.Server.Get("GetMapOptions").SetCallback(() => this.GetMapOptions());
 	}
 
-	public Start() {
-		assert(this.init, `[${script.Name}] - Module not initialized.`);
-		assert(!this.start, `[${script.Name}] - Module already started.`);
-		this.start = true;
-
+	public onStart() {
 		math.randomseed(os.clock());
 
 		this._trove.add(
@@ -347,11 +342,3 @@ class VotingServiceClass implements Types.VotingServiceTypes {
 		return counts;
 	}
 }
-
-/*
---------------------------------------------------------------------
---- Export
---------------------------------------------------------------------
-*/
-const VotingService = new VotingServiceClass();
-export = VotingService;

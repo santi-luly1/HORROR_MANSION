@@ -7,5 +7,4 @@ class DefaultClass implements BehaviorModule {
 	}
 }
 
-const Default = new DefaultClass();
-export = Default;
+export default new DefaultClass();

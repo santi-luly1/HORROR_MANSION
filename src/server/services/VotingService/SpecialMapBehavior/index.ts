@@ -17,5 +17,4 @@ class SpecialMapBehaviorClass implements SpecialMapBehaviorType {
 	}
 }
 
-const SpecialMapBehavior = new SpecialMapBehaviorClass();
-export = SpecialMapBehavior;
+export default new SpecialMapBehaviorClass();

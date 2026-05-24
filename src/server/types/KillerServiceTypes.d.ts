@@ -5,7 +5,6 @@
 */
 import { Trove } from "@rbxts/trove";
 import Signal from "@rbxts/signal";
-import _SERVICE from "./_SERVICE";
 
 /*
 --------------------------------------------------------------------
@@ -18,8 +17,6 @@ export interface soundProps {
 	Looped?: boolean;
 }
 export interface Killer {
-	__index: Killer;
-
 	id: number;
 	name: string;
 	model: Model;
@@ -29,24 +26,22 @@ export interface Killer {
 	alive: boolean;
 	health: number;
 	maxHealth: number;
-	state: string;
+	state: Enum.HumanoidStateType;
 	lastDamageTime: number;
 	behavior: BehaviorModule;
 	trove: Trove;
 
-	new: (model: Model, trove: Trove) => Killer;
 	Damage: (this: Killer, amount: number) => boolean;
 	Kill: (this: Killer) => void;
 	IsAlive: (this: Killer) => boolean;
 	TeleportTo: (this: Killer, cframe: CFrame) => void;
 	PlaySound: (this: Killer, soundId: number, props?: soundProps) => Sound;
 	PlayAnimation: (this: Killer, id: number) => AnimationTrack | undefined;
-	SetState: (this: Killer, state: string) => void;
+	SetState: (this: Killer, state: Enum.HumanoidStateType) => void;
 	Destroy: (this: Killer) => void; // alias for Kill.
 }
 
 export interface BehaviorModule {
-	new: (this: BehaviorModule, killer: Killer) => BehaviorModule;
 	Setup: (this: BehaviorModule) => void;
 	OnPlayerKill: (this: BehaviorModule, victim: Model) => void;
 	DamageVictim: (this: BehaviorModule, humanoid: Humanoid) => void;
@@ -56,16 +51,12 @@ export interface BehaviorModule {
 	GetBonkSound: (this: BehaviorModule) => number;
 	GetPerishSound: (this: BehaviorModule) => number;
 	GetBonkDelay: (this: BehaviorModule) => number;
-
-	__index: BehaviorModule;
 }
 
-export interface KillerServiceMembers {
+export default interface KillerServiceMembers {
 	// signals
 	KillerSpawned: Signal<(killer: Killer) => void>;
 	KillerCleared: Signal<(name: string, id?: string) => void>;
-	KillerDamaged: Signal<(id: string, ammount: number, source?: Instance) => void>;
-	KillerDied: Signal<(id: string, ammount: number, source?: Instance) => void>;
 
 	// public API
 	SpawnKiller: (this: KillerServiceMembers, name: string, spawnIndex: number) => Promise<Killer>;
@@ -78,8 +69,3 @@ export interface KillerServiceMembers {
 	GetKillerInRound: (this: KillerServiceMembers, name: string) => Killer[] | undefined;
 	GetRandomSpawnIndex: (this: KillerServiceMembers) => number;
 }
-
-export type KillerServiceTypes = _SERVICE.Service<KillerServiceMembers>;
-
-declare const _default: KillerServiceTypes;
-export default _default;

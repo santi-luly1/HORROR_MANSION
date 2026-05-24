@@ -6,7 +6,6 @@
 import Promise from "@rbxts-js/roblox-lua-promise";
 import Signal from "@rbxts/signal";
 import ProfileStore from "@rbxts/profile-store";
-import _SERVICE from "./_SERVICE";
 
 /*
 --------------------------------------------------------------------
@@ -24,34 +23,34 @@ export type PlayerData = {
 	Version: number;
 };
 
-export interface PlayerDataServiceMembers {
+export default interface PlayerDataServiceMembers {
 	// public API
-	GetPlayerData: (this: PlayerDataServiceTypes, player: Player) => Promise<PlayerData>;
-	SetPlayerStat: (this: PlayerDataServiceTypes, player: Player, stat: ValidStats, value: number) => Promise<boolean>;
+	GetPlayerData: (this: PlayerDataServiceMembers, player: Player) => Promise<PlayerData>;
+	SetPlayerStat: (
+		this: PlayerDataServiceMembers,
+		player: Player,
+		stat: ValidStats,
+		value: number,
+	) => Promise<boolean>;
 	UpdatePlayerStat: (
-		this: PlayerDataServiceTypes,
+		this: PlayerDataServiceMembers,
 		player: Player,
 		stat: ValidStats,
 		value: number,
 	) => Promise<number>;
 	ObserveSurvivals: (
-		this: PlayerDataServiceTypes,
+		this: PlayerDataServiceMembers,
 		player: Player,
 		callback: (newValue: number) => void,
 	) => Promise<RBXScriptConnection>;
 	ObservePoints: (
-		this: PlayerDataServiceTypes,
+		this: PlayerDataServiceMembers,
 		player: Player,
 		callback: (newValue: number) => void,
 	) => Promise<RBXScriptConnection>;
-	ClearPlayerData: (this: PlayerDataServiceTypes, player: Player) => Promise<boolean | unknown>;
+	ClearPlayerData: (this: PlayerDataServiceMembers, player: Player) => Promise<boolean | unknown>;
 
 	// events
 	ProfileLoaded: ProfileStateChangedSignal;
 	ProfileReleased: ProfileStateChangedSignal;
 }
-
-export type PlayerDataServiceTypes = _SERVICE.Service<PlayerDataServiceMembers>;
-
-declare const _default: PlayerDataServiceTypes;
-export default _default;

@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	@class KillerService
-    @author santi-luly1
+    @author a
     @description Main API for killer(s) management
 	@note as I added OOP killers, I also removed the second arguments from promises (spawnIndex), so I need to implement them into the Killer's class
 

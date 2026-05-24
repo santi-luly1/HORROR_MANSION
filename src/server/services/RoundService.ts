@@ -1,7 +1,7 @@
 /*
 [=[
     @class RoundService
-    @author santi-luly1
+    @author a
     @description Main server game loop handler
 
     CHANGELOG: [
@@ -26,14 +26,15 @@
 import { Debris, Players, Workspace } from "@rbxts/services";
 
 // Packages
+import { Service, OnInit, OnStart } from "@flamework/core";
 import { Trove } from "@rbxts/trove";
 import Promise from "@rbxts-js/roblox-lua-promise";
 import Signal from "@rbxts/signal";
 
 // Types
 import * as Types from "server/types/RoundServiceTypes";
-import { KillerServiceTypes, Killer } from "server/types/KillerServiceTypes";
-import { PlayerDataServiceTypes } from "server/types/PlayerDataServiceTypes";
+import KillerServiceTypes, { Killer } from "server/types/KillerServiceTypes";
+import PlayerDataServiceTypes from "server/types/PlayerDataServiceTypes";
 
 // Networking
 
@@ -46,12 +47,12 @@ import { PlayerDataServiceTypes } from "server/types/PlayerDataServiceTypes";
 --- Module
 --------------------------------------------------------------------
 */
-class RoundServiceClass implements Types.RoundServiceTypes {
+
+@Service()
+export class RoundServiceClass implements Types.default, OnInit, OnStart {
 	/*
 		state
 	*/
-	private init = false;
-	private start = false;
 	private inProgress = false;
 	private isEnding = false;
 
@@ -63,11 +64,14 @@ class RoundServiceClass implements Types.RoundServiceTypes {
 	private trove?: Trove;
 
 	/*
-		dependencies
+	--------------------------------------------------------------------
+	--- Constructor
+	--------------------------------------------------------------------
 	*/
-	private declare KillerService: KillerServiceTypes;
-	private declare PlayerDataService: PlayerDataServiceTypes;
-	public static Dependencies = ["KillerService", "PlayerDataService"];
+	constructor(
+		private readonly KillerService: KillerServiceTypes,
+		private readonly PlayerDataService: PlayerDataServiceTypes,
+	) {}
 
 	/*
 	--------------------------------------------------------------------
@@ -84,22 +88,11 @@ class RoundServiceClass implements Types.RoundServiceTypes {
 	--- Init / Start
 	--------------------------------------------------------------------
 	*/
-	public Init(registry: Map<string, unknown>) {
-		assert(!this.init, `[${script.Name}] - Module already initialized.`);
-		this.init = true;
+	public onInit() {}
 
-		this.KillerService = registry.get("KillerService") as KillerServiceTypes;
-		this.PlayerDataService = registry.get("PlayerDataService") as PlayerDataServiceTypes;
-
-		// this.countdownHint.Parent = Workspace;
-	}
-
-	public Start() {
-		assert(this.init, `[${script.Name}] - Module not initialized.`);
-		assert(!this.start, `[${script.Name}] - Module already started.`);
-		this.start = true;
-
-		this.Begin("**"); // start the main loop.
+	public onStart() {
+		// start the main loop.
+		this.Begin("**").catch(warn);
 	}
 
 	/*
@@ -349,11 +342,3 @@ class RoundServiceClass implements Types.RoundServiceTypes {
 		return this.isEnding;
 	}
 }
-
-/*
---------------------------------------------------------------------
---- Export
---------------------------------------------------------------------
-*/
-const RoundService = new RoundServiceClass();
-export = RoundService;

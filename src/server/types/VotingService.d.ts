@@ -5,7 +5,6 @@
 */
 import type Signal from "@rbxts/signal";
 import { Trove } from "@rbxts/trove";
-import type _SERVICE from "./_SERVICE";
 
 /*
 --------------------------------------------------------------------
@@ -27,7 +26,7 @@ export interface SpecialMapBehaviorType {
 	Get: (this: SpecialMapBehaviorType, name: string) => BehaviorModule;
 }
 
-export interface VotingServiceMembers {
+export default interface VotingServiceMembers {
 	// signals
 	VotingStarted: Signal<(mapOptions: MapData[]) => void>;
 	VotingEnded: Signal<(winner: string, voteCount: Map<string, number>) => void>;
@@ -42,8 +41,3 @@ export interface VotingServiceMembers {
 	IsVoting(this: VotingServiceMembers): boolean;
 	GetVotes(this: VotingServiceMembers): Map<string, number>;
 }
-
-export type VotingServiceTypes = _SERVICE.Service<VotingServiceMembers>;
-
-declare const _default: VotingServiceTypes;
-export default _default;

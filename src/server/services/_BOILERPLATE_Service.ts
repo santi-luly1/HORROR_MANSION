@@ -18,6 +18,7 @@
 // Roblox services
 
 // Packages
+import { Service, OnInit, OnStart } from "@flamework/core";
 import { t } from "@rbxts/t";
 
 // Types
@@ -35,19 +36,12 @@ import _BOILERPLATE_Network from "shared/networking/_BOILERPLATE_Network";
 --- Module
 --------------------------------------------------------------------
 */
-class _BOILERPLATE_ServiceClass implements Types._BOILERPLATE_Service {
-	/*
-		state
-	*/
-	private init = false;
-	private start = false;
 
+@Service()
+export class _BOILERPLATE_ServiceClass implements Types.default, OnInit, OnStart {
 	/*
 		runtime fields
 	*/
-
-	// dependencies
-	public static Dependencies = [];
 
 	/*
 	--------------------------------------------------------------------
@@ -69,18 +63,23 @@ class _BOILERPLATE_ServiceClass implements Types._BOILERPLATE_Service {
 
 	/*
 	--------------------------------------------------------------------
+	--- Constructor
+	--------------------------------------------------------------------
+	*/
+	//constructor(private readonly network: _BOILERPLATE_Network) {} // dependency injection
+	constructor() {}
+
+	/*
+	--------------------------------------------------------------------
 	--- Init / Start
 	--------------------------------------------------------------------
 	*/
-	public Init() {
-		assert(!this.init, `[${script.Name}] - Module already initialized.`);
-		this.init = true;
+	public onInit() {
+		/* initialization logic here */
 	}
 
-	public Start() {
-		assert(this.init, `[${script.Name}] - Module not initialized.`);
-		assert(!this.start, `[${script.Name}] - Module already started.`);
-		this.start = true;
+	public onStart() {
+		/* start/runtime logic here */
 	}
 
 	/*
@@ -96,11 +95,3 @@ class _BOILERPLATE_ServiceClass implements Types._BOILERPLATE_Service {
 		});
 	}
 }
-
-/*
---------------------------------------------------------------------
---- Export
---------------------------------------------------------------------
-*/
-const _BOILERPLATE_Service = new _BOILERPLATE_ServiceClass();
-export = _BOILERPLATE_Service;

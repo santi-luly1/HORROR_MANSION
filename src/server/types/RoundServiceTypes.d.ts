@@ -5,14 +5,13 @@
 */
 import { Killer } from "./KillerServiceTypes";
 import Signal from "@rbxts/signal";
-import _SERVICE from "./_SERVICE";
 
 /*
 --------------------------------------------------------------------
 --- Types
 --------------------------------------------------------------------
 */
-export interface RoundServiceMembers {
+export default interface RoundServiceMembers {
 	// signals
 	RoundStarted: Signal<(preferredKiller: string) => void>;
 	RoundEnded: Signal<(skipped: boolean) => void>;
@@ -24,8 +23,3 @@ export interface RoundServiceMembers {
 	GetIntermissionTimeout: (this: RoundServiceMembers) => number;
 	IsEnding: (this: RoundServiceMembers) => boolean;
 }
-
-export type RoundServiceTypes = _SERVICE.Service<RoundServiceMembers>;
-
-declare const _default: RoundServiceTypes;
-export default _default;

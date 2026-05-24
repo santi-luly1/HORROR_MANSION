@@ -2,7 +2,7 @@
 
 --[=[
 	@class Killer
-    @author santi-luly1
+    @author a
     @description Main API for killer object
 
     CHANGELOG: [

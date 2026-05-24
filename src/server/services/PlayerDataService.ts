@@ -27,6 +27,7 @@
 import { Players, RunService } from "@rbxts/services";
 
 // Packages
+import { Service, OnInit, OnStart } from "@flamework/core";
 import { Trove } from "@rbxts/trove";
 import ProfileStore from "@rbxts/profile-store";
 import Promise from "@rbxts-js/roblox-lua-promise";
@@ -48,13 +49,9 @@ import Networking from "shared/networking/PlayerDataNetwork";
 --- Module
 --------------------------------------------------------------------
 */
-class PlayerDataService implements Types.PlayerDataServiceTypes {
-	/*
-		state
-	*/
-	private init = false;
-	private start = false;
 
+@Service()
+export class PlayerDataService implements Types.default, OnInit, OnStart {
 	/*
 		runtime fields
 	*/
@@ -93,21 +90,21 @@ class PlayerDataService implements Types.PlayerDataServiceTypes {
 
 	/*
 	--------------------------------------------------------------------
+	--- Constructor
+	--------------------------------------------------------------------
+	*/
+	constructor() {}
+
+	/*
+	--------------------------------------------------------------------
 	--- Init / Start
 	--------------------------------------------------------------------
 	*/
-	public Init() {
-		assert(!this.init, `[${script.Name}] already initialized`);
-		this.init = true;
-
+	public onInit() {
 		this.store = ProfileStore.New(this.DATASTORE_KEY, this.TEMPLATE);
 	}
 
-	public Start() {
-		assert(this.init, `[${script.Name}] - Module not initialized.`);
-		assert(!this.start, `[${script.Name}] - Module already started.`);
-		this.start = true;
-
+	public onStart() {
 		Players.PlayerRemoving.Connect((player) => {
 			this.release(player).catch(warn);
 		});
@@ -340,11 +337,3 @@ class PlayerDataService implements Types.PlayerDataServiceTypes {
 		]).andThen(() => true);
 	}
 }
-
-/*
---------------------------------------------------------------------
---- Export
---------------------------------------------------------------------
-*/
-const PlayerDataServiceInstance = new PlayerDataService();
-export = PlayerDataServiceInstance;
