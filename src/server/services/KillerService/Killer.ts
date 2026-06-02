@@ -6,7 +6,7 @@
 
     CHANGELOG: [
 		26/04/25 --> Added this module.
-		26/05/06 --> Added _setupDefaultBehavior to setup basic properties and signals for each killer.
+		26/05/06 --> Added setupDefaultBehavior to setup basic properties and signals for each killer.
         26/05/24 --> Parsed into roblox-ts.
 	]
 ]=]
@@ -39,7 +39,7 @@ export default class Killer implements Types.Killer {
 	public lastDamageTime: number;
 	public declare behavior: Types.BehaviorModule; // KillerService.ts handles this.
 	public trove: Trove;
-    public state: Enum.HumanoidStateType
+	public state: Enum.HumanoidStateType;
 
 	// runtime
 	private anims: Map<number, Animation> = new Map();
@@ -61,12 +61,12 @@ export default class Killer implements Types.Killer {
 		this.health = this.maxHealth;
 		this.lastDamageTime = 0;
 		this.trove = trove;
-        this.state = Enum.HumanoidStateType.PlatformStanding // should it be none?
+		this.state = Enum.HumanoidStateType.PlatformStanding; // should it be none?
 
 		this.animator = new Instance("Animator") as Animator;
 		this.animator.Parent = this.humanoid;
 
-        trove.attachToInstance(model)
+		trove.attachToInstance(model);
 
 		this.setupStandardBehavior();
 	}
@@ -95,9 +95,7 @@ export default class Killer implements Types.Killer {
 
 		const healthConn = hum.HealthChanged.Connect((health) => {
 			this.health = health;
-			if (this.behavior && typeof this.behavior.OnHarm === "function") {
-				this.behavior.OnHarm();
-			}
+			this.behavior.OnHarm();
 		});
 		this.trove.add(healthConn);
 
@@ -119,15 +117,15 @@ export default class Killer implements Types.Killer {
 				targetHum &&
 				targetHum.Health > 0 &&
 				!char.FindFirstChildOfClass("ForceField") &&
-				!char.GetAttribute("killer")
+				char.GetAttribute("killer") === false
 			) {
 				canHit = false;
 
-					this.PlaySound(this.behavior.GetBonkSound(), { Volume: 0.5 });
+				this.PlaySound(this.behavior.GetBonkSound(), { Volume: 0.5 });
 
-					this.behavior.DamageVictim(targetHum);
+				this.behavior.DamageVictim(targetHum);
 
-				const delay = this.behavior && typeof this.behavior.GetBonkDelay === "function" ? this.behavior.GetBonkDelay() : 1;
+				const delay = this.behavior.GetBonkDelay();
 				task.delay(delay, () => {
 					canHit = true;
 				});
@@ -158,7 +156,7 @@ export default class Killer implements Types.Killer {
 		this.health = math.clamp(this.health - amount, 0, this.maxHealth);
 		this.humanoid.Health = this.health;
 
-			this.PlaySound(this.behavior.GetBonkSound(), { Volume: 0.5 });
+		this.PlaySound(this.behavior.GetBonkSound(), { Volume: 0.5 });
 
 		if (this.health <= 0) {
 			this.Kill();
@@ -167,9 +165,9 @@ export default class Killer implements Types.Killer {
 		return true;
 	}
 
-    public SetState(state: Enum.HumanoidStateType): void {
-        this.state = state
-    };
+	public SetState(state: Enum.HumanoidStateType): void {
+		this.state = state;
+	}
 
 	public Kill(): void {
 		if (!this.alive) return;
@@ -177,9 +175,7 @@ export default class Killer implements Types.Killer {
 
 		this.humanoid.Health = 0;
 
-		if (this.behavior && typeof this.behavior.GetPerishSound === "function") {
-			this.PlaySound(this.behavior.GetPerishSound(), { Volume: 1.0 });
-		}
+		this.PlaySound(this.behavior.GetPerishSound(), { Volume: 1.0 });
 
 		this.trove.clean();
 
@@ -210,7 +206,9 @@ export default class Killer implements Types.Killer {
 		});
 		// wait for load
 		task.spawn(() => {
-			do { task.wait() } while (!track.IsLoaded);
+			do {
+				task.wait();
+			} while (!track.IsLoaded);
 			track.Play();
 		});
 		return track;

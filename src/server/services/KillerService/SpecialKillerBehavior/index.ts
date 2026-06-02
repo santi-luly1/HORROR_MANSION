@@ -3,7 +3,7 @@
 --- Dependencies
 --------------------------------------------------------------------
 */
-import type { BehaviorModule } from "server/types/KillerServiceTypes";
+import type { BehaviorConstructor } from "server/types/KillerServiceTypes";
 import Default from "./Default";
 
 /*
@@ -12,20 +12,19 @@ import Default from "./Default";
 --------------------------------------------------------------------
 */
 class SpecialKillerBehaviorClass {
-	private behaviors: Record<string, BehaviorModule> = {};
-	private default: BehaviorModule = new Default();
+	private behaviors = new Map<string, BehaviorConstructor>();
 
 	public Init(): void {
 		for (const child of script.GetChildren()) {
 			if (child.Name === "Default") continue;
 
-			const m = require(child as ModuleScript) as BehaviorModule;
-			this.behaviors[child.Name] = m;
+			const m = require(child as ModuleScript) as BehaviorConstructor;
+			this.behaviors.set(child.Name, m);
 		}
 	}
 
-	public Get(name: string): BehaviorModule {
-		return this.behaviors[name] ?? this.default;
+	public Get(name: string): BehaviorConstructor {
+		return this.behaviors.get(name) ?? Default;
 	}
 }
 

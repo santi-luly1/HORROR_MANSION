@@ -51,7 +51,7 @@ import Networking from "shared/networking/PlayerDataNetwork";
 */
 
 @Service()
-export class PlayerDataService implements Types.default, OnInit, OnStart {
+export default class PlayerDataService implements OnInit, OnStart {
 	/*
 		runtime fields
 	*/
@@ -65,6 +65,8 @@ export class PlayerDataService implements Types.default, OnInit, OnStart {
 	--- Variables
 	--------------------------------------------------------------------
 	*/
+	public readonly ProfileLoaded = new Signal<Types.ProfileStateChangedSignal, false>();
+	public readonly ProfileReleased = new Signal<Types.ProfileStateChangedSignal, false>();
 	private readonly DATASTORE_KEY = RunService.IsStudio() ? "Studio" : "Live";
 	private readonly MAX_RETRIES = 5;
 	private readonly YIELD_PER_RETRY = 2; // seconds
@@ -80,9 +82,6 @@ export class PlayerDataService implements Types.default, OnInit, OnStart {
 		Version: this.PROFILE_VERSION,
 	};
 
-	public ProfileLoaded: Types.ProfileStateChangedSignal = new Signal();
-	public ProfileReleased: Types.ProfileStateChangedSignal = new Signal();
-
 	private playerCheck = t.instanceOf("Player");
 	private updateCheck = t.strictArray(t.instanceOf("Player"), t.literal("Survivals", "Points"), t.number);
 
@@ -93,18 +92,18 @@ export class PlayerDataService implements Types.default, OnInit, OnStart {
 	--- Constructor
 	--------------------------------------------------------------------
 	*/
-	constructor() {}
+	public constructor() {}
 
 	/*
 	--------------------------------------------------------------------
 	--- Init / Start
 	--------------------------------------------------------------------
 	*/
-	public onInit() {
-		this.store = ProfileStore.New(this.DATASTORE_KEY, this.TEMPLATE);
-	}
+	public onInit() {}
 
 	public onStart() {
+		this.store = ProfileStore.New(this.DATASTORE_KEY, this.TEMPLATE);
+
 		Players.PlayerRemoving.Connect((player) => {
 			this.release(player).catch(warn);
 		});
@@ -127,7 +126,7 @@ export class PlayerDataService implements Types.default, OnInit, OnStart {
 	--- Private Methods
 	--------------------------------------------------------------------
 	*/
-	private load(player: Player): Promise<Types.PlayerProfile> {
+	private async load(player: Player): Promise<Types.PlayerProfile> {
 		if (this.loadingPromises.has(player)) {
 			return this.loadingPromises.get(player)!;
 		}
@@ -220,7 +219,7 @@ export class PlayerDataService implements Types.default, OnInit, OnStart {
 		return promise;
 	}
 
-	private release(player: Player): Promise<void> {
+	private async release(player: Player): Promise<void> {
 		return new Promise((resolve) => {
 			assert(this.playerCheck(player));
 
@@ -249,7 +248,7 @@ export class PlayerDataService implements Types.default, OnInit, OnStart {
 	--- Public API
 	--------------------------------------------------------------------
 	*/
-	public GetPlayerData(player: Player): Promise<Types.PlayerData> {
+	public async GetPlayerData(player: Player): Promise<Types.PlayerData> {
 		return new Promise((resolve, reject) => {
 			assert(this.playerCheck(player));
 
@@ -260,7 +259,7 @@ export class PlayerDataService implements Types.default, OnInit, OnStart {
 		});
 	}
 
-	public SetPlayerStat(player: Player, statName: Types.ValidStats, value: number): Promise<boolean> {
+	public async SetPlayerStat(player: Player, statName: Types.ValidStats, value: number): Promise<boolean> {
 		return new Promise((resolve, reject) => {
 			assert(this.updateCheck([player, statName, value]));
 
@@ -278,7 +277,7 @@ export class PlayerDataService implements Types.default, OnInit, OnStart {
 		});
 	}
 
-	public UpdatePlayerStat(player: Player, statName: Types.ValidStats, delta: number): Promise<number> {
+	public async UpdatePlayerStat(player: Player, statName: Types.ValidStats, delta: number): Promise<number> {
 		return new Promise((resolve, reject) => {
 			assert(this.updateCheck([player, statName, delta]));
 
@@ -297,7 +296,7 @@ export class PlayerDataService implements Types.default, OnInit, OnStart {
 		});
 	}
 
-	public ObserveSurvivals(player: Player, callback: (newValue: number) => void): Promise<RBXScriptConnection> {
+	public async ObserveSurvivals(player: Player, callback: (newValue: number) => void): Promise<RBXScriptConnection> {
 		return new Promise((resolve, reject) => {
 			assert(this.playerCheck(player));
 
@@ -308,7 +307,7 @@ export class PlayerDataService implements Types.default, OnInit, OnStart {
 		});
 	}
 
-	public ObservePoints(player: Player, callback: (newValue: number) => void): Promise<RBXScriptConnection> {
+	public async ObservePoints(player: Player, callback: (newValue: number) => void): Promise<RBXScriptConnection> {
 		return new Promise((resolve, reject) => {
 			assert(this.playerCheck(player));
 
@@ -324,7 +323,7 @@ export class PlayerDataService implements Types.default, OnInit, OnStart {
 	--- Studio-only
 	--------------------------------------------------------------------
 	*/
-	public ClearPlayerData(player: Player): Promise<boolean | unknown> {
+	public async ClearPlayerData(player: Player): Promise<boolean | unknown> {
 		if (!RunService.IsStudio()) {
 			return Promise.reject(`[${script.Name}] ClearPlayerData can only be used in Studio`);
 		}

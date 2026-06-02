@@ -4,18 +4,17 @@
 --------------------------------------------------------------------
 */
 import { Trove } from "@rbxts/trove";
-import Signal from "@rbxts/signal";
 
 /*
 --------------------------------------------------------------------
 --- Types
 --------------------------------------------------------------------
 */
-
 export interface soundProps {
 	Volume?: number;
 	Looped?: boolean;
 }
+
 export interface Killer {
 	id: number;
 	name: string;
@@ -53,19 +52,4 @@ export interface BehaviorModule {
 	GetBonkDelay: (this: BehaviorModule) => number;
 }
 
-export default interface KillerServiceMembers {
-	// signals
-	KillerSpawned: Signal<(killer: Killer) => void>;
-	KillerCleared: Signal<(name: string, id?: string) => void>;
-
-	// public API
-	SpawnKiller: (this: KillerServiceMembers, name: string, spawnIndex: number) => Promise<Killer>;
-	SpawnKillers: (this: KillerServiceMembers, names: string[], spawnIndex: number) => Promise<Killer[]>;
-	SpawnAll: (this: KillerServiceMembers, spawnIndex: number) => Promise<Killer[]>;
-	GetCurrentKillers: (this: KillerServiceMembers) => Killer[];
-	Clear: (this: KillerServiceMembers) => void;
-	IsValidName: (this: KillerServiceMembers, name: string, includeSpecial?: boolean) => boolean;
-	GetKillersName: (this: KillerServiceMembers) => string[];
-	GetKillerInRound: (this: KillerServiceMembers, name: string) => Killer[] | undefined;
-	GetRandomSpawnIndex: (this: KillerServiceMembers) => number;
-}
+export type BehaviorConstructor = new (killer: Killer) => BehaviorModule;

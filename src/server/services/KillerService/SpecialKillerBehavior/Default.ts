@@ -13,9 +13,9 @@ import compute from "../Compute"; // make it not so hardcodded
 --------------------------------------------------------------------
 */
 export class Default implements BehaviorModule {
-	protected killer?: Killer;
+	protected killer: Killer;
 
-	constructor(killer?: Killer) {
+	constructor(killer: Killer) {
 		this.killer = killer;
 	}
 

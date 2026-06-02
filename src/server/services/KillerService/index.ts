@@ -1,7 +1,7 @@
 /*
 [=[
 	@class KillerService
-    @author santi-luly1
+    @author a
     @description Main API for killer(s) management
 	@note as I added OOP killers, I also removed the second arguments from promises (spawnIndex), so I need to implement them into the Killer's class
 
@@ -47,6 +47,8 @@ import Networking from "shared/networking/KillerServiceNetwork";
 import SpecialKillerBehavior from "./SpecialKillerBehavior";
 import Killer from "./Killer";
 
+// Services
+
 /*
 --------------------------------------------------------------------
 --- Module
@@ -54,7 +56,7 @@ import Killer from "./Killer";
 */
 
 @Service()
-export class KillerService implements Types.default, OnInit, OnStart {
+export class KillerService implements OnInit, OnStart {
 	/*
 	--------------------------------------------------------------------
 	--- Variables
@@ -79,30 +81,28 @@ export class KillerService implements Types.default, OnInit, OnStart {
 	--- Constructor
 	--------------------------------------------------------------------
 	*/
-	constructor() {
-		this.NAMES[2] = "**";
-		for (let i = 0; i < this.KillerTemplates.size(); i++) {
-			this.NAMES[i + 2] = this.KillerTemplates[i].Name;
-		}
-	}
+	public constructor() {}
 
 	/*
 	--------------------------------------------------------------------
 	--- Init / Start
 	--------------------------------------------------------------------
 	*/
-	public onInit() {
+	public onInit() {}
+
+	public onStart() {
 		this.trove = new Trove();
 		this.KillerSpawned = new Signal();
 		this.KillerCleared = new Signal();
+		this.NAMES[2] = "**";
+		for (let i = 0; i < this.KillerTemplates.size(); i++) {
+			this.NAMES[i + 2] = this.KillerTemplates[i].Name;
+		}
 		SpecialKillerBehavior.Init();
 
 		Networking.Server.Get("GetKillersName").SetCallback(() => {
 			return [this.GetKillersName()];
 		});
-	}
-
-	public onStart() {
 		math.randomseed(os.clock());
 	}
 
@@ -121,18 +121,18 @@ export class KillerService implements Types.default, OnInit, OnStart {
 	--- Private Methods
 	--------------------------------------------------------------------
 	*/
-	private _spawn(name: string, spawnIndex: number): Promise<Types.Killer> {
+	private async spawn(name: string, spawnIndex: number): Promise<Types.Killer> {
 		return new Promise((resolve, reject, onCancel) => {
 			if (!this.spawnCheck([name, spawnIndex])) {
-				return reject(`[{script.Name}] bad argument(s)`);
+				return reject(`[${script.Name}] bad argument(s)`);
 			}
 
 			if (!this.IsValidName(name)) {
-				return reject(`Name '{name}' is invalid`);
+				return reject(`Name '${name}' is invalid`);
 			}
 
 			if (this.spawningNames[name]) {
-				return reject(`Killer '{name}' spawn already in progress`);
+				return reject(`Killer '${name}' spawn already in progress`);
 			}
 			this.spawningNames[name] = true;
 
@@ -175,7 +175,7 @@ export class KillerService implements Types.default, OnInit, OnStart {
 
 			trove.add(() => {
 				const idx = this.killers.indexOf(killer);
-				if (idx) {
+				if (idx !== -1) {
 					this.killers.remove(idx);
 					this.KillerCleared.Fire(killer.name);
 				}
@@ -198,8 +198,11 @@ export class KillerService implements Types.default, OnInit, OnStart {
 		return math.random(1, spawns.size());
 	}
 
-	public GetKillersName(): string[] {
-		return this.NAMES;
+	public GetKillersName(includeSpecial?: boolean): string[] {
+		if (includeSpecial) return this.NAMES;
+		return this.NAMES.filter((v) => {
+			return this.IsValidName(v, false);
+		});
 	}
 
 	public GetKillerInRound(name: string): Types.Killer[] {
@@ -214,9 +217,19 @@ export class KillerService implements Types.default, OnInit, OnStart {
 
 	public IsValidName(name: string, includeSpecial?: boolean): boolean {
 		if (includeSpecial) {
-			return this.NAMES.find(name) !== undefined;
+			return (
+				this.NAMES.find((value) => {
+					return value === name;
+				}) !== undefined
+			);
 		}
-		return table.find(this.NAMES, name) !== undefined && name !== "*" && name !== "**";
+		return (
+			this.NAMES.find((value) => {
+				return value === name;
+			}) !== undefined &&
+			name !== "*" &&
+			name !== "**"
+		);
 	}
 
 	public GetCurrentKillers(): Types.Killer[] {
@@ -228,58 +241,45 @@ export class KillerService implements Types.default, OnInit, OnStart {
 		table.clear(this.killers);
 	}
 
-	public SpawnKiller(name: string, spawnIndex: number): Promise<Types.Killer> {
+	public async SpawnKiller(name: string, spawnIndex: number): Promise<Types.Killer> {
 		if (name === "*") {
 			error("Bulk spawn not allowed from this API.");
 		} else if (name === "**") {
 			const pick = this.KillerTemplates[math.random(0, this.KillerTemplates.size() - 1)];
-			return this._spawn(pick.Name, spawnIndex);
+			return this.spawn(pick.Name, spawnIndex);
 		} else {
-			return this._spawn(name, spawnIndex);
+			return this.spawn(name, spawnIndex);
 		}
 	}
 
-	public SpawnKillers(names: string[], spawnIndex: number): Promise<Types.Killer[]> {
-		const promises: Promise<{ ok: boolean; result: unknown }>[] = [];
+	public async SpawnKillers(names: string[], spawnIndex: number): Promise<Types.Killer[]> {
+		const valid = names.filter((n) => this.IsValidName(n));
+		print(valid, names);
+		if (valid.size() === 0) return Promise.reject("No valid killers to spawn") as Promise<Types.Killer[]>; // ugly
 
-		for (const name of names) {
-			if (this.IsValidName(name)) {
-				const p = this.SpawnKiller(name, spawnIndex)
-					.andThen((model) => {
-						return { ok: true, result: model };
-					})
-					.catch((err) => {
-						return { ok: false, result: tostring(err) };
-					});
-				promises.push(p);
-			}
+		const killers: Types.Killer[] = [];
+		const errors: string[] = [];
+
+		// chain sequentially
+		let chain = Promise.resolve();
+		for (const name of valid) {
+			chain = chain
+				.andThen(() => this.SpawnKiller(name, spawnIndex))
+				.andThen((k) => {
+					killers.push(k);
+				})
+				.catch((e) => {
+					errors.push(tostring(e));
+				});
 		}
 
-		if (promises.size() === 0) {
-			return Promise.reject("No valid killers to spawn");
-		}
-
-		return Promise.all(promises).andThen((results) => {
-			const killers: Types.Killer[] = [];
-			const errors: string[] = [];
-
-			for (const r of results) {
-				if ((r as any).ok) {
-					killers.push((r as any).result as Types.Killer);
-				} else {
-					errors.push((r as any).result as string);
-				}
-			}
-
-			if (killers.size() > 0) {
-				return killers;
-			} else {
-				return Promise.reject(`All ${errors.size()} killer spawns failed: ${errors.join(", ")}`);
-			}
-		});
+		return chain.andThen(() => {
+			if (killers.size() > 0) return killers;
+			return Promise.reject(`All ${errors.size()} killer spawns failed: ${errors.join(", ")}`);
+		}) as Promise<Types.Killer[]>;
 	}
 
-	public SpawnAll(spawnIndex: number): Promise<Types.Killer[]> {
+	public async SpawnAll(spawnIndex: number): Promise<Types.Killer[]> {
 		const validNames: string[] = [];
 
 		for (const name of this.GetKillersName()) {
@@ -289,7 +289,7 @@ export class KillerService implements Types.default, OnInit, OnStart {
 		}
 
 		if (validNames.size() === 0) {
-			return Promise.reject("No valid killers available to spawn");
+			return Promise.reject("No valid killers available to spawn") as Promise<Types.Killer[]>; // ugly
 		}
 
 		return this.SpawnKillers(validNames, spawnIndex);

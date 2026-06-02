@@ -1,7 +1,7 @@
 /*
 [=[
     @class RoundService
-    @author a
+    @author santi-luly1
     @description Main server game loop handler
 
     CHANGELOG: [
@@ -32,15 +32,15 @@ import Promise from "@rbxts-js/roblox-lua-promise";
 import Signal from "@rbxts/signal";
 
 // Types
-import * as Types from "server/types/RoundServiceTypes";
-import KillerServiceTypes, { Killer } from "server/types/KillerServiceTypes";
-import PlayerDataServiceTypes from "server/types/PlayerDataServiceTypes";
+import { Killer } from "server/types/KillerServiceTypes";
 
 // Networking
 
 // Local utilities
 
 // Services
+import { KillerService } from "./KillerService";
+import PlayerDataService from "./PlayerDataService";
 
 /*
 --------------------------------------------------------------------
@@ -49,7 +49,7 @@ import PlayerDataServiceTypes from "server/types/PlayerDataServiceTypes";
 */
 
 @Service()
-export class RoundServiceClass implements Types.default, OnInit, OnStart {
+export default class RoundServiceClass implements OnInit, OnStart {
 	/*
 		state
 	*/
@@ -61,17 +61,14 @@ export class RoundServiceClass implements Types.default, OnInit, OnStart {
 	*/
 	public RoundStarted = new Signal<(preferredKiller: string) => void>();
 	public RoundEnded = new Signal<(skipped: boolean) => void>();
-	private trove?: Trove;
+	private trove = new Trove();
 
 	/*
 	--------------------------------------------------------------------
 	--- Constructor
 	--------------------------------------------------------------------
 	*/
-	constructor(
-		private readonly KillerService: KillerServiceTypes,
-		private readonly PlayerDataService: PlayerDataServiceTypes,
-	) {}
+	constructor(private readonly KillerService: KillerService, private readonly PlayerDataService: PlayerDataService) {}
 
 	/*
 	--------------------------------------------------------------------
@@ -100,53 +97,49 @@ export class RoundServiceClass implements Types.default, OnInit, OnStart {
 	--- Private Methods
 	--------------------------------------------------------------------
 	*/
-	private startRound(preferredKiller: string): Promise<Killer[]> {
+	private async startRound(preferredKiller: string): Promise<Killer[]> {
 		return new Promise((resolve, reject, onCancel) => {
 			if (this.inProgress) return reject("Round already in progress");
 
 			this.inProgress = true;
 			this.RoundStarted.Fire(preferredKiller);
 
-			const trove = new Trove();
-			this.trove = trove;
-
 			let cancelled = false;
 			if (
 				onCancel(() => {
 					cancelled = true;
-					this.cleanupRound(trove);
+					this.cleanupRound();
 				})
 			)
 				return;
 
-			let killersToSpawn: string[] | undefined;
+			let killersToSpawn: string;
 
 			if (preferredKiller === "*") {
-				killersToSpawn = undefined; // SpawnAll handles this
+				killersToSpawn = "*";
 			} else if (preferredKiller === "**") {
-				const all: string[] = [];
-				for (const name of this.KillerService.GetKillersName()) {
-					if (this.KillerService.IsValidName(name)) all.push(name);
-				}
-				killersToSpawn = [all[math.random(1, all.size())]];
+				const candidates: string[] = this.KillerService.GetKillersName(false);
+				killersToSpawn = candidates[math.random(1, candidates.size())]; // as of now, there are is only one killer spawn per round, next update to make it be more than one.
 			} else {
-				killersToSpawn = [preferredKiller];
+				killersToSpawn = preferredKiller;
 			}
 
-			const spawnPromise = killersToSpawn
-				? this.KillerService.SpawnKillers(killersToSpawn, -1)
-				: this.KillerService.SpawnAll(-1);
+			const spawnPromise =
+				killersToSpawn !== "*"
+					? this.KillerService.SpawnKillers([killersToSpawn], -1)
+					: this.KillerService.SpawnAll(-1);
 
+			print(preferredKiller, killersToSpawn);
 			spawnPromise
 				.andThen((initialKillers) => {
 					if (cancelled) return;
 
 					if (initialKillers.size() === 0) {
-						this.cleanupRound(trove);
+						this.cleanupRound();
 						return reject("No killers spawned");
 					}
 
-					trove.add(
+					this.trove.add(
 						this.KillerService.KillerCleared.Connect((killer) => {
 							if (this.isEnding || !this.inProgress) return;
 
@@ -167,7 +160,7 @@ export class RoundServiceClass implements Types.default, OnInit, OnStart {
 						}),
 					);
 
-					trove.add(
+					this.trove.add(
 						task.spawn(() => {
 							let countdown = this.TOTAL_ROUND_DURATION;
 							const cachedNames: string[] = [];
@@ -186,7 +179,7 @@ export class RoundServiceClass implements Types.default, OnInit, OnStart {
 							};
 
 							// invalidate cache when new killers spawn
-							trove.add(this.KillerService.KillerSpawned.Connect(() => (cachedCount = -1)));
+							this.trove.add(this.KillerService.KillerSpawned.Connect(() => (cachedCount = -1)));
 
 							while (countdown >= 0 && this.inProgress && !this.isEnding) {
 								updateCache();
@@ -220,23 +213,22 @@ export class RoundServiceClass implements Types.default, OnInit, OnStart {
 					resolve(initialKillers);
 				})
 				.catch((e) => {
-					this.cleanupRound(trove);
+					this.cleanupRound();
 					reject(e);
 				});
 		});
 	}
 
-	private cleanupRound(trove: Trove) {
+	private cleanupRound() {
 		if (!this.inProgress) return;
 
 		this.inProgress = false;
 		this.isEnding = true;
-		trove.destroy();
+		this.trove.clean();
 		this.KillerService.Clear();
-		this.trove = undefined;
 	}
 
-	private initIntermissionCountdown(skipped: boolean): Promise<void> {
+	private async initIntermissionCountdown(skipped: boolean): Promise<void> {
 		return new Promise((resolve) => {
 			task.spawn(() => {
 				for (let i = this.INTERMISSION_TIMEOUT; i >= 0; i--) {
@@ -249,7 +241,7 @@ export class RoundServiceClass implements Types.default, OnInit, OnStart {
 		});
 	}
 
-	private endRound(preferredKiller: string, skipped: boolean): Promise<unknown> {
+	private async endRound(preferredKiller: string, skipped: boolean): Promise<unknown> {
 		return new Promise((resolve, reject) => {
 			//  start command for example would skip the round, so it doesn't really count as a survival
 			if (!skipped) {
@@ -310,7 +302,7 @@ export class RoundServiceClass implements Types.default, OnInit, OnStart {
 	--- Public API
 	--------------------------------------------------------------------
 	*/
-	public Begin(preferredKiller: string): Promise<Killer[]> {
+	public async Begin(preferredKiller: string): Promise<Killer[]> {
 		assert(!this.isEnding, "Round is ending");
 		assert(!this.OnIntermission(), "Cannot start round during intermission");
 
@@ -325,11 +317,11 @@ export class RoundServiceClass implements Types.default, OnInit, OnStart {
 		return this.isEnding && !this.inProgress;
 	}
 
-	public Stop(preferredKiller?: string, skipped?: boolean): Promise<void> {
+	public async Stop(preferredKiller?: string, skipped?: boolean): Promise<void> {
 		assert(!this.isEnding, "Round already ending");
 		this.isEnding = true;
 
-		if (this.trove) this.cleanupRound(this.trove);
+		this.cleanupRound();
 
 		return this.endRound(preferredKiller ?? "**", skipped || false) as Promise<void>;
 	}

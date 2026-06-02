@@ -13,7 +13,7 @@ import simplepath from "@rbxts/simplepath";
 */
 
 // each killer gets its own entry via the model as key
-const pathRegistry = new WeakMap<Model, { target?: Model; path?: any }>();
+const pathRegistry = new WeakMap<Model, { target?: Model; path?: simplepath }>();
 
 export default function compute(model: Model, trove: Trove): boolean {
 	const hrp = model.FindFirstChild("HumanoidRootPart") as BasePart | undefined;
@@ -52,7 +52,7 @@ export default function compute(model: Model, trove: Trove): boolean {
 
 	if (target !== data.target || !data.path) {
 		data.target = target;
-		data.path = simplepath.new(model, {
+		data.path = new simplepath(model, {
 			AgentHeight: 5,
 			AgentRadius: 2,
 			AgentCanJump: true,

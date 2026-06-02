@@ -1,7 +1,7 @@
 /*
 [=[
     @class VotingService
-    @author a
+    @author santi-luly1
     @description Server-side map voting manager
 
     CHANGELOG: [
@@ -28,7 +28,7 @@ import Signal from "@rbxts/signal";
 import { t } from "@rbxts/t";
 
 // Types
-import RoundServiceTypes from "server/types/RoundServiceTypes";
+import RoundService from "server/services/RoundService";
 import * as Types from "server/types/VotingService";
 
 // Networking
@@ -46,7 +46,7 @@ import SpecialMapBehavior from "./SpecialMapBehavior";
 */
 
 @Service()
-export default class VotingServiceClass implements Types.default, OnInit, OnStart {
+export default abstract class VotingServiceClass implements OnInit, OnStart {
 	/*
 		state
 	*/
@@ -58,19 +58,18 @@ export default class VotingServiceClass implements Types.default, OnInit, OnStar
 	/*
 		runtime fields
 	*/
-	private _trove: Trove = new Trove();
+	private trove: Trove = new Trove();
 	public VotingStarted = new Signal<(mapOptions: Types.MapData[]) => void>();
 	public VotingEnded = new Signal<(winner: string, voteCount: Map<string, number>) => void>();
 	public VoteCast = new Signal<(player: Player, mapName: string, previousVote: string) => void>();
-	private _voteResolve!: (winner: string) => void;
-	private _countdownThread!: thread;
+	private declare countdownThread: thread;
 
 	/*
 	--------------------------------------------------------------------
 	--- Constructor
 	--------------------------------------------------------------------
 	*/
-	constructor(private readonly RoundService: RoundServiceTypes) {}
+	constructor(private readonly RoundService: RoundService) {}
 
 	/*
 	--------------------------------------------------------------------
@@ -142,8 +141,7 @@ export default class VotingServiceClass implements Types.default, OnInit, OnStar
 	public onStart() {
 		math.randomseed(os.clock());
 
-		this._trove.add(
-			// eslint-disable-next-line roblox-ts/no-any
+		this.trove.add(
 			this.RoundService.RoundEnded.Connect((skipped) => {
 				if (skipped) return;
 
@@ -187,23 +185,13 @@ export default class VotingServiceClass implements Types.default, OnInit, OnStar
 	--- Public API
 	--------------------------------------------------------------------
 	*/
-	public StartVoting(mapNames?: string[]): Promise<string> {
+	public async StartVoting(mapNames?: string[]): Promise<string> {
 		return new Promise((resolve, reject, onCancel) => {
 			if (this.isVoting) {
 				return reject("Voting already in progress");
 			}
 
 			this.isVoting = true;
-			let resolved = false;
-			const finalize = (winner: string) => {
-				if (resolved) {
-					return;
-				}
-				resolved = true;
-				//this._voteResolve = undefined;
-				return resolve(winner);
-			};
-			this._voteResolve = finalize;
 			this.votes.clear();
 			this.winningMap = "N/A";
 
@@ -220,7 +208,6 @@ export default class VotingServiceClass implements Types.default, OnInit, OnStar
 			if (this.mapOptions.size() === 0) {
 				// just in case.
 				this.isVoting = false;
-				//this._voteResolve = undefined;
 				return reject("No valid maps to vote on");
 			}
 
@@ -228,23 +215,20 @@ export default class VotingServiceClass implements Types.default, OnInit, OnStar
 			this.VotingStarted.Fire(this.mapOptions);
 
 			const startTime = tick();
-			this._countdownThread = task.spawn(() => {
+			this.countdownThread = task.spawn(() => {
 				while (this.isVoting && tick() - startTime < this.VOTING_DURATION) {
 					task.wait(0.1);
 				}
 
 				if (this.isVoting) {
 					const winner = this.EndVoting();
-					return finalize(winner);
+					return resolve(winner);
 				}
 			});
 
 			onCancel(() => {
 				this.isVoting = false;
-				if (this._countdownThread) {
-					task.cancel(this._countdownThread);
-				}
-				//this._voteResolve = undefined;
+				task.cancel(this.countdownThread);
 				return reject("Voting cancelled");
 			});
 		}) as Promise<string>;
@@ -287,8 +271,6 @@ export default class VotingServiceClass implements Types.default, OnInit, OnStar
 
 		VotingServiceNetwork.Server.Get("VotingEnded").SendToAllPlayers(winner);
 		this.VotingEnded.Fire(winner, voteCounts);
-
-		this._voteResolve(winner);
 
 		return winner;
 	}
