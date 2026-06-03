@@ -4,7 +4,6 @@
 --------------------------------------------------------------------
 */
 import { RunService } from "@rbxts/services";
-import { BehaviorModule, Killer } from "server/types/KillerServiceTypes";
 import simplepath from "@rbxts/simplepath";
 import Default from "./Default";
 
@@ -23,9 +22,7 @@ class Hacker extends Default {
 		killer.trove.add(
 			RunService.Stepped.Connect(() => {
 				for (const part of killer.model.GetDescendants()) {
-					if (part.IsA("BasePart")) {
-						(part as BasePart).CanCollide = false;
-					}
+					if (part.IsA("BasePart")) part.CanCollide = false;
 				}
 			}),
 		);

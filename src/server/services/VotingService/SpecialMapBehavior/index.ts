@@ -1,20 +1,32 @@
-import { BehaviorModule, SpecialMapBehaviorType } from "server/types/VotingService";
+/*
+--------------------------------------------------------------------
+--- Dependencies
+--------------------------------------------------------------------
+*/
+import type { BehaviorConstructor, BehaviorModule } from "server/types/VotingService";
 import Default from "./Default";
 
-class SpecialMapBehaviorClass implements SpecialMapBehaviorType {
-	private default: BehaviorModule = Default;
-	private behaviors: Record<string, BehaviorModule> = {};
+/*
+--------------------------------------------------------------------
+--- Module
+--------------------------------------------------------------------
+*/
+class SpecialMapBehaviorClass {
+	private behaviors = new Map<string, BehaviorModule>();
 
 	public Init(): void {
-		script.GetChildren().forEach((module) => {
-			if (module.Name === "") return;
-			this.behaviors[module.Name] = require(module as ModuleScript) as BehaviorModule;
-		});
+		for (const child of script.GetChildren()) {
+			if (child.Name === "Default") continue;
+
+			const m = require(child as ModuleScript) as BehaviorConstructor;
+			this.behaviors.set(child.Name, new m());
+		}
 	}
 
-	public Get(name: string) {
-		return this.behaviors[name] ?? this.default;
+	public Get(name: string): BehaviorModule {
+		return this.behaviors.get(name) ?? new Default();
 	}
 }
 
-export default new SpecialMapBehaviorClass();
+const SpecialKillerBehavior = new SpecialMapBehaviorClass();
+export default SpecialKillerBehavior;

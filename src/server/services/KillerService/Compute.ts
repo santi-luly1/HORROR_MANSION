@@ -26,6 +26,7 @@ export default function compute(model: Model, trove: Trove): boolean {
 	let target: Model | undefined;
 	try {
 		// This can fail (ej. we don't have an HRP, so it's nil, making this fail)
+		// simplepath has a little flaw, when calling GetNearestCharacter, its lua version takes two arguments (self, fromPosition), so it errors out bc it tries to subtract vector and table (self)
 		target = simplepath.GetNearestCharacter(hrp.Position) as Model | undefined;
 	} catch {
 		ok = false;

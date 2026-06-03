@@ -3,7 +3,7 @@
 --- Dependencies
 --------------------------------------------------------------------
 */
-import type { BehaviorConstructor } from "server/types/KillerServiceTypes";
+import type { BehaviorConstructor } from "server/types/KillerService";
 import Default from "./Default";
 
 /*

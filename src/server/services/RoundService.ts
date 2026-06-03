@@ -32,7 +32,7 @@ import Promise from "@rbxts-js/roblox-lua-promise";
 import Signal from "@rbxts/signal";
 
 // Types
-import { Killer } from "server/types/KillerServiceTypes";
+import { Killer } from "server/types/KillerService";
 
 // Networking
 
@@ -129,7 +129,6 @@ export default class RoundServiceClass implements OnInit, OnStart {
 					? this.KillerService.SpawnKillers([killersToSpawn], -1)
 					: this.KillerService.SpawnAll(-1);
 
-			print(preferredKiller, killersToSpawn);
 			spawnPromise
 				.andThen((initialKillers) => {
 					if (cancelled) return;

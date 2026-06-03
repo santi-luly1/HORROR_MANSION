@@ -4,7 +4,7 @@
 --------------------------------------------------------------------
 */
 import { RunService } from "@rbxts/services";
-import { BehaviorModule, Killer } from "server/types/KillerServiceTypes";
+import { BehaviorModule, Killer } from "server/types/KillerService";
 import compute from "../Compute"; // make it not so hardcodded
 
 /*
@@ -25,11 +25,9 @@ export class Default implements BehaviorModule {
 			task.spawn(() => {
 				while (this.killer.IsAlive()) {
 					const ok = compute(this.killer.model, this.killer.trove);
-					if (ok) {
-						RunService.Heartbeat.Wait(); // sooo smooth
-					} else {
-						task.wait(0.5);
-					}
+
+					if (ok) RunService.Heartbeat.Wait(); // sooo smooth
+					else task.wait(0.5);
 				}
 			}),
 		);
@@ -42,9 +40,7 @@ export class Default implements BehaviorModule {
 
 	public DamageVictim(humanoid: Humanoid): void {
 		humanoid.TakeDamage(20);
-		if (humanoid.Health <= 0) {
-			this.OnPlayerKill(humanoid.Parent as Model);
-		}
+		if (humanoid.Health <= 0) this.OnPlayerKill(humanoid.Parent as Model);
 	}
 
 	public OnHarm(): void {

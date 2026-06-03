@@ -1,7 +1,7 @@
 /*
 [=[
 	@class KillerService
-    @author a
+    @author santi-luly1
     @description Main API for killer(s) management
 	@note as I added OOP killers, I also removed the second arguments from promises (spawnIndex), so I need to implement them into the Killer's class
 
@@ -38,7 +38,7 @@ import Promise from "@rbxts-js/roblox-lua-promise";
 import Signal from "@rbxts/signal";
 
 // Types
-import * as Types from "server/types/KillerServiceTypes";
+import * as Types from "server/types/KillerService";
 
 // Networking
 import Networking from "shared/networking/KillerServiceNetwork";
@@ -65,10 +65,10 @@ export class KillerService implements OnInit, OnStart {
 	private killers: Types.Killer[] = [];
 	private spawningNames: Record<string, true | undefined> = {};
 
-	public declare KillerSpawned: Signal<(killer: Types.Killer) => void>;
-	public declare KillerCleared: Signal<(killerName: string) => void>;
+	public KillerSpawned = new Signal<(killer: Types.Killer) => void>();
+	public KillerCleared = new Signal<(killerName: string) => void>();
 
-	private declare trove: Trove;
+	private trove = new Trove();
 
 	private KillersFolder = ServerStorage.WaitForChild("Killers") as Folder;
 	private KillerTemplates = this.KillersFolder.GetChildren() as Model[];
@@ -91,9 +91,6 @@ export class KillerService implements OnInit, OnStart {
 	public onInit() {}
 
 	public onStart() {
-		this.trove = new Trove();
-		this.KillerSpawned = new Signal();
-		this.KillerCleared = new Signal();
 		this.NAMES[2] = "**";
 		for (let i = 0; i < this.KillerTemplates.size(); i++) {
 			this.NAMES[i + 2] = this.KillerTemplates[i].Name;
@@ -142,12 +139,12 @@ export class KillerService implements OnInit, OnStart {
 
 			spawnIndex = spawnIndex > 0 ? spawnIndex : this.GetRandomSpawnIndex();
 
-			const trove = new Trove();
+			const killerTrove = new Trove();
 
 			if (
 				onCancel(() => {
 					releaseSpawnLock();
-					trove.clean();
+					killerTrove.clean();
 				})
 			) {
 				return;
@@ -162,10 +159,10 @@ export class KillerService implements OnInit, OnStart {
 			const clone = template.Clone();
 			clone.Parent = Workspace;
 
-			const behaviorFactory = SpecialKillerBehavior.Get(name);
-			const killer = new Killer(clone, trove);
+			const killer = new Killer(clone);
 			killer.id = this.killers.size() + 1;
-			killer.behavior = new behaviorFactory(killer);
+			killerTrove.add(killer.trove); // add the killer's trove to it's "parent" trove
+			killerTrove.attachToInstance(clone); // the killer's trove is also attached to the same instance, if killer dies, both troves dies.
 
 			this.killers.push(killer);
 
@@ -173,7 +170,7 @@ export class KillerService implements OnInit, OnStart {
 
 			killer.behavior.Setup();
 
-			trove.add(() => {
+			killerTrove.add(() => {
 				const idx = this.killers.indexOf(killer);
 				if (idx !== -1) {
 					this.killers.remove(idx);
@@ -181,7 +178,7 @@ export class KillerService implements OnInit, OnStart {
 				}
 			});
 
-			this.trove.add(trove);
+			this.trove.add(killerTrove);
 			this.KillerSpawned.Fire(killer);
 			releaseSpawnLock();
 			return resolve(killer);
@@ -242,19 +239,15 @@ export class KillerService implements OnInit, OnStart {
 	}
 
 	public async SpawnKiller(name: string, spawnIndex: number): Promise<Types.Killer> {
-		if (name === "*") {
-			error("Bulk spawn not allowed from this API.");
-		} else if (name === "**") {
+		if (name === "*") error("Bulk spawn not allowed from this API.");
+		else if (name === "**") {
 			const pick = this.KillerTemplates[math.random(0, this.KillerTemplates.size() - 1)];
 			return this.spawn(pick.Name, spawnIndex);
-		} else {
-			return this.spawn(name, spawnIndex);
-		}
+		} else return this.spawn(name, spawnIndex);
 	}
 
 	public async SpawnKillers(names: string[], spawnIndex: number): Promise<Types.Killer[]> {
 		const valid = names.filter((n) => this.IsValidName(n));
-		print(valid, names);
 		if (valid.size() === 0) return Promise.reject("No valid killers to spawn") as Promise<Types.Killer[]>; // ugly
 
 		const killers: Types.Killer[] = [];
@@ -275,6 +268,7 @@ export class KillerService implements OnInit, OnStart {
 
 		return chain.andThen(() => {
 			if (killers.size() > 0) return killers;
+			warn(names, spawnIndex);
 			return Promise.reject(`All ${errors.size()} killer spawns failed: ${errors.join(", ")}`);
 		}) as Promise<Types.Killer[]>;
 	}

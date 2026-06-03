@@ -35,7 +35,7 @@ import Signal from "@rbxts/signal";
 import { t } from "@rbxts/t";
 
 // Types
-import * as Types from "server/types/PlayerDataServiceTypes";
+import * as Types from "server/types/PlayerDataService";
 
 // Networking
 import Networking from "shared/networking/PlayerDataNetwork";
@@ -99,15 +99,15 @@ export default class PlayerDataService implements OnInit, OnStart {
 	--- Init / Start
 	--------------------------------------------------------------------
 	*/
-	public onInit() {}
-
-	public onStart() {
+	public onInit() {
 		this.store = ProfileStore.New(this.DATASTORE_KEY, this.TEMPLATE);
 
 		Players.PlayerRemoving.Connect((player) => {
 			this.release(player).catch(warn);
 		});
+	}
 
+	public onStart() {
 		const createProfileForPlayer = (player: Player) => {
 			this.load(player)
 				.andThen(() => print(`[${script.Name}] loaded ${player.Name}'s profile`))

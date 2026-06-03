@@ -58,7 +58,6 @@ export default abstract class VotingServiceClass implements OnInit, OnStart {
 	/*
 		runtime fields
 	*/
-	private trove: Trove = new Trove();
 	public VotingStarted = new Signal<(mapOptions: Types.MapData[]) => void>();
 	public VotingEnded = new Signal<(winner: string, voteCount: Map<string, number>) => void>();
 	public VoteCast = new Signal<(player: Player, mapName: string, previousVote: string) => void>();
@@ -141,43 +140,40 @@ export default abstract class VotingServiceClass implements OnInit, OnStart {
 	public onStart() {
 		math.randomseed(os.clock());
 
-		this.trove.add(
-			this.RoundService.RoundEnded.Connect((skipped) => {
-				if (skipped) return;
+		this.RoundService.RoundEnded.Connect((skipped) => {
+			if (skipped) return;
 
-				this.StartVoting()
-					.andThen((winningMap) => {
-						// TODO: do not hard-code the map's name to "Map"
-						const existing = Workspace.FindFirstChild("Map");
-						if (existing && existing.IsA("Model")) existing.Destroy();
+			this.StartVoting()
+				.andThen((winningMap) => {
+					// TODO: do not hard-code the map's name to "Map"
+					const existing = Workspace.FindFirstChild("Map");
+					if (existing && existing.IsA("Model")) existing.Destroy();
 
-						const mapTemplate = this.MapsFolder.FindFirstChild(winningMap);
-						if (!mapTemplate || !mapTemplate.IsA("Model")) {
-							warn(`[${script.Name}] Winning map "${winningMap}" not found or not a Model.`);
-							return;
-						}
+					const mapTemplate = this.MapsFolder.FindFirstChild(winningMap);
+					if (!mapTemplate || !mapTemplate.IsA("Model")) {
+						warn(`[${script.Name}] Winning map "${winningMap}" not found or not a Model.`);
+						return;
+					}
 
-						const newMapClone = mapTemplate.Clone() as Model;
-						const mapTrove = new Trove();
-						newMapClone.Parent = Workspace;
-						newMapClone.Name = "Map";
+					const newMapClone = mapTemplate.Clone() as Model;
+					const mapTrove = new Trove();
+					newMapClone.Parent = Workspace;
+					newMapClone.Name = "Map";
 
-						mapTrove.attachToInstance(newMapClone);
-						const behavior = SpecialMapBehavior.Get(winningMap);
-						behavior.OnMapLoaded(newMapClone, mapTrove);
+					mapTrove.attachToInstance(newMapClone);
+					const behavior = SpecialMapBehavior.Get(winningMap);
+					behavior.OnMapLoaded(newMapClone, mapTrove);
 
-						for (const player of Players.GetPlayers()) {
-							task.spawn(() => player.LoadCharacterAsync());
-						}
+					for (const player of Players.GetPlayers()) {
+						task.spawn(() => player.LoadCharacterAsync());
+					}
 
-						// TODO: add an intermission time between map changes, maybe 15s?
+					// TODO: add an intermission time between map changes, maybe 15s?
 
-						// eslint-disable-next-line roblox-ts/no-any
-						this.RoundService.Stop("**", true).catch(warn);
-					})
-					.catch(warn);
-			}),
-		);
+					this.RoundService.Stop("**", true).catch(warn);
+				})
+				.catch(warn);
+		});
 	}
 
 	/*

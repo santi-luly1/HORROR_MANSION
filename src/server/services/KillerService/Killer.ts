@@ -18,7 +18,8 @@
 --------------------------------------------------------------------
 */
 import { Trove } from "@rbxts/trove";
-import type * as Types from "server/types/KillerServiceTypes";
+import type * as Types from "server/types/KillerService";
+import SpecialKillerBehavior from "./SpecialKillerBehavior";
 
 /*
 --------------------------------------------------------------------
@@ -37,7 +38,7 @@ export default class Killer implements Types.Killer {
 	public maxHealth: number;
 	public health: number;
 	public lastDamageTime: number;
-	public declare behavior: Types.BehaviorModule; // KillerService.ts handles this.
+	public behavior: Types.BehaviorModule;
 	public trove: Trove;
 	public state: Enum.HumanoidStateType;
 
@@ -50,7 +51,9 @@ export default class Killer implements Types.Killer {
 	--- Constructor
 	--------------------------------------------------------------------
 	*/
-	constructor(model: Model, trove: Trove) {
+	constructor(model: Model) {
+		const behavior = SpecialKillerBehavior.Get(model.Name);
+
 		this.name = model.Name;
 		this.model = model;
 		this.humanoid = model.FindFirstChildOfClass("Humanoid") as Humanoid;
@@ -60,13 +63,14 @@ export default class Killer implements Types.Killer {
 		this.maxHealth = this.humanoid.MaxHealth;
 		this.health = this.maxHealth;
 		this.lastDamageTime = 0;
-		this.trove = trove;
+		this.behavior = new behavior(this); // is it allowed?
+		this.trove = new Trove();
 		this.state = Enum.HumanoidStateType.PlatformStanding; // should it be none?
 
 		this.animator = new Instance("Animator") as Animator;
 		this.animator.Parent = this.humanoid;
 
-		trove.attachToInstance(model);
+		this.trove.attachToInstance(model);
 
 		this.setupStandardBehavior();
 	}
@@ -108,16 +112,18 @@ export default class Killer implements Types.Killer {
 		this.trove.add(sitConn);
 
 		let canHit = true;
+
 		const touchConn = this.hitbox.Touched.Connect((hit) => {
 			const char = hit.Parent;
 			const targetHum = char && char.FindFirstChildOfClass("Humanoid");
+
 			if (
 				canHit &&
 				char &&
 				targetHum &&
 				targetHum.Health > 0 &&
 				!char.FindFirstChildOfClass("ForceField") &&
-				char.GetAttribute("killer") === false
+				char.GetAttribute("killer") !== true
 			) {
 				canHit = false;
 
@@ -125,8 +131,7 @@ export default class Killer implements Types.Killer {
 
 				this.behavior.DamageVictim(targetHum);
 
-				const delay = this.behavior.GetBonkDelay();
-				task.delay(delay, () => {
+				task.delay(this.behavior.GetBonkDelay(), () => {
 					canHit = true;
 				});
 			}
@@ -158,9 +163,7 @@ export default class Killer implements Types.Killer {
 
 		this.PlaySound(this.behavior.GetBonkSound(), { Volume: 0.5 });
 
-		if (this.health <= 0) {
-			this.Kill();
-		}
+		if (this.health <= 0) this.Kill();
 
 		return true;
 	}

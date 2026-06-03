@@ -23,3 +23,5 @@ export interface SpecialMapBehaviorType {
 	Init: (this: SpecialMapBehaviorType) => void;
 	Get: (this: SpecialMapBehaviorType, name: string) => BehaviorModule;
 }
+
+export type BehaviorConstructor = new () => BehaviorModule;
