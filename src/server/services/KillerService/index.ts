@@ -56,7 +56,7 @@ import Killer from "./Killer";
 */
 
 @Service()
-export class KillerService implements OnInit, OnStart {
+export default class KillerService implements OnInit, OnStart {
 	/*
 	--------------------------------------------------------------------
 	--- Variables
@@ -109,8 +109,9 @@ export class KillerService implements OnInit, OnStart {
 	--------------------------------------------------------------------
 	*/
 	private getSpawnCFrame(index: number): CFrame {
-		const spawns = Workspace.FindFirstChild("Map")!.FindFirstChild("spawns")!.GetChildren() as SpawnLocation[];
-		return spawns[index].CFrame.mul(new CFrame(0, 10, 0));
+		const spawns = Workspace.FindFirstChild("Map")!.FindFirstChild("spawns")! as Folder;
+		const spawn = spawns.FindFirstChild(tostring(index)) as SpawnLocation;
+		return spawn.CFrame.mul(new CFrame(0, 10, 0));
 	}
 
 	/*
@@ -120,17 +121,10 @@ export class KillerService implements OnInit, OnStart {
 	*/
 	private async spawn(name: string, spawnIndex: number): Promise<Types.Killer> {
 		return new Promise((resolve, reject, onCancel) => {
-			if (!this.spawnCheck([name, spawnIndex])) {
-				return reject(`[${script.Name}] bad argument(s)`);
-			}
+			if (!this.spawnCheck([name, spawnIndex])) return reject(`[${script.Name}] bad argument(s)`);
+			if (!this.IsValidName(name)) return reject(`Name '${name}' is invalid`);
+			if (this.spawningNames[name]) return reject(`Killer '${name}' spawn already in progress`);
 
-			if (!this.IsValidName(name)) {
-				return reject(`Name '${name}' is invalid`);
-			}
-
-			if (this.spawningNames[name]) {
-				return reject(`Killer '${name}' spawn already in progress`);
-			}
 			this.spawningNames[name] = true;
 
 			const releaseSpawnLock = () => {

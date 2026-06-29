@@ -46,7 +46,7 @@ import SpecialMapBehavior from "./SpecialMapBehavior";
 */
 
 @Service()
-export default abstract class VotingServiceClass implements OnInit, OnStart {
+export default class VotingServiceClass implements OnInit, OnStart {
 	/*
 		state
 	*/
@@ -77,6 +77,7 @@ export default abstract class VotingServiceClass implements OnInit, OnStart {
 	*/
 	private MapsFolder = ServerStorage.WaitForChild("Maps");
 	private readonly VOTING_DURATION = 10; // should be the round's intermission time, but if it'll be readonly, then it will have to be hardcodded.
+	private readonly DEFAULT_VOTING_COUNT = 3; // ammount of maps that appear as options
 
 	private voteCheck = t.strictArray(t.instanceOf("Player"), t.string);
 
@@ -105,7 +106,7 @@ export default abstract class VotingServiceClass implements OnInit, OnStart {
 
 		if (allMaps.size() === 0) return selected;
 
-		// clamp count to available maps
+		// clamp count to available maps (avoids crash)
 		const maxCount = math.clamp(count, 1, allMaps.size());
 
 		while (selected.size() < maxCount) {
@@ -170,7 +171,7 @@ export default abstract class VotingServiceClass implements OnInit, OnStart {
 
 					// TODO: add an intermission time between map changes, maybe 15s?
 
-					this.RoundService.Stop("**", true).catch(warn);
+					// this.RoundService.Stop("**", true).catch(warn);
 				})
 				.catch(warn);
 		});
@@ -191,7 +192,7 @@ export default abstract class VotingServiceClass implements OnInit, OnStart {
 			this.votes.clear();
 			this.winningMap = "N/A";
 
-			const options = mapNames ?? this.getRandomMaps(3);
+			const options = mapNames ?? this.getRandomMaps(this.DEFAULT_VOTING_COUNT);
 			this.mapOptions = [];
 
 			for (const name of options) {

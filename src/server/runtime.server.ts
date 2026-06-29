@@ -16,7 +16,7 @@ import { Flamework } from "@flamework/core";
 import { Lighting } from "@rbxts/services";
 
 // initial set-up
-Lighting.Ambient = Color3.fromRGB(0, 0, 0);
+Lighting.Ambient = Color3.fromRGB(128, 128, 128);
 
 Flamework.addPaths("src/server/components");
 Flamework.addPaths("src/server/services");

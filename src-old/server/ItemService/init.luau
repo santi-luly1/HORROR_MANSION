@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	@class ItemService
-    @author santi-luly1
+    @author a
     @description Server-side item manager for players.
 
     CHANGELOG: [

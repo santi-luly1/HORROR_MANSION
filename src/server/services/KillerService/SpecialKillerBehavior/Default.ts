@@ -12,7 +12,7 @@ import compute from "../Compute"; // make it not so hardcodded
 --- Default (base) behavior
 --------------------------------------------------------------------
 */
-export class Default implements BehaviorModule {
+export default class Default implements BehaviorModule {
 	protected killer: Killer;
 
 	constructor(killer: Killer) {
@@ -63,5 +63,3 @@ export class Default implements BehaviorModule {
 		return 1.5;
 	}
 }
-
-export default Default;

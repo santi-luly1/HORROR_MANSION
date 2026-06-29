@@ -6,6 +6,7 @@
 import { RunService } from "@rbxts/services";
 import simplepath from "@rbxts/simplepath";
 import Default from "./Default";
+import Killer from "../Killer";
 
 /*
 --------------------------------------------------------------------
@@ -13,7 +14,10 @@ import Default from "./Default";
 --------------------------------------------------------------------
 */
 
-class Hacker extends Default {
+export default class Hacker extends Default {
+	constructor(killer: Killer) {
+		super(killer);
+	}
 	public Setup(): void {
 		const killer = this.killer;
 		killer.humanoid.WalkSpeed = 24;
@@ -29,7 +33,7 @@ class Hacker extends Default {
 
 		killer.PlaySound(123437024423007, { Looped: true, Volume: 0.5 }); // ambience
 
-		//AI
+		// AI
 		killer.trove.add(
 			task.spawn(() => {
 				while (this.killer.IsAlive()) {
@@ -63,5 +67,3 @@ class Hacker extends Default {
 		return 1.5;
 	}
 }
-
-export default Hacker;

@@ -23,7 +23,7 @@
 --------------------------------------------------------------------
 */
 // Roblox services
-import { Debris, Players, Workspace } from "@rbxts/services";
+import { Debris, Players, RunService, Workspace } from "@rbxts/services";
 
 // Packages
 import { Service, OnInit, OnStart } from "@flamework/core";
@@ -39,7 +39,7 @@ import { Killer } from "server/types/KillerService";
 // Local utilities
 
 // Services
-import { KillerService } from "./KillerService";
+import KillerService from "./KillerService";
 import PlayerDataService from "./PlayerDataService";
 
 /*
@@ -76,7 +76,7 @@ export default class RoundServiceClass implements OnInit, OnStart {
 	--------------------------------------------------------------------
 	*/
 	// private countdownHint = new Instance("Hint"); // TODO: Since this is deprecated, I'll have to make them into a gui notification
-	private readonly TOTAL_ROUND_DURATION = 120;
+	private readonly TOTAL_ROUND_DURATION = RunService.IsStudio() ? 15 : 120; // TODO: probably add command for these readonly properties.
 	private readonly ANNOUNCEMENT_LIFETIME = 3;
 	private readonly INTERMISSION_TIMEOUT = 10;
 
@@ -89,7 +89,7 @@ export default class RoundServiceClass implements OnInit, OnStart {
 
 	public onStart() {
 		// start the main loop.
-		this.Begin("**").catch(warn);
+		this.Begin("Killer").catch(warn);
 	}
 
 	/*
@@ -205,7 +205,7 @@ export default class RoundServiceClass implements OnInit, OnStart {
 								countdown--;
 							}
 
-							if (this.inProgress && !this.isEnding) task.defer(() => this.Stop().catch(warn));
+							if (this.inProgress && !this.IsEnding()) task.defer(() => this.Stop().catch(warn));
 						}),
 					);
 
@@ -284,7 +284,7 @@ export default class RoundServiceClass implements OnInit, OnStart {
 			}
 
 			// maybe its name would be better if it was smth like "OnIntermission"
-			this.RoundEnded.Fire(skipped || false);
+			this.RoundEnded.Fire(skipped);
 
 			this.initIntermissionCountdown(skipped)
 				.andThen(() => {
@@ -302,27 +302,28 @@ export default class RoundServiceClass implements OnInit, OnStart {
 	--------------------------------------------------------------------
 	*/
 	public async Begin(preferredKiller: string): Promise<Killer[]> {
+		assert(!this.inProgress, "Round already in progress");
 		assert(!this.isEnding, "Round is ending");
-		assert(!this.OnIntermission(), "Cannot start round during intermission");
+		assert(!this.OnIntermission(), "Round is in intermission");
 
-		if (this.inProgress) {
-			return this.Stop(preferredKiller, true).andThen(() => this.startRound(preferredKiller));
-		}
+		// if (this.inProgress) {
+		// return this.Stop(preferredKiller, true).andThen(() => this.startRound(preferredKiller));
+		// }
 
 		return this.startRound(preferredKiller);
 	}
 
-	public OnIntermission(): boolean {
-		return this.isEnding && !this.inProgress;
-	}
-
 	public async Stop(preferredKiller?: string, skipped?: boolean): Promise<void> {
-		assert(!this.isEnding, "Round already ending");
+		if (this.isEnding) return Promise.reject("Round already ending") as Promise<void>;
 		this.isEnding = true;
 
 		this.cleanupRound();
 
 		return this.endRound(preferredKiller ?? "**", skipped || false) as Promise<void>;
+	}
+
+	public OnIntermission(): boolean {
+		return this.isEnding && !this.inProgress;
 	}
 
 	public GetIntermissionTimeout(): number {

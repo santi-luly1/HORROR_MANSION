@@ -20,7 +20,7 @@
 import Net, { Definitions } from "@rbxts/net";
 
 export = Net.CreateDefinitions({
-	PurchaseItem: Definitions.ClientToServerEvent<[itemName: string]>(),
+	PurchaseItem: Definitions.ServerAsyncFunction<(itemName: string) => string>(),
 	GetAvailableItems: Definitions.ServerAsyncFunction<() => [items: string[]]>(),
 	GetItemData: Definitions.ServerAsyncFunction<(item: string) => []>(), // TODO: types
 	ItemGranted: Definitions.ServerToClientEvent<[item: Tool]>(),
