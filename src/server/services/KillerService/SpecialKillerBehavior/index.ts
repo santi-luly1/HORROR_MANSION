@@ -11,22 +11,18 @@ import Default from "./Default";
 --- Module
 --------------------------------------------------------------------
 */
-class SpecialKillerBehaviorClass {
-	private behaviors = new Map<string, BehaviorConstructor>();
+export default {
+	Get(name: string): BehaviorConstructor {
+		return behaviors.get(name) ?? Default;
+	},
+};
 
-	public Init(): void {
-		for (const child of script.GetChildren()) {
-			if (child.Name === "Default") continue;
+const behaviors = new Map<string, BehaviorConstructor>();
 
-			const m = require(child as ModuleScript) as BehaviorConstructor;
-			this.behaviors.set(child.Name, m);
-		}
-	}
+for (const child of script.GetChildren()) {
+	if (child.Name === "Default") continue;
 
-	public Get(name: string): BehaviorConstructor {
-		return this.behaviors.get(name) ?? Default;
-	}
+	const mod = require(child as ModuleScript) as unknown;
+	const behavior = (mod as { default?: unknown }).default ?? mod;
+	behaviors.set(child.Name, behavior as BehaviorConstructor);
 }
-
-const SpecialKillerBehavior = new SpecialKillerBehaviorClass();
-export default SpecialKillerBehavior;

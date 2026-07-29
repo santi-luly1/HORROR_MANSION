@@ -13,10 +13,13 @@
 ]=]
 */
 import { Flamework } from "@flamework/core";
+import logger from "@rbxts/logger";
 import { Lighting } from "@rbxts/services";
 
 // initial set-up
 Lighting.Ambient = Color3.fromRGB(128, 128, 128);
+
+logger.configure().setMinimumLogLevel("DEBUG");
 
 Flamework.addPaths("src/server/components");
 Flamework.addPaths("src/server/services");

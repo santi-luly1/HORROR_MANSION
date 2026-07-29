@@ -183,9 +183,7 @@ export default class Killer implements Types.Killer {
 		this.trove.clean();
 
 		task.delay(10, () => {
-			if (this.model && this.model.Parent) {
-				this.model.Destroy();
-			}
+			if (this.model && this.model.Parent) this.model.Destroy();
 		});
 	}
 
@@ -228,9 +226,7 @@ export default class Killer implements Types.Killer {
 		const animTrack = this.animator.LoadAnimation(animInstance);
 		animTrack.Play();
 		this.trove.add(() => {
-			if (animTrack.IsPlaying) {
-				animTrack.Stop();
-			}
+			if (animTrack.IsPlaying) animTrack.Stop();
 		});
 		return animTrack;
 	}

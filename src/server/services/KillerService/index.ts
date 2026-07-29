@@ -17,7 +17,8 @@
 		26/04/17 --> Added GetKillerInRound API.
 		26/04/25 --> Added a delay before deleting the killer's model, and made the module to be OOP instead (..too much?).
 		26/05/06 --> Moved humanoid-related stuff into KillerClass to handle.
-        26/05/24 --> Parsed into roblox-ts
+        26/05/24 --> Parsed into roblox-ts.
+		26/07/16 --> Implemented logger.
     ]
 ]=]
 */
@@ -33,6 +34,7 @@ import { ServerStorage, Workspace } from "@rbxts/services";
 // Packages
 import { Service, OnInit, OnStart } from "@flamework/core";
 import { Trove } from "@rbxts/trove";
+import { debug, info, warn } from "@rbxts/logger";
 import { t } from "@rbxts/t";
 import Promise from "@rbxts-js/roblox-lua-promise";
 import Signal from "@rbxts/signal";
@@ -44,7 +46,6 @@ import * as Types from "server/types/KillerService";
 import Networking from "shared/networking/KillerServiceNetwork";
 
 // Local utilities
-import SpecialKillerBehavior from "./SpecialKillerBehavior";
 import Killer from "./Killer";
 
 // Services
@@ -95,7 +96,6 @@ export default class KillerService implements OnInit, OnStart {
 		for (let i = 0; i < this.KillerTemplates.size(); i++) {
 			this.NAMES[i + 2] = this.KillerTemplates[i].Name;
 		}
-		SpecialKillerBehavior.Init();
 
 		Networking.Server.Get("GetKillersName").SetCallback(() => {
 			return [this.GetKillersName()];
@@ -121,9 +121,20 @@ export default class KillerService implements OnInit, OnStart {
 	*/
 	private async spawn(name: string, spawnIndex: number): Promise<Types.Killer> {
 		return new Promise((resolve, reject, onCancel) => {
-			if (!this.spawnCheck([name, spawnIndex])) return reject(`[${script.Name}] bad argument(s)`);
-			if (!this.IsValidName(name)) return reject(`Name '${name}' is invalid`);
-			if (this.spawningNames[name]) return reject(`Killer '${name}' spawn already in progress`);
+			debug(`[${script.Name}] spawn() requested: name=${name}, spawnIndex=${spawnIndex}`);
+
+			if (!this.spawnCheck([name, spawnIndex])) {
+				warn(`[${script.Name}] spawn() rejected: bad argument(s)`);
+				return reject(`[${script.Name}] bad argument(s)`);
+			}
+			if (!this.IsValidName(name)) {
+				warn(`[${script.Name}] spawn() rejected: invalid name "${name}"`);
+				return reject(`Name '${name}' is invalid`);
+			}
+			if (this.spawningNames[name]) {
+				warn(`[${script.Name}] spawn() rejected: killer '${name}' already in progress`);
+				return reject(`Killer '${name}' spawn already in progress`);
+			}
 
 			this.spawningNames[name] = true;
 
@@ -139,6 +150,7 @@ export default class KillerService implements OnInit, OnStart {
 				onCancel(() => {
 					releaseSpawnLock();
 					killerTrove.clean();
+					info(`[${script.Name}] spawn() cancelled: name=${name}, spawnIndex=${spawnIndex}`);
 				})
 			) {
 				return;
@@ -147,6 +159,7 @@ export default class KillerService implements OnInit, OnStart {
 			const template = this.KillersFolder.FindFirstChild(name) as Model | undefined;
 			if (!template) {
 				releaseSpawnLock();
+				warn(`[${script.Name}] spawn() failed: template not found for "${name}"`);
 				return reject("Killer not found");
 			}
 
@@ -169,11 +182,15 @@ export default class KillerService implements OnInit, OnStart {
 				if (idx !== -1) {
 					this.killers.remove(idx);
 					this.KillerCleared.Fire(killer.name);
+					debug(`[${script.Name}] killer cleared: ${killer.name} (id=${killer.id})`);
 				}
 			});
 
 			this.trove.add(killerTrove);
 			this.KillerSpawned.Fire(killer);
+
+			info(`[${script.Name}] killer spawned: ${killer.name} (id=${killer.id}, spawnIndex=${spawnIndex})`);
+
 			releaseSpawnLock();
 			return resolve(killer);
 		});
@@ -186,7 +203,9 @@ export default class KillerService implements OnInit, OnStart {
 	*/
 	public GetRandomSpawnIndex(): number {
 		const spawns = Workspace.FindFirstChild("Map")!.FindFirstChild("spawns")!.GetChildren() as BasePart[];
-		return math.random(1, spawns.size());
+		const idx = math.random(1, spawns.size());
+		debug(`[${script.Name}] GetRandomSpawnIndex -> ${idx}`);
+		return idx;
 	}
 
 	public GetKillersName(includeSpecial?: boolean): string[] {
@@ -203,17 +222,18 @@ export default class KillerService implements OnInit, OnStart {
 				killers.push(k);
 			}
 		}
+		debug(`[${script.Name}] GetKillerInRound: ${name} -> ${killers.size()} killer(s)`);
 		return killers;
 	}
 
 	public IsValidName(name: string, includeSpecial?: boolean): boolean {
-		if (includeSpecial) {
+		if (includeSpecial)
 			return (
 				this.NAMES.find((value) => {
 					return value === name;
 				}) !== undefined
 			);
-		}
+
 		return (
 			this.NAMES.find((value) => {
 				return value === name;
@@ -228,21 +248,33 @@ export default class KillerService implements OnInit, OnStart {
 	}
 
 	public Clear() {
+		info(`[${script.Name}] Clear() called. Current killers: ${this.killers.size()}`);
 		this.trove.clean();
-		table.clear(this.killers);
+		this.killers.clear();
 	}
 
 	public async SpawnKiller(name: string, spawnIndex: number): Promise<Types.Killer> {
-		if (name === "*") error("Bulk spawn not allowed from this API.");
-		else if (name === "**") {
+		debug(`[${script.Name}] SpawnKiller() name=${name}, spawnIndex=${spawnIndex}`);
+
+		if (name === "*") {
+			error("Bulk spawn not allowed from this API.");
+		} else if (name === "**") {
 			const pick = this.KillerTemplates[math.random(0, this.KillerTemplates.size() - 1)];
+			info(`[${script.Name}] SpawnKiller() special '**' picked: ${pick.Name}`);
 			return this.spawn(pick.Name, spawnIndex);
-		} else return this.spawn(name, spawnIndex);
+		} else {
+			return this.spawn(name, spawnIndex);
+		}
 	}
 
 	public async SpawnKillers(names: string[], spawnIndex: number): Promise<Types.Killer[]> {
+		debug(`[${script.Name}] SpawnKillers() count=${names.size()}, spawnIndex=${spawnIndex}`);
+
 		const valid = names.filter((n) => this.IsValidName(n));
-		if (valid.size() === 0) return Promise.reject("No valid killers to spawn") as Promise<Types.Killer[]>; // ugly
+		if (valid.size() === 0) {
+			warn(`[${script.Name}] SpawnKillers() rejected: no valid killers`);
+			return Promise.reject("No valid killers to spawn") as Promise<Types.Killer[]>; // ugly
+		}
 
 		const killers: Types.Killer[] = [];
 		const errors: string[] = [];
@@ -257,17 +289,20 @@ export default class KillerService implements OnInit, OnStart {
 				})
 				.catch((e) => {
 					errors.push(tostring(e));
+					warn(`[${script.Name}] SpawnKillers() failed for "${name}": ${tostring(e)}`);
 				});
 		}
 
 		return chain.andThen(() => {
 			if (killers.size() > 0) return killers;
-			warn(names, spawnIndex);
+			warn(`${names}, ${spawnIndex}`);
 			return Promise.reject(`All ${errors.size()} killer spawns failed: ${errors.join(", ")}`);
 		}) as Promise<Types.Killer[]>;
 	}
 
 	public async SpawnAll(spawnIndex: number): Promise<Types.Killer[]> {
+		debug(`[${script.Name}] SpawnAll() spawnIndex=${spawnIndex}`);
+
 		const validNames: string[] = [];
 
 		for (const name of this.GetKillersName()) {
@@ -277,8 +312,9 @@ export default class KillerService implements OnInit, OnStart {
 		}
 
 		if (validNames.size() === 0) {
-			return Promise.reject("No valid killers available to spawn") as Promise<Types.Killer[]>; // ugly
-		}
+			warn(`[${script.Name}] SpawnAll() rejected: no valid killers available to spawn`);
+			return Promise.reject("No valid killers available to spawn") as Promise<Types.Killer[]>;
+		} // ugly
 
 		return this.SpawnKillers(validNames, spawnIndex);
 	}

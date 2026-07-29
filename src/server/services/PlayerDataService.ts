@@ -15,6 +15,7 @@
 		26/02/16 --> Fixed race conditions.
 		26/03/13 --> Added signal checks to avoid stat updates during player removal (AI).
         26/05/15 --> Parsed into roblox-ts.
+		26/07/16 --> Implemented logger.
 ]=]
 */
 
@@ -29,6 +30,7 @@ import { Players, RunService } from "@rbxts/services";
 // Packages
 import { Service, OnInit, OnStart } from "@flamework/core";
 import { Trove } from "@rbxts/trove";
+import { debug, info, warn } from "@rbxts/logger";
 import ProfileStore from "@rbxts/profile-store";
 import Promise from "@rbxts-js/roblox-lua-promise";
 import Signal from "@rbxts/signal";
@@ -103,15 +105,19 @@ export default class PlayerDataService implements OnInit, OnStart {
 		this.store = ProfileStore.New(this.DATASTORE_KEY, this.TEMPLATE);
 
 		Players.PlayerRemoving.Connect((player) => {
-			this.release(player).catch(warn);
+			debug(`[${script.Name}] PlayerRemoving: ${player.Name}`);
+			this.release(player);
 		});
+
+		info(`[${script.Name}] Initialized (datastore: ${this.DATASTORE_KEY})`);
 	}
 
 	public onStart() {
 		const createProfileForPlayer = (player: Player) => {
+			debug(`[${script.Name}] PlayerAdded: ${player.Name} -> loading profile`);
 			this.load(player)
-				.andThen(() => print(`[${script.Name}] loaded ${player.Name}'s profile`))
-				.catch(warn);
+				.andThen(() => info(`[${script.Name}] loaded ${player.Name}'s profile`))
+				.catch((e) => warn(`[${script.Name}] failed loading profile for ${player.Name}: ${e}`));
 		};
 
 		Players.PlayerAdded.Connect(createProfileForPlayer);
@@ -128,6 +134,7 @@ export default class PlayerDataService implements OnInit, OnStart {
 	*/
 	private async load(player: Player): Promise<Types.PlayerProfile> {
 		if (this.loadingPromises.has(player)) {
+			debug(`[${script.Name}] load() dedup hit for ${player.Name}`);
 			return this.loadingPromises.get(player)!;
 		}
 
@@ -140,14 +147,19 @@ export default class PlayerDataService implements OnInit, OnStart {
 					Cancel: () => player.Parent !== Players,
 				});
 				if (profile) break;
+				debug(`[${script.Name}] load retry ${attempt}/${this.MAX_RETRIES} for ${player.Name} (not ready)`);
 				task.wait(this.YIELD_PER_RETRY * 2 ** (attempt - 1));
 			}
 
-			if (!profile)
+			if (!profile) {
+				warn(`[${script.Name}] could not load profile for ${player.Name} after ${this.MAX_RETRIES} tries`);
 				return reject(
 					`[${script.Name}] could not load profile for ${player.Name} after ${this.MAX_RETRIES} tries`,
 				);
+			}
+
 			if (!profile.Data || !typeIs(profile.Data, "table")) {
+				warn(`[${script.Name}] invalid profile data for ${player.Name}`);
 				profile.EndSession();
 				return reject(`[${script.Name}] invalid profile data for ${player.Name}`);
 			}
@@ -157,6 +169,9 @@ export default class PlayerDataService implements OnInit, OnStart {
 
 			if (profile.Data.Version !== this.PROFILE_VERSION) {
 				// we don't have proper migration, whatever.
+				info(
+					`[${script.Name}] profile version mismatch for ${player.Name}: was ${profile.Data.Version}, now ${this.PROFILE_VERSION}`,
+				);
 				profile.Data.Version = this.PROFILE_VERSION;
 			}
 
@@ -210,11 +225,16 @@ export default class PlayerDataService implements OnInit, OnStart {
 				);
 
 			this.ProfileLoaded.Fire(player, profile);
+
+			debug(`[${script.Name}] load() resolved for ${player.Name}`);
 			resolve(profile);
 		});
 
 		this.loadingPromises.set(player, promise);
-		promise.finally(() => this.loadingPromises.delete(player));
+		promise.finally(() => {
+			this.loadingPromises.delete(player);
+			debug(`[${script.Name}] load() finalized for ${player.Name}`);
+		});
 
 		return promise;
 	}
@@ -222,18 +242,19 @@ export default class PlayerDataService implements OnInit, OnStart {
 	private async release(player: Player): Promise<void> {
 		return new Promise((resolve) => {
 			assert(this.playerCheck(player));
+			debug(`[${script.Name}] release() called for ${player.Name}`);
 
 			const loading = this.loadingPromises.get(player);
 			if (loading) loading.await();
 
 			const trove = this.troves.get(player);
-			const sig = this.signals.get(player);
 			if (trove) trove.destroy();
 			this.troves.delete(player);
 			this.signals.delete(player);
 
 			const profile = this.profiles.get(player);
 			if (profile) {
+				info(`[${script.Name}] releasing profile for ${player.Name}`);
 				profile.EndSession();
 				this.ProfileReleased.Fire(player, profile);
 			}
@@ -253,8 +274,12 @@ export default class PlayerDataService implements OnInit, OnStart {
 			assert(this.playerCheck(player));
 
 			const profile = this.profiles.get(player);
-			if (!profile) return reject(`[${script.Name}] profile not loaded for ${player.Name}`);
+			if (!profile) {
+				warn(`[${script.Name}] GetPlayerData: profile not loaded for ${player.Name}`);
+				return reject(`[${script.Name}] profile not loaded for ${player.Name}`);
+			}
 
+			debug(`[${script.Name}] GetPlayerData ok for ${player.Name}`);
 			resolve({ ...profile.Data });
 		});
 	}
@@ -265,11 +290,21 @@ export default class PlayerDataService implements OnInit, OnStart {
 
 			const profile = this.profiles.get(player);
 			const sig = this.signals.get(player);
-			if (!profile) return reject(`[${script.Name}] profile not loaded for ${player.Name}`);
-			if (!typeIs(sig, "table")) return reject(`[${script.Name}] signals not initialized for ${player.Name}`);
+			if (!profile) {
+				warn(`[${script.Name}] SetPlayerStat: profile not loaded for ${player.Name}`);
+				return reject(`[${script.Name}] profile not loaded for ${player.Name}`);
+			}
+			if (!typeIs(sig, "table")) {
+				warn(`[${script.Name}] SetPlayerStat: signals not initialized for ${player.Name}`);
+				return reject(`[${script.Name}] signals not initialized for ${player.Name}`);
+			}
 
-			if (profile.Data[statName] === value) return resolve(true);
+			if (profile.Data[statName] === value) {
+				debug(`[${script.Name}] SetPlayerStat same value for ${player.Name}.${statName}`);
+				return resolve(true);
+			}
 
+			debug(`[${script.Name}] SetPlayerStat ${player.Name}.${statName}=${value}`);
 			profile.Data[statName] = value;
 			sig[this.SIGNAL_NAMES[statName]].Fire(value);
 
@@ -283,12 +318,22 @@ export default class PlayerDataService implements OnInit, OnStart {
 
 			const profile = this.profiles.get(player);
 			const sig = this.signals.get(player);
-			if (!profile) return reject(`[${script.Name}] profile not loaded for ${player.Name}`);
-			if (!typeIs(sig, "table")) return reject(`[${script.Name}] signals not initialized for ${player.Name}`);
+			if (!profile) {
+				warn(`[${script.Name}] UpdatePlayerStat: profile not loaded for ${player.Name}`);
+				return reject(`[${script.Name}] profile not loaded for ${player.Name}`);
+			}
+			if (!typeIs(sig, "table")) {
+				warn(`[${script.Name}] UpdatePlayerStat: signals not initialized for ${player.Name}`);
+				return reject(`[${script.Name}] signals not initialized for ${player.Name}`);
+			}
 
 			const newValue = profile.Data[statName] + delta;
-			if (profile.Data[statName] === newValue) return resolve(newValue);
+			if (profile.Data[statName] === newValue) {
+				debug(`[${script.Name}] UpdatePlayerStat same value for ${player.Name}.${statName}`);
+				return resolve(newValue);
+			}
 
+			debug(`[${script.Name}] UpdatePlayerStat ${player.Name}.${statName} + (${delta}) => ${newValue}`);
 			profile.Data[statName] = newValue;
 			sig[this.SIGNAL_NAMES[statName]].Fire(newValue);
 
@@ -301,8 +346,12 @@ export default class PlayerDataService implements OnInit, OnStart {
 			assert(this.playerCheck(player));
 
 			const sig = this.signals.get(player);
-			if (!typeIs(sig, "table")) return reject(`[${script.Name}] signals not initialized for ${player.Name}`);
+			if (!typeIs(sig, "table")) {
+				warn(`[${script.Name}] ObserveSurvivals: signals not initialized for ${player.Name}`);
+				return reject(`[${script.Name}] signals not initialized for ${player.Name}`);
+			}
 
+			debug(`[${script.Name}] ObserveSurvivals connected for ${player.Name}`);
 			resolve(sig.SurvivalsChanged.Connect(callback));
 		});
 	}
@@ -312,8 +361,12 @@ export default class PlayerDataService implements OnInit, OnStart {
 			assert(this.playerCheck(player));
 
 			const sig = this.signals.get(player);
-			if (!typeIs(sig, "table")) return reject(`[${script.Name}] signals not initialized for ${player.Name}`);
+			if (!typeIs(sig, "table")) {
+				warn(`[${script.Name}] ObservePoints: signals not initialized for ${player.Name}`);
+				return reject(`[${script.Name}] signals not initialized for ${player.Name}`);
+			}
 
+			debug(`[${script.Name}] ObservePoints connected for ${player.Name}`);
 			resolve(sig.PointsChanged.Connect(callback));
 		});
 	}
@@ -325,10 +378,12 @@ export default class PlayerDataService implements OnInit, OnStart {
 	*/
 	public async ClearPlayerData(player: Player): Promise<boolean | unknown> {
 		if (!RunService.IsStudio()) {
+			warn(`[${script.Name}] ClearPlayerData called outside Studio`);
 			return Promise.reject(`[${script.Name}] ClearPlayerData can only be used in Studio`);
 		}
 
 		assert(this.playerCheck(player));
+		info(`[${script.Name}] ClearPlayerData: resetting stats for ${player.Name}`);
 
 		return Promise.all([
 			this.SetPlayerStat(player, "Survivals", 0),

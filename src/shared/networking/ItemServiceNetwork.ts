@@ -18,10 +18,11 @@
 --------------------------------------------------------------------
 */
 import Net, { Definitions } from "@rbxts/net";
+import type { ItemData } from "server/types/ItemService";
 
 export = Net.CreateDefinitions({
 	PurchaseItem: Definitions.ServerAsyncFunction<(itemName: string) => string>(),
-	GetAvailableItems: Definitions.ServerAsyncFunction<() => [items: string[]]>(),
-	GetItemData: Definitions.ServerAsyncFunction<(item: string) => []>(), // TODO: types
+	GetAvailableItems: Definitions.ServerAsyncFunction<() => string[]>(),
+	GetItemData: Definitions.ServerAsyncFunction<(itemName: string) => ItemData | undefined>(),
 	ItemGranted: Definitions.ServerToClientEvent<[item: Tool]>(),
 });

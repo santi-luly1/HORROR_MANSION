@@ -19,6 +19,14 @@ export type ItemData = {
 export type ActiveItem = {
 	Tool: Tool;
 	Player: Player;
-	Behavior: any;
+	Behavior: BehaviorModule;
 	Trove: Trove;
 };
+
+export interface BehaviorModule {
+	Setup: (this: BehaviorModule) => void;
+	Destroy: (this: BehaviorModule) => void;
+	GetPlayerFromEquipped: (this: BehaviorModule) => Player | undefined;
+}
+
+export type BehaviorConstructor = new (tool: Tool) => BehaviorModule;

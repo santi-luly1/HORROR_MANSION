@@ -5,9 +5,10 @@
     @description Server-side map voting manager
 
     CHANGELOG: [
-        03/01/26 --> Initial version.
-		03/13/26 --> Ensured StartVoting promise resolves when voting ends early or cancels.
-		05/13/26 --> Parsed into roblox-ts.
+        26/03/01 --> Initial version.
+		26/03/13 --> Ensured StartVoting promise resolves when voting ends early or cancels.
+		26/05/13 --> Parsed into roblox-ts.
+		26/07/16 --> Implemented logger.
     ]
 ]=]
 */
@@ -23,6 +24,7 @@ import { Players, ServerStorage, Workspace } from "@rbxts/services";
 // Packages
 import { Service, OnInit, OnStart } from "@flamework/core";
 import { Trove } from "@rbxts/trove";
+import { debug, info, warn } from "@rbxts/logger";
 import Promise from "@rbxts-js/roblox-lua-promise";
 import Signal from "@rbxts/signal";
 import { t } from "@rbxts/t";
@@ -76,7 +78,7 @@ export default class VotingServiceClass implements OnInit, OnStart {
 	--------------------------------------------------------------------
 	*/
 	private MapsFolder = ServerStorage.WaitForChild("Maps");
-	private readonly VOTING_DURATION = 10; // should be the round's intermission time, but if it'll be readonly, then it will have to be hardcodded.
+	private readonly VOTING_DURATION = RoundService.INTERMISSION_TIMEOUT;
 	private readonly DEFAULT_VOTING_COUNT = 3; // ammount of maps that appear as options
 
 	private voteCheck = t.strictArray(t.instanceOf("Player"), t.string);
@@ -88,15 +90,13 @@ export default class VotingServiceClass implements OnInit, OnStart {
 	*/
 	private getMapData(mapName: string): Types.MapData | undefined {
 		const map = this.MapsFolder.FindFirstChild(mapName);
-		if (!map) {
-			return undefined;
-		}
+		if (!map) return undefined;
 
 		const thumb = map.GetAttribute("thumbnail_id") as number | undefined;
 		return {
 			Name: map.Name,
 			Thumbnail: `rbxassetid://${thumb ?? 13239978947}`,
-		} as Types.MapData;
+		};
 	}
 
 	private getRandomMaps(count: number): string[] {
@@ -127,11 +127,8 @@ export default class VotingServiceClass implements OnInit, OnStart {
 	*/
 
 	public onInit() {
-		// this.VOTING_DURATION = this.RoundService.GetIntermissionTimeout();
-
-		SpecialMapBehavior.Init();
-
 		VotingServiceNetwork.Server.Get("CastVote").Connect((player: Player, mapName: string) => {
+			debug(`[${script.Name}] CastVote request: ${player.Name} -> ${mapName}`);
 			return this.CastVote(player, mapName);
 		});
 
@@ -144,8 +141,11 @@ export default class VotingServiceClass implements OnInit, OnStart {
 		this.RoundService.RoundEnded.Connect((skipped) => {
 			if (skipped) return;
 
+			info(`[${script.Name}] RoundEnded -> starting voting (${this.VOTING_DURATION}s)`);
 			this.StartVoting()
 				.andThen((winningMap) => {
+					debug(`[${script.Name}] Voting resolved. Winner: ${winningMap}`);
+
 					// TODO: do not hard-code the map's name to "Map"
 					const existing = Workspace.FindFirstChild("Map");
 					if (existing && existing.IsA("Model")) existing.Destroy();
@@ -183,8 +183,11 @@ export default class VotingServiceClass implements OnInit, OnStart {
 	--------------------------------------------------------------------
 	*/
 	public async StartVoting(mapNames?: string[]): Promise<string> {
+		debug(`[${script.Name}] StartVoting called${mapNames ? " (custom options)" : ""}`);
+
 		return new Promise((resolve, reject, onCancel) => {
 			if (this.isVoting) {
+				warn(`[${script.Name}] StartVoting rejected: voting already in progress`);
 				return reject("Voting already in progress");
 			}
 
@@ -197,33 +200,34 @@ export default class VotingServiceClass implements OnInit, OnStart {
 
 			for (const name of options) {
 				const data = this.getMapData(name);
-				if (data) {
-					this.mapOptions.push(data);
-				}
+				if (data) this.mapOptions.push(data);
 			}
 
 			if (this.mapOptions.size() === 0) {
 				// just in case.
 				this.isVoting = false;
+				warn(`[${script.Name}] StartVoting rejected: no valid maps to vote on`);
 				return reject("No valid maps to vote on");
 			}
+
+			debug(`[${script.Name}] Voting started with options: ${this.mapOptions.map((m) => m.Name).join(", ")}`);
 
 			VotingServiceNetwork.Server.Get("VotingStarted").SendToAllPlayers(this.mapOptions, this.VOTING_DURATION);
 			this.VotingStarted.Fire(this.mapOptions);
 
 			const startTime = tick();
 			this.countdownThread = task.spawn(() => {
-				while (this.isVoting && tick() - startTime < this.VOTING_DURATION) {
-					task.wait(0.1);
-				}
+				while (this.isVoting && tick() - startTime < this.VOTING_DURATION) task.wait(0.1);
 
 				if (this.isVoting) {
 					const winner = this.EndVoting();
+					debug(`[${script.Name}] Countdown ended. Winner: ${winner}`);
 					return resolve(winner);
 				}
 			});
 
 			onCancel(() => {
+				info(`[${script.Name}] Voting cancelled`);
 				this.isVoting = false;
 				task.cancel(this.countdownThread);
 				return reject("Voting cancelled");
@@ -232,9 +236,9 @@ export default class VotingServiceClass implements OnInit, OnStart {
 	}
 
 	public EndVoting(): string {
-		if (!this.isVoting) {
-			return this.winningMap;
-		}
+		debug(`[${script.Name}] EndVoting called`);
+
+		if (!this.isVoting) return this.winningMap;
 
 		this.isVoting = false;
 
@@ -262,6 +266,7 @@ export default class VotingServiceClass implements OnInit, OnStart {
 		if (ties.size() > 1) {
 			const idx = math.random(0, ties.size() - 1);
 			winner = ties[idx];
+			debug(`[${script.Name}] EndVoting tie resolved -> ${winner}`);
 		}
 
 		this.winningMap = winner;
@@ -269,11 +274,15 @@ export default class VotingServiceClass implements OnInit, OnStart {
 		VotingServiceNetwork.Server.Get("VotingEnded").SendToAllPlayers(winner);
 		this.VotingEnded.Fire(winner, voteCounts);
 
+		info(`[${script.Name}] Voting ended. Winner: ${winner} (maxVotes=${maxVotes})`);
 		return winner;
 	}
 
 	public CastVote(player: Player, mapName: string): boolean {
+		debug(`[${script.Name}] CastVote: ${player.Name} -> ${mapName}`);
+
 		if (!this.isVoting) {
+			debug(`[${script.Name}] CastVote ignored: not voting`);
 			return false;
 		}
 
@@ -288,6 +297,7 @@ export default class VotingServiceClass implements OnInit, OnStart {
 		}
 
 		if (!validOption) {
+			warn(`[${script.Name}] CastVote rejected: invalid option "${mapName}" from ${player.Name}`);
 			return false;
 		}
 
@@ -301,6 +311,7 @@ export default class VotingServiceClass implements OnInit, OnStart {
 	}
 
 	public GetMapOptions(): Types.MapData[] {
+		debug(`[${script.Name}] GetMapOptions called (count=${this.mapOptions.size()})`);
 		return this.mapOptions;
 	}
 
