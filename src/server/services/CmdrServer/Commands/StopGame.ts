@@ -1,4 +1,6 @@
-export default {
+import { CommandDefinition } from "@rbxts/cmdr";
+
+export = identity<CommandDefinition>({
 	Name: "stopGame",
 	Aliases: ["stop", "skip", "skipRound"],
 	Description: "Stops the  round. (This will skip the current one)",
@@ -11,4 +13,4 @@ export default {
 			Default: "**",
 		},
 	],
-};
+});

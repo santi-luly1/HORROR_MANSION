@@ -9,13 +9,9 @@ const NozzleOffset = new Vector3(0, 0.4, -1.1);
 
 const BreakJoints = (Object: Instance) => {
 	if (!Object.IsA("BasePart")) {
-		for (const OtherObject of Object.GetDescendants()) {
-			BreakJoints(OtherObject);
-		}
+		for (const OtherObject of Object.GetDescendants()) BreakJoints(OtherObject);
 	} else {
-		for (const Joint of Object.GetJoints()) {
-			Joint.Destroy();
-		}
+		for (const Joint of Object.GetJoints()) Joint.Destroy();
 	}
 };
 
@@ -33,7 +29,7 @@ export default class HyperlaserGun extends Default {
 	private readonly NozzleOffset = NozzleOffset;
 
 	private Handle: Part;
-	private Sounds!: {
+	private Sounds: {
 		Fire: Sound;
 		Reload: Sound;
 		HitFade: Sound;
@@ -46,9 +42,8 @@ export default class HyperlaserGun extends Default {
 		super(tool);
 
 		const handle = this.tool.FindFirstChild("Handle") as Part | undefined;
-		if (!handle) {
-			throw "Missing Handle";
-		}
+		if (!handle) throw "Missing Handle";
+
 		this.Handle = handle;
 
 		this.ServerControl = new Instance("RemoteFunction");
@@ -81,12 +76,11 @@ export default class HyperlaserGun extends Default {
 		const FindCharacterAncestor = (parent: Instance): [Model | undefined, Humanoid | undefined] => {
 			if (parent && parent !== Workspace) {
 				const humanoid = parent.FindFirstChildOfClass("Humanoid") as Humanoid | undefined;
-				if (humanoid) {
-					return [parent as Model, humanoid];
-				}
-				const next = parent.Parent;
-				if (!next) return [undefined, undefined];
-				return FindCharacterAncestor(next);
+				if (humanoid) return [parent as Model, humanoid];
+
+				const nextAncestor = parent.Parent;
+				if (!nextAncestor) return [undefined, undefined];
+				return FindCharacterAncestor(nextAncestor);
 			}
 			return [undefined, undefined];
 		};
@@ -140,9 +134,7 @@ export default class HyperlaserGun extends Default {
 				if (v.IsA("BasePart")) {
 					(v as BasePart).Anchored = true;
 					Parts.push(v as BasePart);
-				} else if (v.IsA("LocalScript") || v.IsA("Script")) {
-					v.Destroy();
-				}
+				} else if (v.IsA("LocalScript") || v.IsA("Script")) v.Destroy();
 			}
 
 			const SelectionBoxes: Instance[] = [];
@@ -273,9 +265,7 @@ export default class HyperlaserGun extends Default {
 				return;
 
 			const [Mode, Value, arg] = args as [string, unknown, unknown];
-			if (Mode === "Click" && Value) {
-				Activated(arg as Vector3);
-			}
+			if (Mode === "Click" && Value) Activated(arg as Vector3);
 		};
 
 		this.trove.add(

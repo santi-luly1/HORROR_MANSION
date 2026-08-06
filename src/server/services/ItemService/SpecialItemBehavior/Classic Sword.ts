@@ -2,8 +2,6 @@
 import { Debris, Players, RunService } from "@rbxts/services";
 import Default from "./Default";
 
-const BaseUrl = "rbxassetid://";
-
 const DamageValues = {
 	BaseDamage: 5,
 	SlashDamage: 10,
@@ -48,7 +46,7 @@ export default class ClassicSword extends Default {
 		const createSound = (name: string, id: number): Sound => {
 			const sound = new Instance("Sound");
 			sound.Name = name;
-			sound.SoundId = `${BaseUrl}${id}`;
+			sound.SoundId = `rbxassetid://${id}`;
 			sound.Parent = this.Handle;
 			return sound;
 		};
@@ -62,7 +60,7 @@ export default class ClassicSword extends Default {
 		const createAnimation = (name: string, id: number): Animation => {
 			const anim = new Instance("Animation");
 			anim.Name = name;
-			anim.AnimationId = `${BaseUrl}${id}`;
+			anim.AnimationId = `rbxassetid://${id}`;
 			anim.Parent = this.tool;
 			return anim;
 		};
@@ -81,21 +79,9 @@ export default class ClassicSword extends Default {
 		this.tool.Grip = Grips.Up;
 		this.tool.Enabled = true;
 
-		const IsTeamMate = (Player1?: Player, Player2?: Player): boolean => {
-			return (
-				Player1 !== undefined &&
-				Player2 !== undefined &&
-				!Player1.Neutral &&
-				!Player2.Neutral &&
-				Player1.TeamColor === Player2.TeamColor
-			);
-		};
-
 		const UntagHumanoid = (humanoid: Humanoid) => {
 			for (const v of humanoid.GetChildren()) {
-				if (v.IsA("ObjectValue") && v.Name === "creator") {
-					v.Destroy();
-				}
+				if (v.IsA("ObjectValue") && v.Name === "creator") v.Destroy();
 			}
 		};
 
@@ -134,7 +120,7 @@ export default class ClassicSword extends Default {
 			const RightArm = Character.FindFirstChild("Right Arm") ?? Character.FindFirstChild("RightHand");
 			if (!RightArm) return;
 
-			const RightGrip = RightArm.FindFirstChild("RightGrip") as any;
+			const RightGrip = RightArm.FindFirstChild("RightGrip") as Weld;
 			if (!RightGrip || (RightGrip.Part0 !== this.Handle && RightGrip.Part1 !== this.Handle)) return;
 
 			const hitCharacter = Hit.Parent as Model;
@@ -145,7 +131,7 @@ export default class ClassicSword extends Default {
 
 			const hitPlayer = Players.GetPlayerFromCharacter(hitCharacter);
 			const player = this.GetPlayerFromEquipped();
-			if (hitPlayer && (hitPlayer === player || IsTeamMate(player, hitPlayer))) return;
+			if (hitPlayer && hitPlayer === player) return;
 
 			TagHumanoid(humanoid, player!);
 			humanoid.TakeDamage(this.Damage);
@@ -233,9 +219,8 @@ export default class ClassicSword extends Default {
 			this.ToolEquipped = true;
 			this.Sounds.Unsheath.Play();
 
-			if (this.Connection) {
-				this.Connection.Disconnect();
-			}
+			if (this.Connection) this.Connection.Disconnect();
+
 			this.Connection = this.Handle.Touched.Connect(Blow);
 		};
 
@@ -253,15 +238,12 @@ export default class ClassicSword extends Default {
 		this.trove.add(this.tool.Unequipped.Connect(Unequipped));
 
 		this.trove.add(() => {
-			if (this.Connection) {
-				this.Connection.Disconnect();
-			}
+			if (this.Connection) this.Connection.Disconnect();
+
 			this.Connection = undefined;
 
 			const Humanoid = this.Humanoid;
-			if (Humanoid) {
-				UntagHumanoid(Humanoid);
-			}
+			if (Humanoid) UntagHumanoid(Humanoid);
 		});
 	}
 }

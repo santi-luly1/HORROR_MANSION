@@ -1,4 +1,3 @@
-// !strict
 /*
 [=[
 	@class CmdrServer
@@ -21,8 +20,8 @@ export default class CmdrServerClass implements OnInit, OnStart {
 	public onInit() {}
 
 	public onStart() {
-		Cmdr.RegisterCommandsIn(script.Commands);
-		Cmdr.RegisterHooksIn(script.Hooks);
-		Cmdr.RegisterTypesIn(script.Types);
+		Cmdr.RegisterCommandsIn(<Folder>script.FindFirstChild("Commands"));
+		Cmdr.RegisterHooksIn(<Folder>script.FindFirstChild("Hooks"));
+		Cmdr.RegisterTypesIn(<Folder>script.FindFirstChild("Types"));
 	}
 }

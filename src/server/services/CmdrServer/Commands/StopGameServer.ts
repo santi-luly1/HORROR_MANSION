@@ -2,24 +2,23 @@ import { CommandContext } from "@rbxts/cmdr";
 import { Dependency } from "@flamework/core";
 
 import RoundServiceClass from "server/services/RoundService";
-
-const RoundService = Dependency<RoundServiceClass>();
+import CmdrConfig from "shared/CmdrConfig";
 
 export default (context: CommandContext, name: string) => {
+	const RoundService = Dependency<RoundServiceClass>();
+
 	if (RoundService.IsEnding()) {
-		context.Reply("Round is ending, try again in a moment.", new Color3(1, 0.7843137255, 0));
+		context.Reply("Round is ending, try again in a moment.", CmdrConfig.Colors.Warn);
 		return "";
 	}
 
-	context.Reply("Ending round...", new Color3(0.3921568627, 0.7843137255, 0.9019607843)); // 100,200,225
+	context.Reply("Ending round...", CmdrConfig.Colors.Info);
 
 	RoundService.Stop(name, true)
-		.andThen((killers) => {
-			context.Reply(`Round stopped.`, new Color3(0, 1, 0));
-		})
+		.andThen(() => context.Reply(`Round stopped.`, CmdrConfig.Colors.Success))
 		.catch((e) => {
 			warn(`[Command]: ${e}`);
-			context.Reply(`Failed to start round: ${e}`, new Color3(1, 0, 0));
+			context.Reply(`Failed to start round: ${e}`, CmdrConfig.Colors.Error);
 		});
 
 	return "";

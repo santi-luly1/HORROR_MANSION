@@ -64,7 +64,7 @@ export default class KillerService implements OnInit, OnStart {
 	--------------------------------------------------------------------
 	*/
 	private killers: Types.Killer[] = [];
-	private spawningNames: Record<string, true | undefined> = {};
+	private spawningNames = new Set<string>();
 
 	public KillerSpawned = new Signal<(killer: Types.Killer) => void>();
 	public KillerCleared = new Signal<(killerName: string) => void>();
@@ -119,7 +119,7 @@ export default class KillerService implements OnInit, OnStart {
 	--- Private Methods
 	--------------------------------------------------------------------
 	*/
-	private async spawn(name: string, spawnIndex: number): Promise<Types.Killer> {
+	private spawn(name: string, spawnIndex: number): Promise<Types.Killer> {
 		return new Promise((resolve, reject, onCancel) => {
 			debug(`[${script.Name}] spawn() requested: name=${name}, spawnIndex=${spawnIndex}`);
 
@@ -131,17 +131,14 @@ export default class KillerService implements OnInit, OnStart {
 				warn(`[${script.Name}] spawn() rejected: invalid name "${name}"`);
 				return reject(`Name '${name}' is invalid`);
 			}
-			if (this.spawningNames[name]) {
+			if (this.spawningNames.has(name)) {
 				warn(`[${script.Name}] spawn() rejected: killer '${name}' already in progress`);
 				return reject(`Killer '${name}' spawn already in progress`);
 			}
 
-			this.spawningNames[name] = true;
+			this.spawningNames.add(name);
 
-			const releaseSpawnLock = () => {
-				this.spawningNames[name] = undefined;
-			};
-
+			const releaseSpawnLock = () => this.spawningNames.delete(name);
 			spawnIndex = spawnIndex > 0 ? spawnIndex : this.GetRandomSpawnIndex();
 
 			const killerTrove = new Trove();
@@ -152,9 +149,8 @@ export default class KillerService implements OnInit, OnStart {
 					killerTrove.clean();
 					info(`[${script.Name}] spawn() cancelled: name=${name}, spawnIndex=${spawnIndex}`);
 				})
-			) {
+			)
 				return;
-			}
 
 			const template = this.KillersFolder.FindFirstChild(name) as Model | undefined;
 			if (!template) {
@@ -210,17 +206,13 @@ export default class KillerService implements OnInit, OnStart {
 
 	public GetKillersName(includeSpecial?: boolean): string[] {
 		if (includeSpecial) return this.NAMES;
-		return this.NAMES.filter((v) => {
-			return this.IsValidName(v, false);
-		});
+		return this.NAMES.filter((v) => this.IsValidName(v, false)); // isn't this redundant
 	}
 
 	public GetKillerInRound(name: string): Types.Killer[] {
 		const killers: Types.Killer[] = [];
 		for (const k of this.killers) {
-			if (k.name === name) {
-				killers.push(k);
-			}
+			if (k.name === name) killers.push(k);
 		}
 		debug(`[${script.Name}] GetKillerInRound: ${name} -> ${killers.size()} killer(s)`);
 		return killers;
@@ -234,13 +226,7 @@ export default class KillerService implements OnInit, OnStart {
 				}) !== undefined
 			);
 
-		return (
-			this.NAMES.find((value) => {
-				return value === name;
-			}) !== undefined &&
-			name !== "*" &&
-			name !== "**"
-		);
+		return this.NAMES.find((value) => value === name) !== undefined && name !== "*" && name !== "**";
 	}
 
 	public GetCurrentKillers(): Types.Killer[] {
@@ -268,54 +254,27 @@ export default class KillerService implements OnInit, OnStart {
 	}
 
 	public async SpawnKillers(names: string[], spawnIndex: number): Promise<Types.Killer[]> {
-		debug(`[${script.Name}] SpawnKillers() count=${names.size()}, spawnIndex=${spawnIndex}`);
-
-		const valid = names.filter((n) => this.IsValidName(n));
-		if (valid.size() === 0) {
-			warn(`[${script.Name}] SpawnKillers() rejected: no valid killers`);
-			return Promise.reject("No valid killers to spawn") as Promise<Types.Killer[]>; // ugly
-		}
-
 		const killers: Types.Killer[] = [];
 		const errors: string[] = [];
 
-		// chain sequentially
-		let chain = Promise.resolve();
-		for (const name of valid) {
-			chain = chain
-				.andThen(() => this.SpawnKiller(name, spawnIndex))
-				.andThen((k) => {
-					killers.push(k);
-				})
-				.catch((e) => {
-					errors.push(tostring(e));
-					warn(`[${script.Name}] SpawnKillers() failed for "${name}": ${tostring(e)}`);
-				});
+		for (const name of names) {
+			try {
+				const k = await this.SpawnKiller(name, spawnIndex);
+				killers.push(k);
+			} catch (e) {
+				errors.push(tostring(e));
+				warn(`[${script.Name}] SpawnKillers() failed for "${name}": ${tostring(e)}`);
+			}
 		}
 
-		return chain.andThen(() => {
-			if (killers.size() > 0) return killers;
-			warn(`${names}, ${spawnIndex}`);
-			return Promise.reject(`All ${errors.size()} killer spawns failed: ${errors.join(", ")}`);
-		}) as Promise<Types.Killer[]>;
+		if (killers.size() > 0) return killers;
+		warn(`${names}, ${spawnIndex}`);
+		throw `All ${errors.size()} killer spawns failed: ${errors.join(", ")}`;
 	}
 
 	public async SpawnAll(spawnIndex: number): Promise<Types.Killer[]> {
 		debug(`[${script.Name}] SpawnAll() spawnIndex=${spawnIndex}`);
 
-		const validNames: string[] = [];
-
-		for (const name of this.GetKillersName()) {
-			if (this.IsValidName(name)) {
-				validNames.push(name);
-			}
-		}
-
-		if (validNames.size() === 0) {
-			warn(`[${script.Name}] SpawnAll() rejected: no valid killers available to spawn`);
-			return Promise.reject("No valid killers available to spawn") as Promise<Types.Killer[]>;
-		} // ugly
-
-		return this.SpawnKillers(validNames, spawnIndex);
+		return this.SpawnKillers(this.GetKillersName(false), spawnIndex);
 	}
 }

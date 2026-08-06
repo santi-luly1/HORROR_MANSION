@@ -1,5 +1,8 @@
 {
+	"files.autoSave": "afterDelay",
+	"files.autoSaveDelay": 2500,
 	"files.eol": "\n",
+
 	"[typescript]": {
 		"editor.defaultFormatter": "esbenp.prettier-vscode",
 		"editor.formatOnSave": true
@@ -8,48 +11,46 @@
 		"editor.defaultFormatter": "dbaeumer.vscode-eslint",
 		"editor.formatOnSave": true
 	},
+
 	"eslint.run": "onType",
 	"eslint.format.enable": true,
-	"typescript.tsdk": "node_modules/typescript/lib",
-	"editor.fontFamily": "Fira Code, JetBrains Mono, monospace",
-	"luau-lsp.studioPlugin.enabled": true,
-	"luau-lsp.sourcemap.rojoPath": "/home/santiago/.aftman/bin/rojo",
-	"[lua]": {
-		"editor.defaultFormatter": "JohnnyMorganz.stylua",
-		"editor.formatOnSave": true
+
+	"js/ts.tsdk.path": "node_modules/typescript/lib",
+
+	"editor.fontFamily": "'JetBrains Mono', 'Fira Code', monospace",
+	"editor.fontLigatures": true,
+	"editor.bracketPairColorization.enabled": true,
+	"editor.guides.bracketPairs": "active",
+
+	"eslint.enable": true,
+	"eslint.codeAction.showDocumentation": {
+		"enable": true
 	},
-	"[luau]": {
-		"editor.defaultFormatter": "JohnnyMorganz.stylua",
-		"editor.formatOnSave": true
+	"eslint.codeAction.disableRuleComment": {
+		"enable": true,
+		"location": "sameLine"
 	},
-	"workbench.editor.customLabels.patterns": {
-		"**/init.lua": "${dirname} (${filename}.${extname})",
-		"**/init.luau": "${dirname} (${filename}.${extname})"
-	},
-	"files.autoSave": "afterDelay",
+	"path-intellisense.showHiddenFiles": true,
+	"formattingToggle.affects": ["editor.formatOnPaste", "editor.formatOnType"],
+
 	"editor.semanticHighlighting.enabled": true,
-	"stylua.searchParentDirectories": true,
 	"terminal.integrated.defaultProfile.linux": "zsh",
 	"explorer.confirmDragAndDrop": false,
 	"explorer.confirmDelete": false,
 	"workbench.tree.indent": 24,
 	"workbench.iconTheme": "charmed-soft",
-	"workbench.colorTheme": "Monokai Dimmed",
+	"workbench.colorTheme": "Pop N' Lock Theme by Luxcium ✨ Alexis's Black ⛷",
 	"git.autofetch": true,
 	"git.enableSmartCommit": true,
 	"editor.defaultFormatter": "esbenp.prettier-vscode",
 	"editor.formatOnSave": true,
-	"editor.fontLigatures": true,
-	"luau-lsp.completion.autocompleteEnd": true,
 	"chat.disableAIFeatures": true,
-	"luau-lsp.completion.imports.enabled": true,
-	"luau-lsp.inlayHints.variableTypes": false,
-	"files.autoSaveDelay": 2500,
-	"stylua.targetReleaseVersion": "latest",
+	"npm.packageManager": "pnpm",
 	"[jsonc]": {
 		"editor.defaultFormatter": "esbenp.prettier-vscode"
 	},
 	"[json]": {
-		"editor.defaultFormatter": "esbenp.prettier-vscode"
+		"editor.defaultFormatter": "esbenp.prettier-vscode",
+		"editor.formatOnSave": true
 	}
 }

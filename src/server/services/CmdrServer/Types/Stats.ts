@@ -1,5 +1,7 @@
 import { Registry } from "@rbxts/cmdr";
 
-export default (registry: Registry) => {
-	registry.RegisterType("stats", registry.Cmdr.Util.MakeEnumType(script.Name, ["Survivals", "Points"]));
+const Type = "stats";
+
+export = function (registry: Registry) {
+	registry.RegisterType(Type, registry.Cmdr.Util.MakeEnumType(Type, ["Survivals", "Points"]));
 };

@@ -1,4 +1,6 @@
-export default {
+import { CommandDefinition } from "@rbxts/cmdr";
+
+export = identity<CommandDefinition>({
 	Name: "spawnKiller",
 	Aliases: ["sk"],
 	Description: "Spawns a killer at the specified index.",
@@ -17,4 +19,4 @@ export default {
 			Default: -1,
 		},
 	],
-};
+});

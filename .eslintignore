@@ -1,0 +1,5 @@
+node_modules
+.github
+include/generated
+devhub-scraper-master
+tsconfig.ts

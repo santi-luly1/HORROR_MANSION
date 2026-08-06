@@ -5,15 +5,18 @@ import KillerServiceClass from "server/services/KillerService";
 import { RunService } from "@rbxts/services";
 import KillerServiceNetwork from "shared/networking/KillerServiceNetwork";
 
-const KillerService = Dependency<KillerServiceClass>();
-export default (registry: Registry) => {
+const Type = "killers";
+
+export = function (registry: Registry) {
+	const KillerService = Dependency<KillerServiceClass>();
+
 	if (RunService.IsServer())
-		registry.RegisterType("killers", registry.Cmdr.Util.MakeEnumType(script.Name, KillerService.GetKillersName()));
+		registry.RegisterType(Type, registry.Cmdr.Util.MakeEnumType(Type, KillerService.GetKillersName()));
 	else {
 		// Cmdr will request this type on the client, so we fetch the enum list from the server.
 		const enumNamesPromise = KillerServiceNetwork.Client.Get("GetKillersName").CallServerAsync();
 		enumNamesPromise.andThen((enumNames) =>
-			registry.RegisterType("killers", registry.Cmdr.Util.MakeEnumType(script.Name, enumNames[0])),
+			registry.RegisterType(Type, registry.Cmdr.Util.MakeEnumType(Type, enumNames[0])),
 		);
 	}
 };

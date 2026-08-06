@@ -10,6 +10,7 @@
         26/02/25 --> Auto-purchase flashlight on join.
 		26/06/29 --> Parsed into roblox-ts.
 		26/07/16 --> Implemented logger.
+		26/08/03 --> Removed promises from "unnecessary" places.
     ]
 ]=]
 */
@@ -100,6 +101,7 @@ export default class ItemServiceClass implements OnInit, OnStart {
 
 	public onStart() {
 		Workspace.DescendantAdded.Connect((descendant) => {
+			// this is too expensive, update me later
 			if (!descendant.IsA("Tool")) return;
 
 			const tool = descendant as Tool;
@@ -107,21 +109,16 @@ export default class ItemServiceClass implements OnInit, OnStart {
 			if (player) this.setupTool(tool, player);
 		});
 
-		Netwoking.Server.Get("PurchaseItem").SetCallback((player: Player, itemName: string) => {
+		Netwoking.Server.Get("PurchaseItem").SetCallback(async (player: Player, itemName: string) => {
 			if (!RunService.IsRunning()) return `Successfully purchased ${itemName}`; // story
 
-			let status: string = "?";
-			this.PurchaseItem(player, itemName)
-				.andThen((info) => {
-					status = info;
-				})
-				.catch((e: string) => {
-					status = e;
-					warn(`[${script.Name}] Purchase failed: ${player.Name} / ${itemName} / ${e}`);
-				})
-				.await();
-
-			return status;
+			try {
+				return await this.PurchaseItem(player, itemName);
+			} catch (e) {
+				const msg = tostring(e);
+				warn(`[${script.Name}] Purchase failed: ${player.Name} / ${itemName} / ${msg}`);
+				return msg;
+			}
 		});
 
 		Netwoking.Server.Get("GetAvailableItems").SetCallback(() => {
@@ -165,7 +162,6 @@ export default class ItemServiceClass implements OnInit, OnStart {
 		const [, itemBehavior] = xpcall(
 			() => {
 				debug(`[${script.Name}] Creating behavior instance: ${tool.Name}`);
-				print(behavior);
 				return new behavior(tool);
 			},
 			(e) => warn(`${tool.Name}'s behavior has encoutered an warn:\n${e}`),
@@ -213,62 +209,45 @@ export default class ItemServiceClass implements OnInit, OnStart {
 	--- Public API
 	--------------------------------------------------------------------
 	*/
-	public PurchaseItem(player: Player, itemName: string): Promise<string> {
-		return new Promise((resolve, reject, onCancel) => {
-			if (onCancel(() => undefined)) return;
+	public async PurchaseItem(player: Player, itemName: string): Promise<string> {
+		assert(this.purchaseCheck([player, itemName]));
 
-			assert(this.purchaseCheck([player, itemName]));
+		debug(`[${script.Name}] PurchaseItem called: ${player.Name} -> ${itemName}`);
 
-			debug(`[${script.Name}] PurchaseItem called: ${player.Name} -> ${itemName}`);
+		// Validate
+		const itemData = this.getItemData(itemName);
+		if (!itemData) {
+			warn(`[${script.Name}] Invalid item purchase attempt: ${player.Name} / ${itemName}`);
+			throw "Item does not exist";
+		}
 
-			// Validate
-			const itemData = this.getItemData(itemName);
-			if (!itemData) {
-				warn(`[${script.Name}] Invalid item purchase attempt: ${player.Name} / ${itemName}`);
-				return reject("Item does not exist");
-			}
-			if (this.HasItem(player, itemName)) {
-				warn(`[${script.Name}] Duplicate purchase attempt: ${player.Name} / ${itemName}`);
-				return reject("Item already bought");
-			}
+		if (this.HasItem(player, itemName)) {
+			warn(`[${script.Name}] Duplicate purchase attempt: ${player.Name} / ${itemName}`);
+			throw "Item already bought";
+		}
 
-			const [, points] = this.PlayerDataService.GetPlayerData(player)
-				.andThen((data) => {
-					return data.Points;
-				})
-				.await(); // await or else this will be skipped (oopsie)
+		const points = await this.PlayerDataService.GetPlayerData(player).then((data) => data.Points);
 
-			if ((points as number) < itemData.Price) {
-				warn(
-					`[${script.Name}] Insufficient points: ${player.Name} / ${itemName} / need ${
-						itemData.Price
-					}, have ${points as number}`,
-				);
-				return reject("Insufficient points");
-			}
-
-			this.PlayerDataService.UpdatePlayerStat(player, "Points", -itemData.Price).andThen(
-				() => {
-					const tool = this.ItemsFolder.FindFirstChild(itemData.Name)!.Clone() as Tool;
-					tool.Parent = player.FindFirstChild("StarterGear");
-
-					const backpackTool = tool.Clone();
-					backpackTool.Parent = player.FindFirstChild("Backpack"); // so the player gets the item instantely instead of having to reset.
-
-					//this._setupTool(backpackTool, player) -- nope, this should be automatically handled by ChildAdded event inside Init
-
-					this.ItemPurchased.Fire(player, itemData.Name);
-					Netwoking.Server.Get("ItemGranted").SendToPlayer(player, backpackTool);
-
-					info(`[${script.Name}] Purchased: ${player.Name} / ${itemData.Name} (-${itemData.Price} pts)`);
-					return resolve(`Successfully purchased ${itemName}`);
-				},
-				(e) => {
-					warn(`[${script.Name}] UpdatePlayerStat failed: ${player.Name} / ${itemName} / ${e}`);
-					reject(e);
-				},
+		if (points < itemData.Price) {
+			warn(
+				`[${script.Name}] Insufficient points: ${player.Name} / ${itemName} / need ${itemData.Price}, have ${points}`,
 			);
-		});
+			throw "Insufficient points";
+		}
+
+		await this.PlayerDataService.UpdatePlayerStat(player, "Points", -itemData.Price);
+
+		const tool = this.ItemsFolder.FindFirstChild(itemData.Name)!.Clone() as Tool;
+		tool.Parent = player.FindFirstChild("StarterGear")!;
+
+		const backpackTool = tool.Clone();
+		backpackTool.Parent = player.FindFirstChild("Backpack")!;
+
+		this.ItemPurchased.Fire(player, itemData.Name);
+		Netwoking.Server.Get("ItemGranted").SendToPlayer(player, backpackTool);
+
+		info(`[${script.Name}] Purchased: ${player.Name} / ${itemData.Name} (-${itemData.Price} pts)`);
+		return `Successfully purchased ${itemName}`;
 	}
 
 	public GetItemData(itemName: string): Types.ItemData | undefined {

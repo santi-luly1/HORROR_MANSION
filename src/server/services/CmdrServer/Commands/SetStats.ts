@@ -1,4 +1,6 @@
-export default {
+import { CommandDefinition } from "@rbxts/cmdr";
+
+export = identity<CommandDefinition>({
 	Name: "setStat",
 	Aliases: [],
 	Description: "Sets a player's stat to the specified amount.",
@@ -20,4 +22,4 @@ export default {
 			Description: "The ammount that will be set.",
 		},
 	],
-};
+});

@@ -1,4 +1,6 @@
-export default {
+import { CommandDefinition } from "@rbxts/cmdr";
+
+export = identity<CommandDefinition>({
 	Name: "removeKiller",
 	Aliases: ["rk"],
 	Description: "Kills the specified killer. (This can skip the round)",
@@ -11,4 +13,4 @@ export default {
 			Default: "**",
 		},
 	],
-};
+});
